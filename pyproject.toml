@@ -11,7 +11,7 @@ requires-python = ">=3.10"
 [project.optional-dependencies]
 dev = ["pytest"]
 # Prototype notebooks (notebooks/). Earth Engine itself comes in via bulcd.
-notebook = ["jupyterlab", "ipykernel", "matplotlib", "nbconvert"]
+notebook = ["jupyterlab", "ipykernel", "matplotlib", "nbconvert", "ipyleaflet"]
 # Pulls the BULC-D core engine straight from GitHub. Only needed for a
 # from-scratch environment (CI, a new machine) that has no local
 # BULC-D_rebuild checkout - see README "Relationship to BULC-D_rebuild".

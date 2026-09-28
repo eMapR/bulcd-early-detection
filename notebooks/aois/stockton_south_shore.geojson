@@ -1,0 +1,33 @@
+{
+ "type": "Feature",
+ "properties": {
+  "name": "stockton_south_shore"
+ },
+ "geometry": {
+  "type": "Polygon",
+  "coordinates": [
+   [
+    [
+     -90.58,
+     46.914
+    ],
+    [
+     -90.58,
+     46.928
+    ],
+    [
+     -90.555,
+     46.928
+    ],
+    [
+     -90.555,
+     46.914
+    ],
+    [
+     -90.58,
+     46.914
+    ]
+   ]
+  ]
+ }
+}

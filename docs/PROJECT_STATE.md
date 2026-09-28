@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-09-28
+Last updated: 2026-09-28 (later)
 
 Concise current-state/handoff doc. Detailed lessons, experimental
 results, and their explanations live in `docs/findings.md` — read it for
@@ -70,7 +70,15 @@ Two-repo split:
     - `USE_CUSTOM_AOI` runs live on any FeatureCollection asset, with an
       AOI size check first. It's slow: ~4 min per map for 9 km², ~17 min
       for the whole notebook. Test asset: `.../apostle_islands/test_aoi_stockton_east`.
-  - Package modules: `config.py`, `outputs.py`, `render.py`. The
+  - Third mode, `AOI_MODE = "draw"`: draw a polygon on an ipyleaflet
+    map, saved as `notebooks/aois/<name>.geojson` and reloadable by
+    name. No EE asset needed. Example: `stockton_south_shore` (3 km²).
+  - Section 10, parameter comparison: named `compare.Variant`s over one
+    saved drawn area; outcome map + area totals only. Each BULC-D run is
+    fetched once via `ee.data.computePixels` (~10–30 s for a few km²).
+    Threshold/mask variants reuse that run and are classified locally.
+  - Package modules: `config.py`, `outputs.py`, `render.py`, `drawing.py`,
+    `compare.py`. The
     production matrix and the thumbnail/reference-image helpers moved
     here; the experiments now import them, with behavior unchanged.
 
@@ -127,7 +135,22 @@ is unchanged until this is investigated. Details: `docs/findings.md`,
   - None of it has been checked against any record — see
     `docs/findings.md`, 2026-09-28.
 
+- **Forest mask is NOT a BULC-D requirement.** Legacy has none; the
+  rebuild's default `mask_non_forest=True` is post-processing only; the
+  legacy-matched cell 8C config has it off. Precomputed Apostle result
+  stays forest-only for Wednesday (user decision). See `docs/findings.md`.
+- **Lead from the first comparison (one 3 km² shoreline area only):**
+  Landsat-only monitoring removed almost all decrease (0.049 → 0.001 km²);
+  a post-high-water 2022–2025 baseline did not (0.062 km²). Suggests a
+  Sentinel-2-in-monitoring vs Landsat-8-only-baseline mismatch, possibly
+  also behind the 76%-early-June issue. Not yet tested more widely.
+
 ## Next steps
+
+- Post-demo: decide the Early Detection masking default (recommended:
+  water on, forest off, forest optional/custom mask asset).
+- Post-demo: test the Sentinel-2 mismatch lead on more areas (inland
+  forest, other shorelines) and against the early-June timing issue.
 
 - Before the demo: a quick look at the notebook with the user; decide
   whether to present the shoreline ring as a known limitation.

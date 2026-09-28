@@ -11,3 +11,4 @@ build/
 
 # Notebook figure/summary copies - regenerated on every run, already embedded in the .ipynb
 notebooks/output/
+.ipynb_checkpoints/

@@ -159,16 +159,20 @@ def reference_layer(area: StudyArea, frame: ee.Geometry, start: str, end: str) -
     return img.blend(_boundary(area.geometry))
 
 
-def _scale_bar(ax, bbox_degrees: list[float], width_px: int) -> None:
+def _km_per_px(bbox_degrees: list[float], width_px: int) -> float:
     west, south, east, north = bbox_degrees
-    km_per_px = (east - west) * 111.32 * math.cos(math.radians((south + north) / 2)) / width_px
+    return (east - west) * 111.32 * math.cos(math.radians((south + north) / 2)) / width_px
+
+
+def scale_bar(ax, km_per_px: float, width_px: int) -> None:
     total_km = km_per_px * width_px
-    length_km = next(n for n in (50, 20, 10, 5, 2, 1, 0.5, 0.2) if n <= total_km / 4)
+    length_km = next((n for n in (50, 20, 10, 5, 2, 1, 0.5, 0.2, 0.1) if n <= total_km / 4), 0.05)
     px = length_km / km_per_px
-    x0, y0 = width_px * 0.03, ax.get_ylim()[0] * 0.96
+    height_px = ax.get_ylim()[0]
+    x0, y0 = width_px * 0.03, height_px * 0.95
     halo = [pe.withStroke(linewidth=5, foreground="white")]
     ax.plot([x0, x0 + px], [y0, y0], color="#222", lw=3, solid_capstyle="butt", path_effects=halo)
-    ax.text(x0 + px / 2, y0 - 8, f"{length_km:g} km", ha="center", va="bottom", fontsize=9, color="#222",
+    ax.text(x0 + px / 2, y0 - height_px * 0.015, f"{length_km:g} km", ha="center", va="bottom", fontsize=9, color="#222",
             path_effects=[pe.withStroke(linewidth=3, foreground="white")])
 
 
@@ -189,7 +193,7 @@ def show_map(
     ax.imshow(img)
     ax.set_axis_off()
     ax.set_title(title, loc="left", fontsize=13, color="#222")
-    _scale_bar(ax, bbox_degrees, img.shape[1])
+    scale_bar(ax, _km_per_px(bbox_degrees, img.shape[1]), img.shape[1])
     if legend:
         handles = [Patch(facecolor=c, edgecolor="#999", label=l) for l, c in legend.items()]
         ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(1.01, 1), frameon=False, fontsize=10)

@@ -607,3 +607,60 @@ Nothing was tuned.
   median final probability 0.9997, and unchanged pixels ~1.0. So the
   notebook's confidence map shows change pixels only.
 
+## 2026-09-28 — The forest mask is a rebuild default, not a BULC-D requirement
+
+Traced on request, before any change:
+
+- **Legacy BULC-D has no forest mask.** `guiBULCD.rtf` (production GUI)
+  has zero forest/treecover/hansen/land-cover references (74 water-mask
+  references). Core caller: water only (`legacy/BULCD-Caller-Current.txt:96-97`).
+  The only legacy `forestMask` is `mckenzeBULCD.rtf`, a downstream
+  "FOREST LOSS ENSEMBLE" workflow (`users/msime/forestChangeEnsemble`),
+  not core BULC-D.
+- **The rebuild's algorithm assumes nothing about forest:** `bulcd/inputs.py`
+  and `bulcd/bulc.py` have no forest/land-cover logic; each pixel is
+  compared with its own history. `mask_non_forest=True`
+  (`bulcd/config/schema.py:121`, Hansen `treecover2000 >= 10%`) was added
+  2026-07-30 after above-treeline false change in cell 2F
+  (BULC-D_rebuild `docs/decisions/0006`). It's applied only to
+  `final_probabilities` at the end of `run_bulcd` (`bulcd/engine.py:243-245`).
+- **The legacy-matched config has it off:** `configs/cell_8c_comparison.yaml:78`,
+  `mask_non_forest: false`. Our `build_config` never set it, so every
+  replay, the spatial validation and the notebook inherited `True`.
+- **Removing it (Stockton area, 43 km², live):** forest pixels identical
+  (0 km² differ). Excluded land had 0% Hansen tree cover (beach, sand
+  spit, open bog). 27% of it flagged decrease, vs 0.7% of forest (mostly
+  the open bog). Park-wide the mask excludes ~5.1 km² (~3% of land).
+  Real change vs noise there is unknown.
+- **Hansen staleness:** `treecover2000` is year-2000 cover. Land cleared
+  since still counts as forest, and forest grown in since is excluded.
+- The notebook's earlier caveat "BULC-D's model is tuned for forest" was
+  wrong (copied from rebuild comments) and has been corrected.
+
+## 2026-09-28 — First parameter comparison: shoreline decrease disappears without Sentinel-2
+
+`notebooks/early_detection_demo.ipynb` section 10, drawn area
+`stockton_south_shore` (3 km², south shore of Stockton Island incl. part
+of the open bog). Decrease km² (forest-masked unless noted):
+
+| Variant | Decrease | Increase |
+|---|---:|---:|
+| Current settings | 0.049 | 0.001 |
+| Threshold 0.9 | 0.031 | 0.000 |
+| All land (no forest mask) | 0.087 | 0.002 |
+| Landsat-only monitoring (no S2) | **0.001** | 0.000 |
+| Baseline 2022–2025 | 0.062 | 0.005 |
+
+- **Landsat-only monitoring removes ~98% of decrease.** The baseline is
+  Landsat 8 only (EE memory workaround), while monitoring adds Sentinel-2.
+  Leading hypothesis: S2 vs L8 differences (spectral response,
+  harmonization, 10–20 m pixels at sharp land/water edges) read as
+  departures from an L8-only "normal". That would also explain detections
+  appearing immediately in early June (see the 76% entry above). Caveat:
+  L8+L9-only has fewer observations, so some real change may drop too.
+- **Recent baseline doesn't remove it,** so Lake Superior high water in
+  2019–2020 inside the baseline isn't supported as the cause here.
+- ~63% of decrease survives threshold 0.9: mostly strong evidence, not marginal.
+- **One small area only** — a lead, not a conclusion. Needs inland forest
+  and other shorelines, and a check against the early-June timing.
+
