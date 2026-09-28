@@ -35,23 +35,11 @@ import replay_fire_2026 as fire
 import replay_harvest_2025 as harvest
 from _replay_common import print_summary, run_replay, summarize
 
-# Verbatim from ../BULC-D_rebuild/configs/cell_8c_comparison.yaml
-# (custom_transition_matrix: REAL, read live from the legacy GUI Console
-# for cell 8C - see that repo's docs/findings.md "Real production
-# BULC-D parameters"). Rows sum to ~0.98-0.99 (real conditional
-# probabilities), unlike Willis's hand-picked weights.
-PRODUCTION_TRANSITION_MATRIX = [
-    [0.83, 0.08, 0.08],
-    [0.66, 0.24, 0.08],
-    [0.53, 0.37, 0.08],
-    [0.14, 0.76, 0.08],
-    [0.08, 0.83, 0.08],
-    [0.08, 0.83, 0.08],
-    [0.08, 0.76, 0.14],
-    [0.08, 0.37, 0.53],
-    [0.08, 0.24, 0.66],
-    [0.08, 0.08, 0.83],
-]
+# Verbatim from ../BULC-D_rebuild/configs/cell_8c_comparison.yaml (read
+# live from the legacy GUI Console for cell 8C - see that repo's
+# docs/findings.md "Real production BULC-D parameters"). Now lives in the
+# package so the monitoring notebook shares the exact same values.
+from bulcd_early_detection.config import PRODUCTION_TRANSITION_MATRIX  # noqa: E402
 
 RECENCY_FACTOR = 1.0
 

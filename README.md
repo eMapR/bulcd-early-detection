@@ -10,6 +10,24 @@ recovery — cause attribution is handled separately from detection.
 Forest disturbance (e.g. wildfire) is one specific use case, not the
 whole scope.
 
+## Prototype notebook
+
+`notebooks/early_detection_demo.ipynb` maps one season's change
+(decrease / unchanged / increase) plus confidence, first-detection date,
+and Sentinel-2 context imagery. It defaults to Apostle Islands National
+Lakeshore (a precomputed Earth Engine asset). Set `USE_CUSTOM_AOI = True`
+and an Earth Engine FeatureCollection asset ID to run live on your own
+area.
+
+```sh
+pip install -e ".[notebook]"      # into the same env as bulcd
+jupyter lab notebooks/early_detection_demo.ipynb
+```
+
+Reusable pieces live in `src/bulcd_early_detection/`: `config.py`
+(simple controls -> full `BULCDConfig`), `outputs.py` (study area,
+outcome layers, export/load), and `render.py` (static maps).
+
 ## Relationship to BULC-D_rebuild
 
 This repo does **not** contain the detection algorithm. The Bayesian

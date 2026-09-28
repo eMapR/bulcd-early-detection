@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-09-20
+Last updated: 2026-09-28
 
 Concise current-state/handoff doc. Detailed lessons, experimental
 results, and their explanations live in `docs/findings.md` — read it for
@@ -18,8 +18,8 @@ Two-repo split:
   generally (harvest, insect/disease, fire, beaver-related change,
   clearing/development, recovery — not forest disturbance specifically).
   BULC-D detects spectral change; cause attribution is separate. No
-  monitoring/interface code exists yet — only integration scaffolding
-  and Milestone 1's replay experiments (`experiments/`).
+  first interface-layer code is the Milestone 2 prototype notebook
+  (`notebooks/`) and its small support package (`src/bulcd_early_detection/`).
 
 ## Completed work
 
@@ -52,9 +52,39 @@ Two-repo split:
   - All outputs in `experiments/output/`; full analysis in
     `experiments/*_findings.md` and `docs/findings.md`.
 
+- **Milestone 2 (in progress) — NPS prototype notebook**,
+  `notebooks/early_detection_demo.ipynb`, for a Wednesday 2026-09-30
+  demo. Goal: simplify BULC-D for monitoring use. One primary map
+  (decrease / unchanged / increase), plus supporting confidence,
+  first-detection date, Sentinel-2 before/after imagery, and a zoom.
+  - Simple controls: monitoring year and season, baseline years,
+    decision threshold, and sensitivity (`z_score_numerator_factor`).
+    The full `BULCDConfig` is editable in an `advanced()` hook.
+  - Defaults reproduce the validated fire-replay config exactly (checked
+    against `replay_fire_2026.build_config`; see also `tests/test_config.py`).
+  - Two modes:
+    - Apostle Islands (default) loads a precomputed asset,
+      `projects/bulcd-python-rebuild/assets/apostle_islands/apostle_2026_v1_all`.
+      The whole park ran as ONE batch export in 19 min. The notebook runs
+      in ~1 min and is saved with outputs embedded.
+    - `USE_CUSTOM_AOI` runs live on any FeatureCollection asset, with an
+      AOI size check first. It's slow: ~4 min per map for 9 km², ~17 min
+      for the whole notebook. Test asset: `.../apostle_islands/test_aoi_stockton_east`.
+  - Package modules: `config.py`, `outputs.py`, `render.py`. The
+    production matrix and the thumbnail/reference-image helpers moved
+    here; the experiments now import them, with behavior unchanged.
+
 ## Active problem
 
-None — between milestones.
+Wednesday (2026-09-30) NPS demo prep. Notebook works end-to-end in both modes.
+
+**Open interpretation issue (post-demo, deliberately not addressed yet):**
+~76% of Apostle Islands' 2026 changed area was already detected in the
+first two weeks of June. The current output therefore mostly identifies
+places that differ from the 2018–2025 expectation, not necessarily
+changes that began during the 2026 monitoring season. Detection behavior
+is unchanged until this is investigated. Details: `docs/findings.md`,
+2026-09-28.
 
 ## Key findings (see `docs/findings.md` for full explanations)
 
@@ -86,7 +116,29 @@ None — between milestones.
   false-positive rate — no independent disturbance-perimeter data exists
   for the buffers. Gallery link in `docs/findings.md`.
 
+- **Apostle Islands 2026, first read:**
+  - Mapped change: 2.3 km² decrease and 0.3 km² increase out of
+    164 km² analyzed. About 5 km² of non-forest land isn't analyzed.
+  - ~76% of the changed area was first detected in the first two weeks
+    of the season, so it's mostly "differs from 2018–2025 normal", not
+    "disturbed this summer".
+  - Detections concentrate on island shorelines and at the Stockton
+    Island wetland/sandspit edges.
+  - None of it has been checked against any record — see
+    `docs/findings.md`, 2026-09-28.
+
 ## Next steps
+
+- Before the demo: a quick look at the notebook with the user; decide
+  whether to present the shoreline ring as a known limitation.
+- Identify a known historical Apostle Islands disturbance for a real
+  validation case.
+- Shoreline ring: check whether it's water-mask-edge mixing
+  (JRC occurrence threshold) or Lake Superior level change vs the
+  2018–2025 baseline.
+- Live custom-AOI mode recomputes BULC-D for every map. If that's too
+  slow for experimenting, export custom AOIs as assets too (the same
+  path Apostle Islands uses).
 
 - Fire's second, smaller, unexplained detached detection patch (east of
   the lake) — not investigated.

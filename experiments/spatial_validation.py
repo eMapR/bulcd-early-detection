@@ -33,16 +33,18 @@ Usage:
 
 from __future__ import annotations
 
-import urllib.request
 from pathlib import Path
 
 import ee
-import google.auth.transport.requests
 
 ee.Initialize(project="bulcd-python-rebuild")
 
 from bulcd.engine import run_bulcd
 from bulcd.interpret import first_change_year
+
+# Thumbnail download + reference composite moved into the package (shared
+# with the monitoring notebook); behavior unchanged.
+from bulcd_early_detection.render import auth_token, download_png, reference_composite
 
 import replay_fire_2026 as fire
 import replay_harvest_2025 as harvest
@@ -75,40 +77,6 @@ SITES = [
 _BACKGROUND = ee.Image.constant([0.12, 0.12, 0.12]).visualize(min=0, max=1)
 
 
-def _download(image: ee.Image, region: ee.Geometry, token: str, attempts: int = 3) -> bytes:
-    url = image.getThumbURL({"region": region, "dimensions": THUMB_DIMENSIONS, "format": "png"})
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
-    for attempt in range(attempts):
-        try:
-            return urllib.request.urlopen(req).read()
-        except (ConnectionResetError, TimeoutError) as exc:
-            if attempt == attempts - 1:
-                raise
-            print(f"  download retry ({exc}) ...")
-
-
-def _reference_composite(region: ee.Geometry, start: str, end: str) -> ee.Image:
-    """Simple post-disturbance false-color (SWIR2/NIR/Red) Sentinel-2
-    median composite - independent of BULC-D's own evidence pipeline,
-    purely for visual context. Bare/burned ground reads bright
-    orange-brown against green vegetation in this band combination.
-
-    S2_SR_HARMONIZED bands are raw DN, 0-10000 scale (not reflectance
-    0-1) - dividing by 3000 here first (a mistake carried over from a
-    true-color-composite habit) saturated the NIR band solid green.
-    Fixed: keep raw DN and let the caller's .visualize(min=0, max=4000)
-    do the stretch, a standard S2 false-color range.
-    """
-    return (
-        ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
-        .filterBounds(region)
-        .filterDate(start, end)
-        .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 40))
-        .median()
-        .select(["B12", "B8", "B4"])
-    )
-
-
 def _with_marker(vis_image: ee.Image, point: ee.Geometry) -> ee.Image:
     """Blends `vis_image` onto a neutral gray background (so masked
     pixels are visibly gray, not transparent/black) and paints the
@@ -135,7 +103,7 @@ def process_site(site: dict, token: str) -> dict:
     decrease = result.final_probabilities.select("decrease")
     mask = decrease.gt(0.5).selfMask()
 
-    reference = _reference_composite(buffer_geom, site["reference_start"], site["reference_end"])
+    reference = reference_composite(buffer_geom, site["reference_start"], site["reference_end"])
     layers = {
         "reference": reference.visualize(min=0, max=4000),
         "decrease_probability": decrease.visualize(
@@ -150,7 +118,7 @@ def process_site(site: dict, token: str) -> dict:
     site_dir = OUTPUT_DIR / site["name"]
     site_dir.mkdir(parents=True, exist_ok=True)
     for label, img in layers.items():
-        data = _download(_with_marker(img, point), buffer_geom, token)
+        data = download_png(_with_marker(img, point), buffer_geom, token, THUMB_DIMENSIONS)
         path = site_dir / f"{label}.png"
         path.write_bytes(data)
         print(f"  wrote {path} ({len(data)} bytes)")
@@ -170,11 +138,10 @@ def process_site(site: dict, token: str) -> dict:
 
 
 def main() -> None:
-    creds = ee.data.get_persistent_credentials()
-    creds.refresh(google.auth.transport.requests.Request())
+    token = auth_token()
     for site in SITES:
         print(f"=== {site['name']} ===")
-        process_site(site, creds.token)
+        process_site(site, token)
 
 
 if __name__ == "__main__":

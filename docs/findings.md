@@ -569,3 +569,41 @@ reference composite) — only the visual-context layer.
 
 **No BULC-D_rebuild code was modified and no parameter was tuned based
 on any of the above** — both parts are validation/provenance only.
+
+## 2026-09-28 — Apostle Islands 2026 prototype run: most mapped change predates the season and rings the shorelines
+
+First run over a whole study area with no known disturbance
+(`notebooks/early_detection_demo.ipynb`). Config: the validated
+fire-replay baseline (production matrix, `recency_factor=1.0`, L8-only
+2018–2025 baseline, L8/L9/S2 Jun 1–Sep 30 2026, threshold 0.5).
+Nothing was tuned.
+
+- **Scale/runtime:** the full park (WDPA boundary, 277 km²; bulcd run over
+  its 2,178 km² bounding box, output clipped to the boundary) completed as
+  ONE `Export.image.toAsset` task in 19 min, so no tiling was needed. Live
+  `getThumbURL` over a 9 km² custom AOI took ~4 min per map, because every
+  map recomputes BULC-D.
+- **Result:** of 164 km² analyzed forest, 2.3 km² decrease and 0.3 km²
+  increase. About 5 km² of land is excluded by the Hansen non-forest mask.
+- **Timing:** ~76% of changed area first crossed 0.5 within the first two
+  weeks of the season (median first-detection bin: DOY 156, Jun 5). With
+  this matrix, one early-season crossing that persists all season means
+  the pixel was already anomalous against the 2018–2025 same-season model
+  when observations began. Read the map as "differs from its normal", not
+  as in-season disturbance, unless timing says otherwise.
+  **Status: OPEN interpretation issue, to investigate after the
+  2026-09-30 demo.** The current output largely identifies places that
+  differ from the 2018–2025 expectation, not necessarily changes that
+  began during the 2026 monitoring season. Detection behavior is
+  deliberately left unchanged until then.
+- **Spatial pattern:** detections concentrate along island shorelines and
+  around the Stockton Island tombolo (open wetland edges, forested dune
+  ridge). Sentinel-2 imagery shows the Stockton area looking similar in
+  late 2025 and late 2026, consistent with the timing result.
+  - **Unresolved:** shoreline mixing at the JRC water-mask edge vs real
+    lake-level/shoreline change vs the multi-year baseline.
+  - **Not validated:** no reference data or known event was used.
+- **Confidence is uninformative at this threshold:** changed pixels have
+  median final probability 0.9997, and unchanged pixels ~1.0. So the
+  notebook's confidence map shows change pixels only.
+
