@@ -1,0 +1,11 @@
+site,recency_factor,crossing_date,crossing_phase,valid_post_change_before_crossing,days_since_reference,max_decrease_probability,false_positive_pre_change
+harvest_2025,1.0,,,,,0.28435374149659864,False
+harvest_2025,0.95,,,,,0.4479174765274307,False
+harvest_2025,0.9,2025-09-21,post_change,13,58,0.5503161822943454,False
+harvest_2025,0.85,2025-09-17,post_change,12,54,0.5418896222309537,False
+harvest_2025,0.8,2025-09-25,post_change,14,62,0.507561443883589,False
+fire_2026,1.0,,,,,0.3002754820936639,False
+fire_2026,0.95,,,,,0.4319682283110797,False
+fire_2026,0.9,,,,,0.4907331369563304,False
+fire_2026,0.85,,,,,0.49748317874149617,False
+fire_2026,0.8,,,,,0.4825311259568144,False

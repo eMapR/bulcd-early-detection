@@ -8,5 +8,18 @@ version = "0.1.0"
 description = "Early detection and monitoring of forest disturbance using BULC-D."
 requires-python = ">=3.10"
 
+[project.optional-dependencies]
+dev = ["pytest"]
+# Pulls the BULC-D core engine straight from GitHub. Only needed for a
+# from-scratch environment (CI, a new machine) that has no local
+# BULC-D_rebuild checkout - see README "Relationship to BULC-D_rebuild".
+# If you already installed bulcd yourself (e.g. `pip install -e
+# ../BULC-D_rebuild`), skip this extra: `pip install -e .` alone leaves
+# that install alone, while `pip install -e ".[engine]"` would try to
+# reinstall bulcd from GitHub and overwrite it.
+engine = [
+    "bulcd @ git+ssh://git@github.com/eMapR/BULC-D_rebuild.git@main",
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]
