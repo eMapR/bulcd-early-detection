@@ -664,3 +664,50 @@ of the open bog). Decrease km² (forest-masked unless noted):
 - **One small area only** — a lead, not a conclusion. Needs inland forest
   and other shorelines, and a check against the early-June timing.
 
+
+## 2026-09-28 — Sensor consistency: S2 detections track the L8-only baseline, not the change
+
+Direct test of the Stockton lead above. `experiments/sensor_consistency.py`:
+notebook default controls and `build_config()` throughout; ONLY the
+expectation → monitoring sensor sets change. 5 saved ~3 km² AOIs
+(`notebooks/aois/`): two suspicious shorelines (`stockton_south_shore`,
+`shoreline_top_decrease` = the park's highest-decrease shoreline cell in
+the precomputed result), two stable interiors (`stockton_interior`, right
+next to the south-shore box; `interior_forest_quiet`), and the known
+Jul 18–21 2026 fire (`fire_2026_wa`, same monitoring year). Raw rows:
+`experiments/output/sensor_consistency.csv`; tables:
+`experiments/summarize_sensor_consistency.py`. 1 pixel = 0.0009 km².
+
+Decrease km² (forest-masked):
+
+| AOI | L8→L8 | L8→L8+L9 | **L8→L8+L9+S2** (current) | L8→S2 | S2→S2 | L8+S2→L8+L9+S2 |
+|---|---:|---:|---:|---:|---:|---:|
+| stockton_south_shore | 0.0045 | 0.0009 | **0.0486** | 0.0801 | 0.0 | 0.0 |
+| shoreline_top_decrease | 0.0045 | 0.0045 | **0.0720** | 0.1152 | 0.0036 | 0.0018 |
+| stockton_interior | 0 | 0 | **0.0018** | 0.0063 | 0 | 0 |
+| interior_forest_quiet | 0 | 0 | **0** | 0.0054 | 0 | 0 |
+| fire_2026_wa | 1.238 | 1.249 | **1.274** | 1.271 | 1.278 | 1.279 |
+
+- **Detections appear only when S2 is in monitoring but not in the
+  baseline** (L8→L8+L9+S2, L8→S2), in all four non-fire AOIs. Adding S2 to
+  the baseline (S2→S2, L8+S2→L8+L9+S2) removes 95–100% of it.
+- **Not an observation-count effect:** S2→S2 uses the same S2 monitoring
+  observations as L8→S2 and finds ~nothing; L8→S2 finds the most.
+- **Real change is kept by every configuration:** the fire is 1.24–1.28 km²
+  in all six; the consistent S2 configs lose nothing.
+- **Early June:** in the shoreline cell, 99% of mismatched-config decrease
+  first crossed in the season's first 14 days (median DOY 156 = Jun 5 —
+  the same median as the park-wide 76% finding). In the fire AOI, 27–33% of
+  decrease pixels in the L8-baseline + S2 configs first crossed **before the
+  fire started** (DOY < 199), vs 1–2% Landsat-only and 7–8% with S2 in the
+  baseline. That fits a cross-sensor offset registering as change as soon as
+  the first S2 scenes arrive. (stockton_south_shore is an exception: its
+  mixed-config detections are mostly later, median DOY 168.)
+- **The S2 baselines ran fine at this size** (15–150 s per run). The
+  L8+S2 baseline memory failure was on the full park; whether an S2-inclusive
+  baseline fits there is untested.
+- **Status: strong support for the lead, not yet a park-wide conclusion.**
+  5 small AOIs, one season, one fire; the mismatched areas are only 2–130
+  pixels per AOI. Nothing in the notebook or the precomputed result was
+  changed. Next: a park-wide or larger-sample check (e.g. all shoreline
+  cells), and whether an S2-inclusive baseline is feasible at park scale.

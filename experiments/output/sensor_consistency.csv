@@ -1,0 +1,31 @@
+aoi,role,variant,expectation,monitoring,status,error,run_s,forest_km2,decrease_km2,increase_km2,decrease_pixels,early_frac,median_first_doy,first_doy_p10,first_doy_p90,doy_hist
+stockton_south_shore,"shoreline, suspicious",L8 -> L8,L8,L8,ok,,20,1.046,0.0045,0.0,5,0.4,260.0,156.0,260.0,156:2 260:3
+stockton_south_shore,"shoreline, suspicious",L8 -> L8+L9,L8,L8+L9,ok,,26,1.046,0.0009,0.0,1,1.0,156.0,156.0,156.0,156:1
+stockton_south_shore,"shoreline, suspicious",L8 -> L8+L9+S2,L8,L8+L9+S2,ok,,7,1.046,0.0486,0.0009,54,0.167,168.0,156.0,248.0,156:9 168:19 176:1 196:2 212:2 224:5 228:3 236:2 244:3 248:5 252:1 256:1 260:1
+stockton_south_shore,"shoreline, suspicious",L8 -> S2,L8,S2,ok,,6,1.046,0.0801,0.0045,89,0.483,168.0,156.0,244.0,156:43 168:23 224:3 228:5 236:5 244:4 248:2 256:2 268:2
+stockton_south_shore,"shoreline, suspicious",S2 -> S2,S2,S2,ok,,54,1.046,0.0,0.0,0,,,,,
+stockton_south_shore,"shoreline, suspicious",L8+S2 -> L8+L9+S2,L8+S2,L8+L9+S2,ok,,75,1.046,0.0,0.0,0,,,,,
+shoreline_top_decrease,"shoreline, suspicious",L8 -> L8,L8,L8,ok,,44,2.318,0.0045,0.0189,5,0.0,180.0,180.0,180.0,180:5
+shoreline_top_decrease,"shoreline, suspicious",L8 -> L8+L9,L8,L8+L9,ok,,34,2.318,0.0045,0.0261,5,1.0,156.0,156.0,156.0,156:5
+shoreline_top_decrease,"shoreline, suspicious",L8 -> L8+L9+S2,L8,L8+L9+S2,ok,,4,2.318,0.072,0.0162,80,0.988,156.0,156.0,156.0,156:79 168:1
+shoreline_top_decrease,"shoreline, suspicious",L8 -> S2,L8,S2,ok,,3,2.318,0.1152,0.0288,128,0.992,156.0,156.0,156.0,156:127 268:1
+shoreline_top_decrease,"shoreline, suspicious",S2 -> S2,S2,S2,ok,,19,2.318,0.0036,0.0261,4,1.0,156.0,156.0,156.0,156:4
+shoreline_top_decrease,"shoreline, suspicious",L8+S2 -> L8+L9+S2,L8+S2,L8+L9+S2,ok,,35,2.318,0.0018,0.0144,2,1.0,156.0,156.0,156.0,156:2
+stockton_interior,"interior forest, stable",L8 -> L8,L8,L8,ok,,17,3.066,0.0,0.0027,0,,,,,
+stockton_interior,"interior forest, stable",L8 -> L8+L9,L8,L8+L9,ok,,101,3.066,0.0,0.0036,0,,,,,
+stockton_interior,"interior forest, stable",L8 -> L8+L9+S2,L8,L8+L9+S2,ok,,13,3.066,0.0018,0.0018,2,0.5,162.0,157.2,166.8,156:1 168:1
+stockton_interior,"interior forest, stable",L8 -> S2,L8,S2,ok,,6,3.066,0.0063,0.0009,7,1.0,156.0,156.0,156.0,156:7
+stockton_interior,"interior forest, stable",S2 -> S2,S2,S2,ok,,15,3.066,0.0,0.0063,0,,,,,
+stockton_interior,"interior forest, stable",L8+S2 -> L8+L9+S2,L8+S2,L8+L9+S2,ok,,29,3.066,0.0,0.0063,0,,,,,
+interior_forest_quiet,"interior forest, stable",L8 -> L8,L8,L8,ok,,11,3.066,0.0,0.0,0,,,,,
+interior_forest_quiet,"interior forest, stable",L8 -> L8+L9,L8,L8+L9,ok,,22,3.066,0.0,0.0,0,,,,,
+interior_forest_quiet,"interior forest, stable",L8 -> L8+L9+S2,L8,L8+L9+S2,ok,,7,3.066,0.0,0.0,0,,,,,
+interior_forest_quiet,"interior forest, stable",L8 -> S2,L8,S2,ok,,10,3.066,0.0054,0.0,6,0.833,156.0,156.0,182.0,156:5 208:1
+interior_forest_quiet,"interior forest, stable",S2 -> S2,S2,S2,ok,,20,3.066,0.0,0.0,0,,,,,
+interior_forest_quiet,"interior forest, stable",L8+S2 -> L8+L9+S2,L8+S2,L8+L9+S2,ok,,42,3.066,0.0,0.0,0,,,,,
+fire_2026_wa,"known disturbance (fire, Jul 18-21 2026)",L8 -> L8,L8,L8,ok,,21,1.293,1.2384,0.0,1376,0.0,224.0,208.0,240.0,176:2 192:25 208:147 224:515 240:654 256:33
+fire_2026_wa,"known disturbance (fire, Jul 18-21 2026)",L8 -> L8+L9,L8,L8+L9,ok,,8,1.293,1.2492,0.0,1388,0.0,232.0,224.0,240.0,176:2 184:8 192:6 200:6 208:13 216:40 224:144 232:686 240:453 248:17 256:13
+fire_2026_wa,"known disturbance (fire, Jul 18-21 2026)",L8 -> L8+L9+S2,L8,L8+L9+S2,ok,,110,1.293,1.2735,0.0,1415,0.211,220.0,156.0,232.0,156:299 172:48 176:34 184:2 192:4 200:4 204:15 208:10 212:21 216:174 220:130 224:392 232:250 236:23 240:3 244:2 264:4
+fire_2026_wa,"known disturbance (fire, Jul 18-21 2026)",L8 -> S2,L8,S2,ok,,498,1.293,1.2708,0.0,1412,0.212,224.0,156.0,236.0,156:299 172:48 176:73 184:14 192:30 200:22 204:43 212:52 216:61 220:56 224:222 232:58 236:302 244:126 252:5 264:1
+fire_2026_wa,"known disturbance (fire, Jul 18-21 2026)",S2 -> S2,S2,S2,ok,,149,1.293,1.278,0.0,1420,0.053,236.0,212.0,244.0,156:75 172:15 176:10 184:3 192:4 200:3 204:22 212:46 216:60 220:59 224:225 232:99 236:471 244:306 252:13 264:9
+fire_2026_wa,"known disturbance (fire, Jul 18-21 2026)",L8+S2 -> L8+L9+S2,L8+S2,L8+L9+S2,ok,,54,1.293,1.2789,0.0,1421,0.046,224.0,208.0,232.0,156:66 172:17 176:10 184:3 192:4 200:3 204:26 208:34 212:46 216:100 220:155 224:512 232:374 236:47 240:9 244:3 252:5 264:7
