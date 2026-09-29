@@ -704,8 +704,10 @@ Decrease km² (forest-masked):
   the first S2 scenes arrive. (stockton_south_shore is an exception: its
   mixed-config detections are mostly later, median DOY 168.)
 - **The S2 baselines ran fine at this size** (15–150 s per run). The
-  L8+S2 baseline memory failure was on the full park; whether an S2-inclusive
-  baseline fits there is untested.
+  earlier L8+S2 baseline memory failure happened in the Milestone 1
+  harvest/fire replays (2026-09-18 entry), not in an Apostle Islands run.
+  An S2-inclusive baseline has never been tried over the whole park, so
+  whether it fits there is untested.
 - **Status: strong support for the lead, not yet a park-wide conclusion.**
   5 small AOIs, one season, one fire; the mismatched areas are only 2–130
   pixels per AOI. Nothing in the notebook or the precomputed result was

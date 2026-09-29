@@ -259,3 +259,17 @@ def early_detection_share(outcome: ee.Image, region: ee.Geometry, first_doy: int
     )
     total = sums.get("changed") or 0.0
     return {"changed_km2": total, "early_km2": sums.get("early") or 0.0, "early_share": (sums.get("early") or 0.0) / total if total else 0.0}
+
+
+def reclassify(outputs_image: ee.Image, threshold: float) -> ee.Image:
+    """Re-applies the decision rule at another threshold (>= 0.5) to
+    existing outputs - no new BULC-D run, since the threshold only acts on
+    the final probabilities. Masked areas are unchanged."""
+    outcome = outputs_image.select("outcome")
+    analyzed = outcome.lte(INCREASE)
+    new = (
+        outcome.where(analyzed, UNCHANGED)
+        .where(analyzed.And(outputs_image.select("decrease").gt(threshold)), DECREASE)
+        .where(analyzed.And(outputs_image.select("increase").gt(threshold)), INCREASE)
+    )
+    return outputs_image.addBands(new.rename("outcome"), overwrite=True)

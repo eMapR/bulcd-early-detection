@@ -12,19 +12,22 @@ whole scope.
 
 ## Prototype notebook
 
-`notebooks/early_detection_demo.ipynb` maps one season's change
-(decrease / unchanged / increase) plus confidence, first-detection date,
-and Sentinel-2 context imagery. Study area (`AOI_MODE`):
+`notebooks/early_detection_demo.ipynb` is a walkthrough of BULC-D with
+Apostle Islands National Lakeshore (2026) as the example:
 
-- `"apostle"` (default): Apostle Islands National Lakeshore, loaded from
-  a precomputed Earth Engine asset.
-- `"draw"`: a polygon drawn on an interactive map (ipyleaflet), saved as
-  `notebooks/aois/<name>.geojson` and reloadable by name.
-- `"asset"`: any Earth Engine FeatureCollection asset.
+1. What BULC-D is (baseline, observations, Bayesian updating, outcomes).
+2. Its important parameters, in plain terms, with the full config available.
+3. The Apostle Islands result (precomputed asset): change map, area totals,
+   confidence, first-detection timing, Sentinel-2 imagery, and a Devils
+   Island close-up.
+4. Parameter effects: one setting changed per map, all at the same
+   Devils Island extent.
+5. Try your own area: draw a polygon (ipyleaflet; saved as
+   `notebooks/aois/<name>.geojson`) or use an Earth Engine
+   FeatureCollection asset. Runs live.
 
-Its "Compare parameter settings" section reruns one saved drawn area
-under a few named settings and shows the outcome maps and area totals
-side by side. Drawing needs JupyterLab 4, Notebook 7 or VS Code.
+Running it takes about 2 minutes. Drawing needs JupyterLab 4, Notebook 7
+or VS Code.
 
 ```sh
 pip install -e ".[notebook]"      # into the same env as bulcd
@@ -34,7 +37,8 @@ jupyter lab notebooks/early_detection_demo.ipynb
 Reusable pieces live in `src/bulcd_early_detection/`: `config.py`
 (simple controls -> full `BULCDConfig`), `outputs.py` (study area,
 outcome layers, export/load), `render.py` (static maps), `drawing.py`
-(drawn AOIs), and `compare.py` (parameter comparison).
+(drawn AOIs), `compare.py` (parameter comparison), and `report.py`
+(notebook map/table helpers and the one-pixel teaching figure).
 
 ## Relationship to BULC-D_rebuild
 

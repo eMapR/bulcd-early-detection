@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-09-28 (later)
+Last updated: 2026-09-29
 
 Concise current-state/handoff doc. Detailed lessons, experimental
 results, and their explanations live in `docs/findings.md` — read it for
@@ -81,6 +81,17 @@ Two-repo split:
     `compare.py`. The
     production matrix and the thumbnail/reference-image helpers moved
     here; the experiments now import them, with behavior unchanged.
+
+- **2026-09-29: notebook restructured as an NPS-facing walkthrough**
+  (user direction: explain BULC-D; don't chase individual artifacts):
+  1 What is BULC-D (with a one-pixel teaching figure from the fire replay),
+  2 Setup and parameters, 3 Apostle Islands example (+ Devils Island
+  close-up, `notebooks/aois/devils_island.geojson`, the park part containing
+  USGS GNIS 1563935), 4 Parameter effects (Devils Island, same extent: default,
+  threshold 0.9, sensitivity 0.5/2.0, dampening 0.7, posterior leveler 0.9;
+  plus whole-park threshold totals via `outputs.reclassify`), 5 Try your own
+  area (draw/asset, off by default). Runs in ~2 min. Notebook defaults and
+  the precomputed result are unchanged.
 
 ## Active problem
 
