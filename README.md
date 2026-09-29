@@ -34,6 +34,13 @@ Cascades National Park (WDPA boundary, excluding Ross Lake and Lake
 Chelan NRAs; precomputed asset), with a 23 km² comparison box in the
 north unit for the parameter-effects section. Same default settings.
 
+`notebooks/testsite_demo.ipynb` is the same walkthrough for a study area
+supplied as an Earth Engine FeatureCollection
+(`projects/bulcd-python-rebuild/assets/testsite`, one 26 km² polygon in
+western Oregon; precomputed asset). It adds a side-by-side 2024 | 2025 |
+2026 true-color Sentinel-2 comparison next to the change map, and uses the
+whole site for the parameter-effects section. Same default settings.
+
 ```sh
 pip install -e ".[notebook]"      # into the same env as bulcd
 jupyter lab notebooks/early_detection_demo.ipynb

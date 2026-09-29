@@ -747,3 +747,35 @@ Cascades" National Park, 2,022 km². Whole-park export: 40.2 min, one task.
   park-wide. Candidates to test later: real 2026 change, haze/smoke in
   monitoring imagery, harmonic-baseline fit in steep mountain forest.
 
+## 2026-09-29 — testsite (FeatureCollection) 2026 with the unchanged default config
+
+Study area: `projects/bulcd-python-rebuild/assets/testsite` (1 feature, 26.3 km²,
+single polygon, 123.59–123.52 W, 44.81–44.85 N; 24.2 km² forest under the
+Hansen mask, no water). Default config as the other notebooks, nothing tuned;
+bulcd runs on the asset directly (`aoi_asset`). Export: 1.4 min.
+
+| Outcome | km² | share of analyzed |
+|---|---:|---:|
+| Decrease | 4.75 | 19.6% |
+| Unchanged | 18.75 | 77.5% |
+| Increase | 0.68 | 2.8% |
+| Not analyzed (non-forest) | 2.21 | — |
+
+- ~64% of changed area first detected in the first two weeks of June.
+- Parameter effects, whole site (decrease / increase km²): default 4.78 / 0.69;
+  threshold 0.9 4.45 / 0.60; sensitivity 0.5 3.02 / 0.04; sensitivity 2.0
+  7.63 / 1.92; dampening 0.7 4.73 / 0.67; posterior leveler 0.9 4.79 / 0.65.
+  The comparison runs use their own snapped 30 m grid, so "default" differs
+  from the precomputed total by ~0.6% (4.78 vs 4.75): grid alignment, not a
+  different result.
+- Reference imagery: Sentinel-2 true color on 2024-09-16, 2025-09-16 and
+  2026-09-16 (each fully clear over the site per Cloud Score+, low haze; one
+  fixed stretch).
+- BULC-D's decrease patches are distinct and sharp-edged, and **correspond to**
+  patches that are green in 2024 and bare/brown in the 2025 or 2026 imagery;
+  the larger increase patches correspond to areas bare in 2024 and greener by
+  2026. The imagery shows visible differences that align with the detections;
+  it does not confirm a particular disturbance type or cause. The high
+  early-June share is consistent with patches that were already bare before
+  the 2026 season started. Not field-checked.
+

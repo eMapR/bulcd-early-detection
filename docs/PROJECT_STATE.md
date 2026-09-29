@@ -104,6 +104,17 @@ Two-repo split:
   park-wide. `outputs` now derives the UTM projection per area (Apostle results
   verified identical). Runs in ~1.5 min.
 
+- **2026-09-29: testsite notebook** (`notebooks/testsite_demo.ipynb`), same
+  structure and unchanged default config, study area = the supplied
+  FeatureCollection `projects/bulcd-python-rebuild/assets/testsite` (1 feature,
+  26.3 km², one contiguous polygon, western Oregon, no attributes). Precomputed
+  in 1.4 min: `projects/bulcd-python-rebuild/assets/testsite_bulcd/testsite_2026_v1_all`.
+  Parameter effects over the whole site. Adds a 2024 | 2025 | 2026 true-color
+  Sentinel-2 row (single clear dates, Sep 16 each year, one fixed stretch) via
+  `report.scene_row` / `render.show_map_row` / `render.TRUE_COLOR`. Runs in
+  ~1.5 min. Three demo notebooks now: `early_detection_demo.ipynb` (Apostle
+  Islands), `north_cascades_demo.ipynb`, `testsite_demo.ipynb`.
+
 ## Active problem
 
 Wednesday (2026-09-30) NPS demo prep. Notebook works end-to-end in both modes.

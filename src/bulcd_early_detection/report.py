@@ -45,14 +45,14 @@ def area_table(results, region: ee.Geometry) -> tuple[str, dict]:
     return "| Outcome | Area (km²) | Share of analyzed land |\n|---|---:|---:|\n" + "\n".join(rows), areas
 
 
-def confidence_map(results, area, frame, bbox, title, token, threshold, save_to=None):
-    png = render.download_png(render.confidence_layer(results, area, frame, threshold, enlarge_changes=True), frame, token)
+def confidence_map(results, area, frame, bbox, title, token, threshold, save_to=None, enlarge_changes=True):
+    png = render.download_png(render.confidence_layer(results, area, frame, threshold, enlarge_changes=enlarge_changes), frame, token)
     return render.show_map(png, title, bbox, colorbar=render.confidence_colorbar(threshold), save_to=save_to)
 
 
-def timing_map(results, area, frame, bbox, title, token, controls, save_to=None):
+def timing_map(results, area, frame, bbox, title, token, controls, save_to=None, enlarge_changes=True):
     png = render.download_png(
-        render.timing_layer(results, area, frame, controls.first_doy, controls.last_doy, enlarge_changes=True), frame, token
+        render.timing_layer(results, area, frame, controls.first_doy, controls.last_doy, enlarge_changes=enlarge_changes), frame, token
     )
     return render.show_map(
         png, title, bbox,
@@ -74,13 +74,27 @@ def reference_pair(area, frame, bbox, name: str, token: str, controls, out_dir=N
                         save_to=(Path(out_dir) / f"reference_{label}.png") if out_dir else None)
 
 
+def _scene_date(image_id: str) -> str:
+    return f"{image_id[:4]}-{image_id[4:6]}-{image_id[6:8]}"
+
+
 def scene_series(area, frame, bbox, name: str, token: str, scenes: list[tuple[str, str]], out_dir=None, dimensions=800):
     """Single-date Sentinel-2 false color, one map per (label, scene id)."""
     for label, image_id in scenes:
         png = render.download_png(render.scene_layer(area, image_id), frame, token, dimensions)
-        date = f"{image_id[:4]}-{image_id[4:6]}-{image_id[6:8]}"
+        date = _scene_date(image_id)
         render.show_map(png, f"{name}: Sentinel-2, {date} ({label})", bbox,
                         save_to=(Path(out_dir) / f"scene_{date}.png") if out_dir else None)
+
+
+def scene_row(area, frame, bbox, token: str, scenes: list[tuple[str, str]], suptitle: str = "", vis=render.TRUE_COLOR,
+              clip: bool = True, save_to=None, dimensions=900):
+    """Single-date Sentinel-2 scenes side by side at one extent and one
+    stretch: (title, scene id) pairs, e.g. [("2024", id), ("2025", id)].
+    The acquisition date is shown under each panel."""
+    pngs = [render.download_png(render.scene_layer(area, image_id, vis, clip), frame, token, dimensions) for _, image_id in scenes]
+    subtitles = [f"Sentinel-2, {_scene_date(image_id)}" for _, image_id in scenes]
+    return render.show_map_row(pngs, [t for t, _ in scenes], subtitles, bbox, suptitle, save_to)
 
 
 def pixel_journey(csv_path: Path, event_start: datetime.date, event_end: datetime.date, threshold: float = 0.5, save_to=None):

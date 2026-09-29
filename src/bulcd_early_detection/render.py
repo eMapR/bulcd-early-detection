@@ -159,12 +159,22 @@ def reference_layer(area: StudyArea, frame: ee.Geometry, start: str, end: str) -
     return img.blend(_boundary(area.geometry))
 
 
-def scene_layer(area: StudyArea, image_id: str) -> ee.Image:
-    """One Sentinel-2 scene (COPERNICUS/S2_SR_HARMONIZED system:index), same
-    false-color stretch as reference_layer() - for dates where a seasonal
-    median is spoiled by haze or smoke."""
-    img = ee.Image(f"COPERNICUS/S2_SR_HARMONIZED/{image_id}").select(["B12", "B8", "B4"])
-    return img.visualize(min=[0, 0, 0], max=[2500, 5000, 1500], gamma=1.2).blend(_boundary(area.geometry))
+FALSE_COLOR = {"bands": ["B12", "B8", "B4"], "min": [0, 0, 0], "max": [2500, 5000, 1500], "gamma": 1.2}
+# True color. One fixed stretch for every date, so years are directly comparable.
+TRUE_COLOR = {"bands": ["B4", "B3", "B2"], "min": [0, 0, 0], "max": [1400, 1400, 1400], "gamma": 1.3}
+
+
+def scene_layer(area: StudyArea, image_id: str, vis: dict = FALSE_COLOR, clip: bool = False) -> ee.Image:
+    """One Sentinel-2 scene (COPERNICUS/S2_SR_HARMONIZED system:index) - for
+    dates where a seasonal median is spoiled by haze or smoke, or to compare
+    specific dates. `clip` shows imagery only inside the study boundary."""
+    img = ee.Image(f"COPERNICUS/S2_SR_HARMONIZED/{image_id}")
+    if clip:
+        img = img.clip(area.geometry)
+    vis_img = img.visualize(**vis)
+    if clip:
+        vis_img = ee.Image.constant([245, 245, 243]).visualize(min=0, max=255).blend(vis_img)
+    return vis_img.blend(_boundary(area.geometry))
 
 
 def _km_per_px(bbox_degrees: list[float], width_px: int) -> float:
@@ -213,6 +223,28 @@ def show_map(
         if "ticks" in colorbar:
             cb.set_ticks(colorbar["ticks"], labels=colorbar.get("ticklabels"))
         cb.outline.set_visible(False)
+    fig.tight_layout()
+    if save_to is not None:
+        save_to.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_to, bbox_inches="tight")
+    plt.show()
+    return fig
+
+
+def show_map_row(pngs: list[bytes], titles: list[str], subtitles: list[str], bbox_degrees: list[float], suptitle: str = "", save_to: Path | None = None):
+    """Several same-extent map PNGs side by side, each with a large title
+    (e.g. the year) and a subtitle below (e.g. the acquisition date)."""
+    imgs = [plt.imread(io.BytesIO(p), format="png") for p in pngs]
+    h, w = imgs[0].shape[:2]
+    fig, axes = plt.subplots(1, len(imgs), figsize=(4.8 * len(imgs), 4.8 * h / w + 1.2), dpi=110, squeeze=False)
+    for ax, img, title, sub in zip(axes[0], imgs, titles, subtitles):
+        ax.imshow(img)
+        ax.set_axis_off()
+        ax.set_title(title, fontsize=15, color="#222")
+        ax.text(0.5, -0.03, sub, transform=ax.transAxes, ha="center", va="top", fontsize=10, color="#444")
+    scale_bar(axes[0][0], _km_per_px(bbox_degrees, w), w)
+    if suptitle:
+        fig.suptitle(suptitle, x=0.01, ha="left", fontsize=12)
     fig.tight_layout()
     if save_to is not None:
         save_to.parent.mkdir(parents=True, exist_ok=True)
