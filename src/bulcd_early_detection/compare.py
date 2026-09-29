@@ -52,15 +52,9 @@ class Variant:
     edit: Callable[[BULCDConfig], BULCDConfig | None] | None = None
 
 
-def _utm_crs(geometry: ee.Geometry) -> str:
-    lon, lat = geometry.centroid(1).coordinates().getInfo()
-    zone = int((lon + 180) // 6) + 1
-    return f"EPSG:{(32600 if lat >= 0 else 32700) + zone}"
-
-
 def pixel_grid(geometry: ee.Geometry) -> dict:
     """A 30 m UTM grid covering `geometry`, snapped to 30 m multiples."""
-    crs = _utm_crs(geometry)
+    crs = outputs.utm_crs(geometry)
     ring = geometry.transform(crs, 1).bounds(1, crs).coordinates().get(0).getInfo()
     xs, ys = [p[0] for p in ring], [p[1] for p in ring]
     x0 = np.floor(min(xs) / PIXEL_M) * PIXEL_M
@@ -161,7 +155,7 @@ def show_comparison(results: list[dict], title: str, save_to=None):
     ncols = min(n, 3)
     nrows = int(np.ceil(n / ncols))
     h, w = results[0]["classes"].shape
-    fig, axes = plt.subplots(nrows, ncols, figsize=(4.6 * ncols, 4.6 * nrows * h / w + 0.9), dpi=110, squeeze=False)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(4.6 * ncols, (4.6 * h / w + 0.7) * nrows + 0.6), dpi=110, squeeze=False)
     for ax in axes.flat[n:]:
         ax.set_axis_off()
     for ax, r in zip(axes.flat, results):

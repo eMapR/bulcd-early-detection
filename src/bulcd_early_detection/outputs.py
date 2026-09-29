@@ -22,9 +22,6 @@ from bulcd.engine import run_bulcd, study_area_mask
 
 WDPA_POLYGONS = "WCMC/WDPA/current/polygons"
 PARK_NAME = "Apostle Islands National Lakeshore"
-# UTM 15N - the park spans ~91.05W-90.39W. Area stats and exports use an
-# equal-distance projected grid rather than the config's EPSG:4326.
-PROJECTED_CRS = "EPSG:32615"
 SCALE = 30
 
 # Values of the "outcome" band. Water is masked (no value).
@@ -38,11 +35,22 @@ OUTCOME_LABELS = {
 OUTPUT_BANDS = ["outcome", "confidence", "first_detection_doy", "decrease", "unchanged", "increase"]
 
 
-def park_geometry(name: str = PARK_NAME) -> ee.Geometry:
+def park_geometry(name: str = PARK_NAME, designation: str | None = None) -> ee.Geometry:
     """Park boundary from the World Database on Protected Areas. Exact
-    name match - a substring match also picks up Australia's "Twelve
-    Apostles" marine park."""
-    return ee.FeatureCollection(WDPA_POLYGONS).filter(ee.Filter.eq("NAME", name)).geometry()
+    name match (a substring match for "Apostle" also picks up Australia's
+    "Twelve Apostles"); `designation` (WDPA DESIG_ENG) narrows further."""
+    fc = ee.FeatureCollection(WDPA_POLYGONS).filter(ee.Filter.eq("NAME", name))
+    if designation:
+        fc = fc.filter(ee.Filter.eq("DESIG_ENG", designation))
+    return fc.geometry()
+
+
+def utm_crs(geometry: ee.Geometry) -> str:
+    """UTM zone at the geometry's centroid. Area stats and exports use an
+    equal-distance projected grid rather than the config's EPSG:4326."""
+    lon, lat = geometry.centroid(100).coordinates().getInfo()
+    zone = int((lon + 180) // 6) + 1
+    return f"EPSG:{(32600 if lat >= 0 else 32700) + zone}"
 
 
 @dataclass
@@ -56,13 +64,23 @@ class StudyArea:
     aoi: dict
 
 
-def apostle_islands() -> StudyArea:
-    """The park's WDPA boundary. bulcd runs over its bounding box (the
-    boundary is a 22-part multipolygon, and aoi_coordinates takes one
-    ring); outputs are then clipped back to the boundary."""
-    park = park_geometry()
+def wdpa_park(key: str, name: str, designation: str | None = None) -> StudyArea:
+    """A park's WDPA boundary. bulcd runs over its bounding box
+    (aoi_coordinates takes one ring, and park boundaries are often
+    multipolygons); outputs are then clipped back to the boundary."""
+    park = park_geometry(name, designation)
     ring = park.bounds(1).coordinates().get(0).getInfo()
-    return StudyArea("apostle_islands", park, {"aoi_coordinates": ring})
+    return StudyArea(key, park, {"aoi_coordinates": ring})
+
+
+def apostle_islands() -> StudyArea:
+    return wdpa_park("apostle_islands", PARK_NAME)
+
+
+def north_cascades() -> StudyArea:
+    """North Cascades National Park only - WDPA lists Ross Lake and Lake
+    Chelan National Recreation Areas separately, so they're excluded."""
+    return wdpa_park("north_cascades", "North Cascades", "National Park")
 
 
 def from_asset(asset_id: str) -> StudyArea:
@@ -200,7 +218,7 @@ def export_study_area(controls, build, area: StudyArea, folder: str, run_name: s
         assetId=f"{folder}/{run_name}_all",
         region=area.geometry,
         scale=SCALE,
-        crs=PROJECTED_CRS,
+        crs=utm_crs(area.geometry),
         maxPixels=1e10,
     )
     task.start()
@@ -228,14 +246,14 @@ def load_precomputed(folder: str, run_name: str) -> tuple[ee.Image, list[dict]]:
     return collection.mosaic().select(OUTPUT_BANDS), props
 
 
-def area_summary(outcome: ee.Image, region: ee.Geometry) -> dict[str, float]:
+def area_summary(outcome: ee.Image, region: ee.Geometry, crs: str | None = None) -> dict[str, float]:
     """km^2 per outcome class inside `region` (water excluded)."""
     area = ee.Image.pixelArea().divide(1e6).addBands(outcome.select("outcome").toInt())
     groups = area.reduceRegion(
         reducer=ee.Reducer.sum().group(groupField=1, groupName="outcome"),
         geometry=region,
         scale=SCALE,
-        crs=PROJECTED_CRS,
+        crs=crs or utm_crs(region),
         maxPixels=1e10,
         tileScale=4,
     ).get("groups").getInfo()
@@ -243,7 +261,7 @@ def area_summary(outcome: ee.Image, region: ee.Geometry) -> dict[str, float]:
     return {OUTCOME_LABELS[k]: by_class.get(k, 0.0) for k in OUTCOME_LABELS}
 
 
-def early_detection_share(outcome: ee.Image, region: ee.Geometry, first_doy: int, days: int = 14) -> dict[str, float]:
+def early_detection_share(outcome: ee.Image, region: ee.Geometry, first_doy: int, days: int = 14, crs: str | None = None) -> dict[str, float]:
     """Changed area (km^2), and the share of it first detected within
     `days` of the season start - a high share means most mapped change
     was already present when the season's observations began, rather than
@@ -254,7 +272,7 @@ def early_detection_share(outcome: ee.Image, region: ee.Geometry, first_doy: int
     sums = (
         area.updateMask(changed).rename("changed")
         .addBands(area.updateMask(early).rename("early"))
-        .reduceRegion(ee.Reducer.sum(), region, SCALE, crs=PROJECTED_CRS, maxPixels=1e10, tileScale=4)
+        .reduceRegion(ee.Reducer.sum(), region, SCALE, crs=crs or utm_crs(region), maxPixels=1e10, tileScale=4)
         .getInfo()
     )
     total = sums.get("changed") or 0.0

@@ -713,3 +713,37 @@ Decrease km² (forest-masked):
   pixels per AOI. Nothing in the notebook or the precomputed result was
   changed. Next: a park-wide or larger-sample check (e.g. all shoreline
   cells), and whether an S2-inclusive baseline is feasible at park scale.
+
+## 2026-09-29 — North Cascades 2026 with the unchanged default config: widespread decrease, mostly mid/late season
+
+Default config exactly as Apostle Islands (nothing tuned). WDPA "North
+Cascades" National Park, 2,022 km². Whole-park export: 40.2 min, one task.
+
+| Outcome | km² | share of analyzed |
+|---|---:|---:|
+| Decrease | 375.76 | 31.6% |
+| Unchanged | 783.57 | 65.9% |
+| Increase | 29.97 | 2.5% |
+| Not analyzed (non-forest) | 832.86 | — |
+
+- Threshold 0.9 (same probabilities): decrease 326.45, increase 23.65 km².
+- Only ~1% of changed area was first detected in the first two weeks
+  (Apostle Islands: 76%), so the early-season sensor-mismatch pattern is not
+  the dominant signal here.
+- Five random forested 2 km boxes: 9–20% decrease each at 30 m.
+- **Do not use coarse-scale screening:** a 240 m `computePixels` run flagged ~79%
+  decrease; aggregated pixels have lower residual variability, inflating
+  z-scores. Not representative of 30 m behavior; discarded.
+- Comparison box (23.4 km², 48.83 N 121.19 W): clear single S2 dates show
+  green forest on 2026-07-15 and coherent red-magenta loss on 2026-09-06
+  (2025-09-10 matches 07-15). Box-mean NBR on clear dates ~0.49 before, ~0.20–
+  0.24 after. Heavy haze (blue reflectance 2,000–3,400 vs normal 250–800) from
+  ~Jul 20, 2026, which spoils seasonal composites. Cause unconfirmed.
+- Parameter effects there (decrease km²): default 13.29; threshold 0.9 10.00;
+  sensitivity 0.5 7.95; sensitivity 2.0 16.48; dampening 0.7 13.30; posterior
+  leveler 0.9 **16.28** (increases, unlike Devils Island's decrease: it lets
+  pixels that were normal until mid-July switch faster).
+- **Not investigated** (user direction): why so much decrease is mapped
+  park-wide. Candidates to test later: real 2026 change, haze/smoke in
+  monitoring imagery, harmonic-baseline fit in steep mountain forest.
+

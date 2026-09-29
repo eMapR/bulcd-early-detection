@@ -159,6 +159,14 @@ def reference_layer(area: StudyArea, frame: ee.Geometry, start: str, end: str) -
     return img.blend(_boundary(area.geometry))
 
 
+def scene_layer(area: StudyArea, image_id: str) -> ee.Image:
+    """One Sentinel-2 scene (COPERNICUS/S2_SR_HARMONIZED system:index), same
+    false-color stretch as reference_layer() - for dates where a seasonal
+    median is spoiled by haze or smoke."""
+    img = ee.Image(f"COPERNICUS/S2_SR_HARMONIZED/{image_id}").select(["B12", "B8", "B4"])
+    return img.visualize(min=[0, 0, 0], max=[2500, 5000, 1500], gamma=1.2).blend(_boundary(area.geometry))
+
+
 def _km_per_px(bbox_degrees: list[float], width_px: int) -> float:
     west, south, east, north = bbox_degrees
     return (east - west) * 111.32 * math.cos(math.radians((south + north) / 2)) / width_px

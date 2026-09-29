@@ -93,6 +93,17 @@ Two-repo split:
   area (draw/asset, off by default). Runs in ~2 min. Notebook defaults and
   the precomputed result are unchanged.
 
+- **2026-09-29: North Cascades notebook** (`notebooks/north_cascades_demo.ipynb`),
+  same structure and unchanged default config. Boundary: WDPA "North Cascades"
+  National Park (2,022 km², two units; Ross Lake/Lake Chelan NRAs excluded),
+  `outputs.north_cascades()`. Whole park precomputed as ONE export in 40.2 min:
+  `projects/bulcd-python-rebuild/assets/north_cascades/noca_2026_v1_all`.
+  Comparison box: `notebooks/aois/noca_comparison_box.geojson` (23.4 km², north
+  unit, 48.83 N 121.19 W). Reference imagery uses single clear S2 dates there
+  (seasonal composites are hazed from ~Jul 20, 2026) and a Sep 5–30 composite
+  park-wide. `outputs` now derives the UTM projection per area (Apostle results
+  verified identical). Runs in ~1.5 min.
+
 ## Active problem
 
 Wednesday (2026-09-30) NPS demo prep. Notebook works end-to-end in both modes.

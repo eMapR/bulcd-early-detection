@@ -60,15 +60,27 @@ def timing_map(results, area, frame, bbox, title, token, controls, save_to=None)
     )
 
 
-def reference_pair(area, frame, bbox, name: str, token: str, controls, out_dir=None, dimensions=render.THUMB_DIMENSIONS):
-    """Sentinel-2 false color for the later half of the season: last
-    baseline year ("before") and monitoring year ("after")."""
+def reference_pair(area, frame, bbox, name: str, token: str, controls, out_dir=None, dimensions=render.THUMB_DIMENSIONS,
+                   window: tuple[str, str] | None = None):
+    """Sentinel-2 false color median for the last baseline year ("before")
+    and the monitoring year ("after"). `window` = (MM-DD, MM-DD); default is
+    the later half of the season."""
     mid = controls.monitoring_start + (controls.monitoring_end - controls.monitoring_start) / 2
+    first, last = window or (f"{mid:%m-%d}", controls.season_end)
     for year, label in [(controls.baseline_last_year, "before"), (controls.monitoring_year, "after")]:
-        start, end = f"{year}-{mid:%m-%d}", f"{year}-{controls.season_end}"
+        start, end = f"{year}-{first}", f"{year}-{last}"
         png = render.download_png(render.reference_layer(area, frame, start, end), frame, token, dimensions)
         render.show_map(png, f"{name}: Sentinel-2, {start} to {end} ({label})", bbox,
                         save_to=(Path(out_dir) / f"reference_{label}.png") if out_dir else None)
+
+
+def scene_series(area, frame, bbox, name: str, token: str, scenes: list[tuple[str, str]], out_dir=None, dimensions=800):
+    """Single-date Sentinel-2 false color, one map per (label, scene id)."""
+    for label, image_id in scenes:
+        png = render.download_png(render.scene_layer(area, image_id), frame, token, dimensions)
+        date = f"{image_id[:4]}-{image_id[4:6]}-{image_id[6:8]}"
+        render.show_map(png, f"{name}: Sentinel-2, {date} ({label})", bbox,
+                        save_to=(Path(out_dir) / f"scene_{date}.png") if out_dir else None)
 
 
 def pixel_journey(csv_path: Path, event_start: datetime.date, event_end: datetime.date, threshold: float = 0.5, save_to=None):

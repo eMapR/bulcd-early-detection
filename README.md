@@ -29,6 +29,11 @@ Apostle Islands National Lakeshore (2026) as the example:
 Running it takes about 2 minutes. Drawing needs JupyterLab 4, Notebook 7
 or VS Code.
 
+`notebooks/north_cascades_demo.ipynb` is the same walkthrough for North
+Cascades National Park (WDPA boundary, excluding Ross Lake and Lake
+Chelan NRAs; precomputed asset), with a 23 km² comparison box in the
+north unit for the parameter-effects section. Same default settings.
+
 ```sh
 pip install -e ".[notebook]"      # into the same env as bulcd
 jupyter lab notebooks/early_detection_demo.ipynb
