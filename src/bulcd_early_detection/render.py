@@ -11,6 +11,8 @@ from __future__ import annotations
 import datetime
 import io
 import math
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -58,10 +60,12 @@ def download_png(image: ee.Image, region: ee.Geometry, token: str, dimensions: i
     for attempt in range(attempts):
         try:
             return urllib.request.urlopen(req).read()
-        except (ConnectionResetError, TimeoutError) as exc:
-            if attempt == attempts - 1:
+        except (ConnectionResetError, TimeoutError, urllib.error.HTTPError) as exc:
+            # Retry transient failures, including Earth Engine 5xx (e.g. 503 when busy); not 4xx.
+            if isinstance(exc, urllib.error.HTTPError) and exc.code < 500 or attempt == attempts - 1:
                 raise
             print(f"  download retry ({exc}) ...")
+            time.sleep(5 * (attempt + 1))
 
 
 def reference_composite(region: ee.Geometry, start: str, end: str) -> ee.Image:
@@ -166,7 +170,8 @@ YEAR_COLORS = ["#7c2d12", "#d4541a", "#f5a54a", "#fbd3a0"]
 NO_DETECTION_COLOR = "#bdbbb3"  # same gray as "unchanged"
 
 
-def detection_year_layer(timing: ee.Image, area: StudyArea, frame: ee.Geometry, years: list[int]) -> ee.Image:
+def detection_year_layer(timing: ee.Image, area: StudyArea, frame: ee.Geometry, years: list[int],
+                         enlarge_changes: bool = False) -> ee.Image:
     """First year P(decrease) crossed the threshold; analyzed land with no
     crossing in gray, non-analyzed land pale."""
     outcome = timing.select("outcome")
@@ -174,6 +179,8 @@ def detection_year_layer(timing: ee.Image, area: StudyArea, frame: ee.Geometry, 
         min=UNCHANGED, max=NOT_ANALYZED, palette=[NO_DETECTION_COLOR[1:], NO_DETECTION_COLOR[1:], OUTCOME_COLORS[NOT_ANALYZED][1:]]
     ).blend(outcome.updateMask(outcome.eq(DECREASE)).visualize(palette=[NO_DETECTION_COLOR[1:]]))
     year = timing.select("first_decrease_year")
+    if enlarge_changes:
+        year = _grow(year, "min")   # display only, as for the condition map; earliest year wins
     vis = year.visualize(min=years[0], max=years[-1], palette=[c[1:] for c in YEAR_COLORS[: len(years)]])
     return _layer(base.blend(vis), area, frame)
 
@@ -186,10 +193,20 @@ def detection_year_legend(years: list[int]) -> dict[str, str]:
     return legend
 
 
-def nbr_rgb_layer(nbr_images: list[ee.Image], area: StudyArea, frame: ee.Geometry, low: float, high: float) -> ee.Image:
+def _not_water() -> ee.Image:
+    return ee.Image("JRC/GSW1_4/GlobalSurfaceWater").select("occurrence").unmask(0).lte(50)
+
+
+def nbr_rgb_layer(nbr_images: list[ee.Image], area: StudyArea, frame: ee.Geometry, low: float, high: float,
+                  mask_water: bool = True) -> ee.Image:
     """Three years of NBR as R, G, B (oldest = red), one fixed stretch for
-    all channels, shown only inside the study boundary."""
-    rgb = ee.Image.cat(nbr_images).clip(area.geometry).visualize(min=[low] * 3, max=[high] * 3)
+    all channels, shown only inside the study boundary. Water (JRC, as in
+    BULC-D's own products) is left out: its low NBR says nothing about
+    vegetation and would dominate shorelines."""
+    rgb = ee.Image.cat(nbr_images).clip(area.geometry)
+    if mask_water:
+        rgb = rgb.updateMask(_not_water())
+    rgb = rgb.visualize(min=[low] * 3, max=[high] * 3)
     return ee.Image.constant([245, 245, 243]).visualize(min=0, max=255).blend(rgb).blend(_boundary(area.geometry))
 
 
@@ -223,7 +240,11 @@ def scene_layer(area: StudyArea, image_id: str, vis: dict = FALSE_COLOR, clip: b
     """One Sentinel-2 scene (COPERNICUS/S2_SR_HARMONIZED system:index) - for
     dates where a seasonal median is spoiled by haze or smoke, or to compare
     specific dates. `clip` shows imagery only inside the study boundary."""
-    img = ee.Image(f"COPERNICUS/S2_SR_HARMONIZED/{image_id}")
+    return image_layer(area, ee.Image(f"COPERNICUS/S2_SR_HARMONIZED/{image_id}"), vis, clip)
+
+
+def image_layer(area: StudyArea, img: ee.Image, vis: dict = TRUE_COLOR, clip: bool = False) -> ee.Image:
+    """Any Sentinel-2-scaled image (a scene or a composite) with a fixed stretch."""
     if clip:
         img = img.clip(area.geometry)
     vis_img = img.visualize(**vis)

@@ -243,7 +243,7 @@ For maintainers, only needed after changing settings. These start Earth Engine b
 PIXEL_TEXT = r"""
 ### {heading}
 
-The pixel in the cyan ring on the maps above. **How it was chosen:** {rule} It was chosen by that rule, not for how clean its curve looks.
+The pixel in the cyan ring on the maps above, followed through the three annual runs behind the first-detected-season map (fixed 2018–2023 baseline; each season starts from even odds). **How it was chosen:** {rule} It was chosen by that rule, not for how clean its curve looks.
 
 - **Top:** each clear observation's NBR (dots) against the value expected from the baseline (dashed line). Each dot is colored by the outcome that observation supports.
 - **Bottom:** BULC-D's probability of decrease as it updates, the 0.5 threshold, and the date it **first crossed** the threshold. Shading marks every period above the threshold.
@@ -255,8 +255,8 @@ This chart is the prototype of a planned interactive tool: **click a pixel on th
 
 PIXEL_CODE = r"""
 histories = {}
-for y in PIXEL_SEASONS:
-    season_controls = MonitoringControls(**{**dataclasses.asdict(controls), "monitoring_year": y, **PIXEL_BASELINE})
+for y in TIMING_YEARS:   # the three annual runs behind the first-detected-season map
+    season_controls = MonitoringControls(**{**dataclasses.asdict(controls), "monitoring_year": y, "baseline_last_year": 2023})
     histories[f"{y} season"] = pixel.pixel_history(build(season_controls, **AREA.aoi), *INSPECT_PIXEL)
 lon, lat = INSPECT_PIXEL
 pixel.plot_pixel_history(histories, controls.decision_threshold, title=f"Pixel at {lat:.5f} N, {abs(lon):.5f} W",
@@ -276,14 +276,14 @@ SITES = [
         area_expr='outputs.apostle_islands()',
         area_desc="Apostle Islands National Lakeshore: the park boundary from the World Database on Protected Areas (not an official NPS file).",
         folder="apostle_islands", run="apostle_2026_v1", pad=500, enlarge=True, out="apostle_islands_2026",
-        pixel=(-90.72668, 47.07517), pixel_seasons="[2026]", pixel_baseline="{}",
+        pixel=(-90.72623, 47.06706), timing_prefix="apostle", nbr_window=("07-01", "09-15"),
+        tc_text="True-color Sentinel-2 at the same extent, with **one fixed stretch** for all three years. At park scale no single date is clear everywhere, so each year is the **median of clear (Cloud Score+) observations from Aug 1 to Sep 15**, the same window every year.",
+        tc_code='report.annual_true_color_row(AREA, frame, bbox, token, TIMING_YEARS, ("08-01", "09-15"), suptitle="True color, same window and stretch each year", save_to=out_dir / "true_color_2024_2025_2026.png")',
         focus_expr='drawing.study_area("devils_island")', focus_name="Devils Island", focus_pad=100,
         export_time="about 20 minutes for the whole park",
-        reference_park='report.reference_pair(AREA, frame, bbox, "Apostle Islands", token, controls, out_dir)',
-        reference_park_text="Sentinel-2 false color (shortwave infrared / near infrared / red), independent of BULC-D: healthy forest green, bare or damaged ground orange-brown, water dark. Both images cover the later half of the season: the last baseline year, then this year.",
         focus_text="At park scale a 30 m pixel is smaller than a screen pixel, so here is one island at true resolution. **Devils Island**, the park's northernmost island, has the park's densest cluster of mapped decrease (about 39% of its analyzed land). The same extent is used in section 4.",
-        focus_ref='report.reference_pair(focus, focus_frame, focus_bbox, "Devils Island", token, controls, out_dir / "devils_island", dimensions=800, marker=INSPECT_PIXEL)',
-        pixel_rule="the pixel nearest the center of the largest decrease patch on Devils Island.",
+        focus_ref='report.annual_true_color_row(focus, focus_frame, focus_bbox, token, TIMING_YEARS, ("08-01", "09-15"), suptitle="Devils Island: true color, same window and stretch each year", save_to=out_dir / "devils_island_true_color.png", marker=INSPECT_PIXEL)',
+        pixel_rule="the pixel nearest the center of the largest patch on Devils Island that BULC-D first detected in 2026.",
         center="(46.95, -90.72)", zoom=11,
         notes=r"""
 ### What this run shows (prepared 2026-09-29)
@@ -292,7 +292,9 @@ SITES = [
 - **About three-quarters of it first crossed the threshold in the first two weeks of June.** So it is best read as "different from its 2018–2025 normal", not "changed this summer". **Unresolved; needs validation.**
   - Tests on small areas point to one likely contributor: the Landsat-only baseline combined with Sentinel-2 monitoring.
 - **Much of the decrease rings island shorelines and open wetlands, and is concentrated on Devils Island.**
-- **The inspected pixel** sits below its expected NBR all season. Its probability only just passed 0.5 on the first observation (June 5), fell back below it in late June, and crossed decisively in mid-July. "First detected" counts the first crossing, so it reads June 5.
+- **The first-detected-season map flags far more than the 2026 condition map.** Against the fixed 2018–2023 expectation, 64 km² (39% of analyzed forest) is detected in at least one season, 85% of it first in 2026. Against 2018–2025, only 2.3 km² is flagged. So the 2026 season departs strongly from 2018–2023 but only slightly from 2018–2025. **Why is unresolved and needs validation; read the timing map here with caution.**
+- **The NBR composite shows few clear year-to-year NBR drops in the park,** so it offers little independent check on timing here.
+- **The inspected pixel** (Devils Island) never crossed the threshold in the 2024 or 2025 runs and first crossed on June 5, 2026, the first observation of that season.
 - **Not field-checked;** no cause is assigned.
 """,
     ),
@@ -303,21 +305,23 @@ SITES = [
         area_expr='outputs.north_cascades()',
         area_desc="North Cascades National Park (2,022 km², two units): the World Database on Protected Areas boundary, excluding Ross Lake and Lake Chelan National Recreation Areas.",
         folder="north_cascades", run="noca_2026_v1", pad=500, enlarge=True, out="north_cascades_2026",
-        pixel=(-121.19198, 48.83181), pixel_seasons="[2026]", pixel_baseline="{}",
+        pixel=(-121.19697, 48.84079), timing_prefix="noca", nbr_window=("09-05", "09-30"),
+        tc_text="True-color Sentinel-2 at the same extent, with **one fixed stretch** for all three years. Each year is the **median of clear (Cloud Score+) observations from Sep 5 to 30**, the same window every year. Late July–August 2026 is heavily hazed here, so September is used for every year.",
+        tc_code='report.annual_true_color_row(AREA, frame, bbox, token, TIMING_YEARS, ("09-05", "09-30"), suptitle="True color, same window and stretch each year", save_to=out_dir / "true_color_2024_2025_2026.png")',
         focus_expr='drawing.study_area("noca_comparison_box")', focus_name="the North Cascades comparison area", focus_pad=100,
         export_time="about 40 minutes for the whole park",
-        reference_park='report.reference_pair(AREA, frame, bbox, "North Cascades", token, controls, out_dir, window=("09-05", "09-30"))',
-        reference_park_text="Sentinel-2 false color (shortwave infrared / near infrared / red), independent of BULC-D: healthy forest green, bare or damaged ground orange-brown to magenta, snow and ice cyan. Both images are **September 5–30** composites (last baseline year, then this year). Late July–August 2026 imagery here is heavily hazed, so only September is used.",
         focus_text="At park scale a 30 m pixel is smaller than a screen pixel, so here is one 5 km box at true resolution (23 km², north unit, 48.83° N 121.19° W). It holds the park's largest patch of 2026 vegetation loss visible in independent imagery. Because seasonal composites are hazed here, the reference uses **single clear dates**: the same time last year, the last clear date before the change, and a clear date after it. The change appears between July 15 and 20, 2026; its cause is not confirmed. The same extent is used in section 4.",
         focus_ref='report.scene_series(focus, focus_frame, focus_bbox, "Comparison area", token, [("same time last year", "20250910T190821_20250910T190823_T10UFV"), ("before, this season", "20260715T185921_20260715T190728_T10UFV"), ("after", "20260906T190921_20260906T191705_T10UFV")], out_dir / "comparison_area", marker=INSPECT_PIXEL)',
-        pixel_rule="the pixel nearest the center of the largest decrease patch in the comparison area.",
+        pixel_rule="the pixel nearest the center of the largest patch in the comparison area that BULC-D first detected in 2026.",
         center="(48.68, -121.14)", zoom=9,
         notes=r"""
 ### What this run shows (prepared 2026-09-29)
 
 - **Much more decrease is mapped than at Apostle Islands:** about 32% of analyzed forest (376 of 1,189 km²), plus 2.5% increase. About 833 km² (rock, ice, alpine) isn't analyzed.
 - **It is widespread, heaviest in the north unit, and mostly detected later in the season.** Only about 1% of it was first detected in early June.
-- **The comparison area shows a clearly visible change in clear single-date imagery,** starting between July 15 and 20, 2026. The inspected pixel there first crossed the threshold on September 9, after that change and with few clear observations because of haze.
+- **The comparison area shows a clearly visible change in clear single-date imagery,** starting between July 15 and 20, 2026. The inspected pixel there never crossed in the 2024 or 2025 runs and first crossed on September 9, 2026, after that change and with few clear observations because of haze.
+- **The first-detected-season map flags far more than the 2026 condition map:** 866 km² (73% of analyzed forest) is detected in at least one season against the fixed 2018–2023 expectation, 82% of it already in 2024.
+- **Its agreement with the NBR composite is poor.** Where NBR fell between 2025 and 2026, only 26% is first detected in 2026, and 47% is "already detected" in 2024. **Unresolved and needs validation; read the timing map here with caution.**
 - **Why so much decrease is flagged park-wide is unresolved and needs validation.** Possibilities include real 2026 change, haze or smoke, and how well the baseline model fits steep mountain forest. **Not field-checked;** no cause is assigned.
 """,
     ),
@@ -328,10 +332,12 @@ SITES = [
         area_expr='outputs.from_asset("projects/bulcd-python-rebuild/assets/testsite")',
         area_desc="The supplied FeatureCollection, used as is: one polygon, 26.3 km².",
         folder="testsite_bulcd", run="testsite_2026_v1", pad=150, enlarge=False, out="testsite_2026",
-        pixel=(-123.52488, 44.82438), pixel_seasons="[2024, 2025, 2026]", pixel_baseline='{"baseline_last_year": 2023}',
+        pixel=(-123.52488, 44.82438), timing_prefix="testsite", nbr_window=("07-01", "09-15"),
+        tc_text="True-color Sentinel-2 at the same extent, with **one fixed stretch** for all three years. The site is small enough for a single clear date each year: **September 16**, the same day of year each time, fully cloud-free over the site with low haze.",
+        tc_code='report.scene_row(AREA, frame, bbox, token, [("2024", "20240916T191031_20240916T191702_T10TDQ"), ("2025", "20250916T190929_20250916T191932_T10TDQ"), ("2026", "20260916T191031_20260916T191726_T10TDQ")], suptitle="True color, same date each year", save_to=out_dir / "true_color_2024_2025_2026.png", marker=INSPECT_PIXEL)',
         focus_expr='AREA', focus_name="the whole test site", focus_pad=150,
         export_time="about 2 minutes each at this size",
-        pixel_rule="the pixel nearest the center of the largest patch that BULC-D first detected in 2026 *and* whose NBR fell between 2025 and 2026. It's shown through the three annual runs behind the first-detected-season map (each starts from even odds).",
+        pixel_rule="the pixel nearest the center of the largest patch that BULC-D first detected in 2026 *and* whose NBR fell between 2025 and 2026.",
         center="(44.834, -123.552)", zoom=13,
         notes=r"""
 ### What this run shows (prepared 2026-09-29)
@@ -351,7 +357,7 @@ SITES = [
     ),
 ]
 
-TESTSITE_TIMING_TEXT = r"""
+TIMING_TEXT = r"""
 ### First detected season
 
 **Two products, two questions, two baselines:**
@@ -383,47 +389,40 @@ How to read it:
 - **As with any first crossing,** a pixel counts as detected even if its probability later drops back below the threshold.
 """
 
-TESTSITE_TIMING_CODE = r"""
+TIMING_CODE = r"""
 TIMING_YEARS = [2024, 2025, 2026]
-seasons = {y: outputs.load_precomputed(PRECOMPUTED_FOLDER, f"testsite_timing{y}_base2018_2023_v1", bands=outputs.TIMING_BANDS)[0]
+seasons = {y: outputs.load_precomputed(PRECOMPUTED_FOLDER, f"{TIMING_PREFIX}_timing{y}_base2018_2023_v1", bands=outputs.TIMING_BANDS)[0]
            for y in TIMING_YEARS}
 timing = outputs.combine_season_timing(seasons)
 report.detection_year_map(timing, AREA, frame, bbox, "First season BULC-D detected a decrease (vs 2018–2023 baseline)", token,
-                          TIMING_YEARS, save_to=out_dir / "first_detected_season.png", marker=INSPECT_PIXEL)
+                          TIMING_YEARS, save_to=out_dir / "first_detected_season.png", marker=INSPECT_PIXEL, enlarge_changes=ENLARGE)
 display(Markdown(report.detection_year_table(timing, AREA.geometry, TIMING_YEARS)))
 """
 
-TESTSITE_NBR_TEXT = r"""
+NBR_TEXT = r"""
 ### Temporal NBR composite: 2024 = red, 2025 = green, 2026 = blue
 
 One image in which **color shows how vegetation changed across the three years**. Each channel is one year's NBR (Sentinel-2 bands B8 and B12, the same index BULC-D uses). Bright means dense green vegetation; dark means bare or sparse.
 
 **Every year is processed identically:**
-- the median of clear observations from July 1 to September 15, with clouds removed using Cloud Score+;
-- the same 30 m grid;
+- the median of clear observations from **{window}**, with clouds removed using Cloud Score+;
+- the same grid;
 - **one fixed stretch** for all three channels.
 
-The colors are *spectral timing clues*: they describe how NBR changed, not confirmed disturbance dates or causes.
+Water is left out, as in the BULC-D products. The colors are *spectral timing clues*: they describe how NBR changed, not confirmed disturbance dates or causes.{extra}
 """
 
-TESTSITE_NBR_CODE = r"""
-low, high = report.nbr_rgb_map(AREA, frame, bbox, "NBR composite: R = 2024, G = 2025, B = 2026", token, TIMING_YEARS,
+NBR_CODE = r"""
+low, high = report.nbr_rgb_map(AREA, frame, bbox, "NBR composite: R = 2024, G = 2025, B = 2026", token, TIMING_YEARS, NBR_WINDOW,
                                save_to=out_dir / "nbr_rgb.png", marker=INSPECT_PIXEL)
-print(f"NBR stretch, all channels: {low:.2f} to {high:.2f} (2nd–98th percentile across the three years)")
+print(f"NBR stretch, all channels: {low:.2f} to {high:.2f} (2nd–98th percentile of land across the three years)")
 """
 
-TESTSITE_RGB_TEXT = r"""
-### What the landscape looked like: 2024 | 2025 | 2026
 
-True-color Sentinel-2 at the same extent, with **one fixed stretch** for all three years. Each year uses a single clear date, **September 16**, the same day of year each time. All three are fully cloud-free over the site with low haze.
-"""
-
-TESTSITE_RGB_CODE = r"""
-RGB_SCENES = [("2024", "20240916T191031_20240916T191702_T10TDQ"), ("2025", "20250916T190929_20250916T191932_T10TDQ"),
-              ("2026", "20260916T191031_20260916T191726_T10TDQ")]
-report.scene_row(AREA, frame, bbox, token, RGB_SCENES, suptitle="True color, same date each year",
-                 save_to=out_dir / "true_color_2024_2025_2026.png", marker=INSPECT_PIXEL);
-"""
+def _window_label(window: tuple[str, str]) -> str:
+    import datetime
+    f = lambda md: datetime.date.fromisoformat(f"2001-{md}").strftime("%b %-d")
+    return f"{f(window[0])} to {f(window[1])}"
 
 
 def _title_case_first(name: str) -> str:
@@ -482,8 +481,9 @@ frame, bbox = report.frame_for(AREA.geometry, pad_m={site['pad']})
 season = report.season_label(controls)
 out_dir = OUT / "{site['out']}"
 INSPECT_PIXEL = {site['pixel']}   # (lon, lat) of the pixel inspected below; cyan ring on the maps
-PIXEL_SEASONS = {site['pixel_seasons']}
-PIXEL_BASELINE = {site['pixel_baseline']}
+TIMING_PREFIX = "{site['timing_prefix']}"
+NBR_WINDOW = {site['nbr_window']}
+ENLARGE = {site['enlarge']}   # draw flagged pixels slightly enlarged (park-scale maps)
 focus = {site['focus_expr']}
 FOCUS_NAME = "{_title_case_first(site['focus_name'])}"
 focus_frame, focus_bbox = report.frame_for(focus.geometry, pad_m={site['focus_pad']})
@@ -492,34 +492,32 @@ focus_frame, focus_bbox = report.frame_for(focus.geometry, pad_m={site['focus_pa
            + ("\n\n*Flagged pixels (decrease or increase) are drawn slightly enlarged on park-wide maps so small patches stay visible. Area totals use the exact 30 m pixels.*" if site["enlarge"] else "")),
         code(f"""
 report.outcome_map(results, AREA, frame, bbox, f"2026 condition relative to expectation ({{season}})", token,
-                   save_to=out_dir / "condition_2026.png", enlarge_changes={site['enlarge']}{'' if site['enlarge'] else ', marker=INSPECT_PIXEL'})
+                   save_to=out_dir / "condition_2026.png", enlarge_changes=ENLARGE, marker=INSPECT_PIXEL)
 display(Markdown(report.area_table(results, AREA.geometry)[0]))
+early = outputs.early_detection_share(results, AREA.geometry, controls.first_doy)
+print(f"Of the {{early['changed_km2']:.2f}} km² flagged, {{100 * early['early_share']:.0f}}% first crossed the threshold in the "
+      "first two weeks of the 2026 season, i.e. was already different when monitoring began.")
 """),
         md("**Confidence:** the final probability of each flagged decrease or increase (darker is more certain). Only flagged pixels are colored."),
         code(f"""
 report.confidence_map(results, AREA, frame, bbox, "2026 condition: confidence in each flagged decrease or increase", token,
-                      controls.decision_threshold, save_to=out_dir / "confidence.png", enlarge_changes={site['enlarge']});
+                      controls.decision_threshold, save_to=out_dir / "confidence.png", enlarge_changes=ENLARGE);
 """),
+        md(TIMING_TEXT),
+        code(TIMING_CODE),
+        md(NBR_TEXT.format(window=_window_label(site["nbr_window"]), extra=site.get("nbr_extra", ""))),
+        code(NBR_CODE),
+        md("### What the landscape looked like: 2024 | 2025 | 2026\n\n" + site["tc_text"]),
+        code(site["tc_code"] + ";"),
     ]
-    if testsite:
-        cells += [md(TESTSITE_TIMING_TEXT), code(TESTSITE_TIMING_CODE), md(TESTSITE_NBR_TEXT), code(TESTSITE_NBR_CODE),
-                  md(TESTSITE_RGB_TEXT), code(TESTSITE_RGB_CODE)]
-    else:
+    if not testsite:
         cells += [
-            md("### First detected within the 2026 season\n\nThe date in 2026 when each flagged pixel's probability **first crossed** the threshold. A departure that begins during the season is usually detected a few weeks later. A pixel flagged **in the first days of the season** was most likely already different from normal when monitoring began. Neither is a verified disturbance date."),
-            code(f"""
-report.timing_map(results, AREA, frame, bbox, "First detected within the 2026 season", token, controls,
-                  save_to=out_dir / "first_detected_2026.png", enlarge_changes={site['enlarge']})
-timing = outputs.early_detection_share(results, AREA.geometry, controls.first_doy)
-print(f"Flagged decrease and increase: {{timing['changed_km2']:.2f}} km², of which {{100 * timing['early_share']:.0f}}% "
-      "first crossed the threshold in the first two weeks of the season.")
-"""),
-            md("### Satellite imagery: before and after\n\n" + site["reference_park_text"]),
-            code(site["reference_park"] + ";"),
             md("### Close-up: " + site["focus_name"].replace("the ", "", 1) + "\n\n" + site["focus_text"]),
             code(f"""
 report.outcome_map(results, focus, focus_frame, focus_bbox, f"{{FOCUS_NAME}}: 2026 condition relative to expectation", token,
                    save_to=out_dir / "focus_condition.png", enlarge_changes=False, dimensions=800, marker=INSPECT_PIXEL)
+report.detection_year_map(timing, focus, focus_frame, focus_bbox, f"{{FOCUS_NAME}}: first season a decrease was detected", token,
+                          TIMING_YEARS, save_to=out_dir / "focus_first_detected.png", marker=INSPECT_PIXEL, dimensions=800)
 {site['focus_ref']};
 """),
         ]
@@ -543,12 +541,11 @@ RUN_EXPORT = False
 
 if RUN_EXPORT:
     tasks = outputs.export_study_area(controls, build, AREA, PRECOMPUTED_FOLDER, PRECOMPUTED_RUN)"""
-    if testsite:
-        export += """
+    export += """
     for y in TIMING_YEARS:   # first-detected-season runs: one season each, fixed 2018-2023 baseline
         season_controls = MonitoringControls(**{**dataclasses.asdict(controls), "monitoring_year": y, "baseline_last_year": 2023})
         tasks += outputs.export_study_area(season_controls, build, AREA, PRECOMPUTED_FOLDER,
-                                           f"testsite_timing{y}_base2018_2023_v1", image_fn=outputs.detection_timing_image)"""
+                                           f"{TIMING_PREFIX}_timing{y}_base2018_2023_v1", image_fn=outputs.detection_timing_image)"""
     export += """
     print(outputs.wait_for(tasks))
 """

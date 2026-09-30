@@ -337,29 +337,44 @@ def decrease_year_summary(timing: ee.Image, region: ee.Geometry, years: list[int
 
 
 # ---------------------------------------------------------------- temporal NBR composite
-def annual_nbr(region: ee.Geometry, year: int, window: tuple[str, str] = ("07-01", "09-15"),
-               crs: str | None = None, cs_threshold: float = 0.6) -> ee.Image:
-    """Sentinel-2 NBR (B8, B12) for one year: median of Cloud Score+-masked
-    observations in the MM-DD `window`, on a fixed 30 m UTM grid. Same
-    processing every year, so years are directly comparable. Reference
-    imagery only - independent of BULC-D's evidence pipeline."""
+def _clear_s2(region: ee.Geometry, year: int, window: tuple[str, str], cs_threshold: float = 0.6) -> ee.ImageCollection:
+    """Sentinel-2 SR for one year's MM-DD window, Cloud Score+-masked."""
     csp = ee.ImageCollection("GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED")
-    col = (
+    return (
         ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
         .filterBounds(region)
         .filterDate(f"{year}-{window[0]}", f"{year}-{window[1]}")
         .linkCollection(csp, ["cs_cdf"])
         .map(lambda i: i.updateMask(i.select("cs_cdf").gte(cs_threshold)))
     )
-    nbr = col.map(lambda i: i.normalizedDifference(["B8", "B12"])).median()
-    return nbr.rename(f"nbr_{year}").reproject(crs=crs or utm_crs(region), scale=SCALE)
 
 
-def nbr_stretch(nbr_images: list[ee.Image], region: ee.Geometry, low: int = 2, high: int = 98) -> tuple[float, float]:
+def annual_true_color(region: ee.Geometry, year: int, window: tuple[str, str] = ("08-01", "09-15")) -> ee.Image:
+    """Sentinel-2 red/green/blue for one year: median of clear (Cloud Score+)
+    observations in the MM-DD window. For areas too large for one clear
+    date; same processing every year."""
+    return _clear_s2(region, year, window).select(["B4", "B3", "B2"]).median()
+
+
+def annual_nbr(region: ee.Geometry, year: int, window: tuple[str, str] = ("07-01", "09-15"),
+               crs: str | None = None, cs_threshold: float = 0.6, reproject: bool = True) -> ee.Image:
+    """Sentinel-2 NBR (B8, B12) for one year: median of Cloud Score+-masked
+    observations in the MM-DD `window`, on a fixed 30 m UTM grid. Same
+    processing every year, so years are directly comparable. Reference
+    imagery only - independent of BULC-D's evidence pipeline."""
+    col = _clear_s2(region, year, window, cs_threshold)
+    nbr = col.map(lambda i: i.normalizedDifference(["B8", "B12"])).median().rename(f"nbr_{year}")
+    # A fixed 30 m grid for analysis; skip for display over large areas, where
+    # forcing 30 m everywhere is very expensive (the map is drawn coarser anyway).
+    return nbr.reproject(crs=crs or utm_crs(region), scale=SCALE) if reproject else nbr
+
+
+def nbr_stretch(nbr_images: list[ee.Image], region: ee.Geometry, low: int = 2, high: int = 98,
+                scale: int = SCALE) -> tuple[float, float]:
     """ONE stretch for all years: the lowest `low` and highest `high`
     percentile across the years' NBR inside `region`."""
     stats = ee.Image.cat(nbr_images).reduceRegion(
-        ee.Reducer.percentile([low, high]), region, SCALE, maxPixels=1e10
+        ee.Reducer.percentile([low, high]), region, scale, maxPixels=1e10, bestEffort=True, tileScale=4
     ).getInfo()
     lows = [v for k, v in stats.items() if k.endswith(f"_p{low}") and v is not None]
     highs = [v for k, v in stats.items() if k.endswith(f"_p{high}") and v is not None]

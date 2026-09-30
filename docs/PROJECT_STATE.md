@@ -131,6 +131,23 @@ Two-repo split:
     composite (`outputs.annual_nbr`, `report.nbr_rgb_map`), true-color 2024 / 2025 / 2026.
   - Runtime about 3–5 min each.
 
+- **2026-09-29 (later): product suite synchronized across all three case studies**:
+  - Apostle Islands and North Cascades gained the first-detected-season product. Annual runs
+    `apostle_timing{y}_base2018_2023_v1` and `noca_timing{y}_base2018_2023_v1`, 25 min for all six.
+  - Temporal NBR composite (water masked; large areas skip the forced 30 m reprojection).
+  - Annual true color: clear-sky median composites for the parks
+    (`outputs.annual_true_color`, `report.annual_true_color_row`); single dates for testsite.
+  - Three-season pixel history for every site.
+- **Interactive prototype** (`notebooks/early_detection_interactive.ipynb` →
+  `app.EarlyDetectionApp`):
+  - Draw, saved area or FeatureCollection asset, with size guards.
+  - Expectation/monitoring sliders; advanced settings collapsed.
+  - Live condition, first-detected season, NBR composite and true-color layers on an ipyleaflet map.
+  - Click-to-inspect pixel history; on-demand sensitivity maps and response curves.
+  - Tested in a kernel on testsite: run ~2–2.5 min, inspect ~75–100 s.
+  - An Earth Engine request deadline (300 s) was added after unexplained 0%-CPU stalls in
+    automated kernel tests.
+
 ## Unresolved (needs validation; not being investigated in the notebook work)
 
 - **Apostle Islands early-June pattern:** ~76% of 2026 flagged area first crossed the
@@ -138,6 +155,11 @@ Two-repo split:
   Sentinel-2 monitoring mismatch (sensor-consistency experiment); not confirmed park-wide.
 - **North Cascades widespread decrease:** ~32% of analyzed forest flagged, mostly later in the
   season. Candidates: real 2026 change, haze/smoke, baseline-model fit in steep terrain.
+- **First-detected-season product at the parks:** against the fixed 2018–2023 expectation it flags
+  39% of Apostle Islands' analyzed forest (85% first in 2026) and 73% of North Cascades' (82% in 2024).
+  That is far more than the 2026 condition products (2018–2025 expectation). At North Cascades it
+  agrees poorly with the NBR composite. Looks systematic (baseline years / sensors / seasonal
+  conditions), not investigated. Decide whether to show it in the park notebooks.
 - **Superseded Earth Engine assets** (continuous 2024–2026 timing run, first season exports)
   are intentionally kept for now; clean up later.
 

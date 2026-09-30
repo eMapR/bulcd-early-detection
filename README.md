@@ -19,12 +19,24 @@ setting at a time); and trying it on your own area.
 
 | Notebook | Study area | Highlights |
 |---|---|---|
-| `notebooks/early_detection_demo.ipynb` | Apostle Islands National Lakeshore (WI) | 2026 condition map, within-season first-detected date, Devils Island close-up |
+| `notebooks/early_detection_demo.ipynb` | Apostle Islands National Lakeshore (WI) | Devils Island close-up |
 | `notebooks/north_cascades_demo.ipynb` | North Cascades National Park (WA) | Large mountain park; clear single-date imagery around a mid-season change |
-| `notebooks/testsite_demo.ipynb` | An Earth Engine FeatureCollection (26 km², western OR) | First-detected-season map (2024/2025/2026), temporal NBR composite, true-color 2024 / 2025 / 2026 |
+| `notebooks/testsite_demo.ipynb` | An Earth Engine FeatureCollection (26 km², western OR) | Small site; single clear dates for true color |
 
-All three include a pixel-history chart (observations vs. expectation,
-probability of decrease, first threshold crossing), with the pixel marked on the maps.
+All three produce the same product suite:
+- 2026 condition relative to expectation;
+- first-detected season (independent 2024 / 2025 / 2026 runs against a fixed 2018–2023
+  expectation) with the within-season date;
+- a temporal NBR composite;
+- annual true color;
+- a pixel-history chart (observations vs. expectation, probability of decrease, first
+  threshold crossing, periods above threshold), with the pixel marked on the maps;
+- one-at-a-time parameter sensitivity maps and response curves.
+
+**Interactive prototype:** `notebooks/early_detection_interactive.ipynb`. Draw or pick an area,
+set expectation and monitoring periods, run, and click pixels to inspect them. It's a
+functional prototype and specification for a future Early Detection interface; it runs live
+in Earth Engine.
 
 **Key terms.** A *decrease* in the 2026 condition map means the landscape is
 below its expected condition **during 2026**. It doesn't by itself mean the
@@ -91,6 +103,7 @@ Reusable pieces live in `src/bulcd_early_detection/`:
 | `compare.py` | Sensitivity maps and response charts |
 | `pixel.py` | Pixel history, usable from any (lon, lat) |
 | `drawing.py` | Drawn areas |
+| `app.py` | The interactive prototype (ipywidgets + ipyleaflet) |
 
 ## Relationship to BULC-D_rebuild
 

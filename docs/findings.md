@@ -845,3 +845,28 @@ Decrease km² as each parameter moves alone (notebook section 4):
   on June 5, fell back below it, then crossed decisively in mid-July. "First detected" follows
   the legacy first-change rule (a single crossing counts).
 
+## 2026-09-29 — First-detected-season product at park scale: widespread detections, poor NBR agreement (unresolved)
+
+Same method as testsite: independent 2024 / 2025 / 2026 runs, fixed 2018–2023 expectation, even-odds
+start, no parameter changes.
+
+| | Analyzed | Detected (any season) | 2024 | 2025 | 2026 |
+|---|---:|---:|---:|---:|---:|
+| Apostle Islands | 164.4 km² | 64.1 km² (39%) | 6.3 | 3.4 | 54.3 |
+| North Cascades | 1,189 km² | 865.5 km² (73%) | 707.6 | 87.5 | 70.5 |
+| testsite (for reference) | 24.2 km² | 7.2 km² (30%) | 3.7 | 1.4 | 2.0 |
+
+- **Both parks:** far more is flagged than by the 2026 condition products against 2018–2025
+  (Apostle 2.3 km², NOCA 376 km² decrease).
+- **Apostle Islands:** the 2026 season departs strongly from 2018–2023 but only slightly from
+  2018–2025; nearly all of Devils Island is "first detected in 2026". The NBR composite shows few
+  clear NBR drops in the park (<1 km² per category), so it can't check timing there.
+- **North Cascades:**
+  - 60% of analyzed forest is already "detected" in 2024.
+  - Where NBR fell between 2025 and 2026 (7.4 km²), only 26% is first detected in 2026 (47% in
+    2024).
+  - In the comparison box, the 2026 detections do cluster on the visible mid-July 2026 loss.
+- Reads as a systematic effect: expectation years, the Landsat-only baseline vs Sentinel-2
+  monitoring, or regional seasonal conditions. **Not investigated** (user direction).
+- Testsite, with distinct harvest patches, agrees well (94%/94%); the parks don't.
+

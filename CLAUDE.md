@@ -58,4 +58,6 @@ pytest                        # run tests (currently: dependency smoke test only
 - `tools/build_demo_notebooks.py` — generates all three demo notebooks
   (`notebooks/*.ipynb`) from one template. Edit it, not the notebooks
   (re-running overwrites hand edits), then re-execute the notebooks.
+  `notebooks/early_detection_interactive.ipynb` is NOT generated; it is a
+  short launcher for `src/bulcd_early_detection/app.py` (edit it directly).
 - `../BULC-D_rebuild/CLAUDE.md` — the detection engine's own docs.
