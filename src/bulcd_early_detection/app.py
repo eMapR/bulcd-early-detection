@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import dataclasses
 import datetime
+import math
+import urllib.request
 from pathlib import Path
 
 import ee
@@ -31,22 +33,55 @@ EXAMPLE_ASSETS = {"testsite (western Oregon, 26 km²)": "projects/bulcd-python-r
 MAX_TIMING_SEASONS = 3
 
 
-def _season_options() -> list[tuple[str, str]]:
-    """Weekly MM-DD choices from April through October."""
-    day, out = datetime.date(2025, 4, 1), []
-    while day <= datetime.date(2025, 10, 31):
-        out.append((f"{day:%b %-d}", f"{day:%m-%d}"))
-        day += datetime.timedelta(days=7)
-    for label, value in (("Jun 1", "06-01"), ("Sep 30", "09-30")):
-        if (label, value) not in out:
-            out.append((label, value))
-    return sorted(out, key=lambda o: o[1])
+_MONTHS = [(datetime.date(2025, m, 1).strftime("%b"), m) for m in range(1, 13)]
+_DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]   # Feb 29 left out: it doesn't exist most years
 
 
-def _tile(vis: ee.Image, name: str, visible: bool = True, opacity: float = 1.0) -> ipyleaflet.TileLayer:
-    layer = drawing.ee_tile_layer(vis, name, opacity)
-    layer.visible = visible
-    return layer
+class SeasonWindow:
+    """Start and end month/day pickers covering the whole year - any window BULC-D supports:
+    a start day and an end day within one calendar year, applied to every expectation and
+    monitoring year (a window can't wrap past Dec 31). `.value` is ("MM-DD", "MM-DD")."""
+
+    def __init__(self, start=(6, 1), end=(9, 30)):
+        self.start_month, self.start_day = self._pair("Season starts:", *start)
+        self.end_month, self.end_day = self._pair("ends:", *end)
+        self.widget = W.HBox([self.start_month, self.start_day, W.HTML("&nbsp;&nbsp;"), self.end_month, self.end_day])
+
+    @staticmethod
+    def _pair(label, month, day):
+        m = W.Dropdown(options=_MONTHS, value=month, description=label,
+                       style={"description_width": "170px" if label.startswith("Season") else "40px"},
+                       layout=W.Layout(width="260px" if label.startswith("Season") else "130px"))
+        d = W.Dropdown(options=list(range(1, _DAYS_IN_MONTH[month - 1] + 1)), value=day, layout=W.Layout(width="70px"))
+        def fit_days(ch):
+            keep = min(d.value, _DAYS_IN_MONTH[ch["new"] - 1])
+            d.options = list(range(1, _DAYS_IN_MONTH[ch["new"] - 1] + 1))
+            d.value = keep
+        m.observe(fit_days, "value")
+        return m, d
+
+    @property
+    def value(self) -> tuple[str, str]:
+        return (f"{self.start_month.value:02d}-{self.start_day.value:02d}", f"{self.end_month.value:02d}-{self.end_day.value:02d}")
+
+    def observe(self, handler, names="value"):
+        for w in (self.start_month, self.start_day, self.end_month, self.end_day):
+            w.observe(handler, names)
+
+
+def _tile_xyz(lon: float, lat: float, zoom: int) -> tuple[int, int, int]:
+    n = 2 ** zoom
+    x = int((lon + 180) / 360 * n)
+    y = int((1 - math.log(math.tan(math.radians(lat)) + 1 / math.cos(math.radians(lat))) / math.pi) / 2 * n)
+    return zoom, x, y
+
+
+def _check_tile(layer: ipyleaflet.TileLayer, lon: float, lat: float, zoom: int = 12) -> None:
+    """Fetches one tile over the study area; raises if Earth Engine can't serve it.
+    (Catches failures that would otherwise only show up as a blank layer.)"""
+    z, x, y = _tile_xyz(lon, lat, zoom)
+    url = layer.url.replace("{z}", str(z)).replace("{x}", str(x)).replace("{y}", str(y))
+    urllib.request.urlopen(url, timeout=180).read()
 
 
 class EarlyDetectionApp:
@@ -109,7 +144,7 @@ class EarlyDetectionApp:
         self.area_info.value = f"Using <b>{area.name}</b>: {km2:,.1f} km², {note}"
         w, s, e, n = size["bbox_degrees"]
         self.drawer.map.fit_bounds([[s, w], [n, e]])
-        self.run_btn.disabled = False
+        self.run_btn.disabled = not self.settings_ok
 
     # ------------------------------------------------------------------ step 2: settings
     def _build_settings_step(self):
@@ -118,9 +153,7 @@ class EarlyDetectionApp:
         self.expectation = W.IntRangeSlider(value=(2018, 2023), min=2016, max=2025, description="Expectation years:",
                                             style=style, layout=wide)
         self.monitoring_year = W.Dropdown(options=[2024, 2025, 2026], value=2026, description="Monitoring year:", style=style)
-        opts = _season_options()
-        self.window = W.SelectionRangeSlider(options=opts, index=(opts.index(("Jun 1", "06-01")), opts.index(("Sep 30", "09-30"))),
-                                             description="Seasonal window:", style=style, layout=wide)
+        self.window = SeasonWindow()
         self.sensitivity = W.FloatSlider(value=1.0, min=0.25, max=3.0, step=0.05, description="Sensitivity:", style=style, layout=wide)
         self.threshold = W.FloatSlider(value=0.5, min=0.5, max=0.99, step=0.01, description="Decision threshold:", style=style, layout=wide)
         self.timing = W.Checkbox(value=True, description="Also map the first-detected season", style={"description_width": "initial"})
@@ -147,6 +180,7 @@ class EarlyDetectionApp:
         self._describe()
         self.run_btn = W.Button(description="Run Early Detection", button_style="primary", icon="play", disabled=True,
                                 layout=W.Layout(width="220px"))
+        self._describe()
         self.run_btn.on_click(self._run)
         self.status = W.HTML()
 
@@ -159,9 +193,18 @@ class EarlyDetectionApp:
         (e0, e1), m = self.expectation.value, self.monitoring_year.value
         start, end = self.window.value
         fmt = lambda md: datetime.date.fromisoformat(f"2025-{md}").strftime("%b %-d")
+        problem = None
         if e1 >= m:
-            self.relationship.value = (f"<div style='padding:6px;border-left:4px solid #b00'><b>The expectation years must end "
-                                       f"before the monitoring year.</b> Now: {e0}–{e1} vs {m}.</div>")
+            problem = f"The expectation years must end before the monitoring year. Now: {e0}–{e1} vs {m}."
+        elif start >= end:
+            problem = (f"The season must start before it ends. Now: {fmt(start)} to {fmt(end)}. "
+                       "(A window can't wrap past Dec 31; each year's window runs within that calendar year.)")
+        self.settings_ok = problem is None
+        if hasattr(self, "run_btn"):
+            self.run_btn.disabled = not (self.settings_ok and self.area is not None)
+        if problem:
+            self.relationship.value = (f"<div style='padding:6px;border-left:4px solid #b00'><b>{problem}</b> "
+                                       "Run is disabled until this is fixed.</div>")
             return
         timing = (f"<br><b>First detected season:</b> separate runs for {', '.join(map(str, self._timing_years()))}, "
                   "each judged against the same expectation and starting from even odds."
@@ -195,7 +238,12 @@ class EarlyDetectionApp:
         self.results_map = ipyleaflet.Map(center=self.drawer.map.center, zoom=self.drawer.map.zoom,
                                           basemap=ipyleaflet.basemaps.Esri.WorldImagery, scroll_wheel_zoom=True)
         self.results_map.layout.height = "560px"
-        self.results_map.add(ipyleaflet.LayersControl(position="topright"))
+        # A layers panel instead of Leaflet's layer control: in ipyleaflet a raster layer's
+        # visible=False only sets opacity 0, so the Leaflet control could never reveal a
+        # layer that started hidden. Checking a layer here adds it on top; unchecking removes it.
+        self.layer_panel = W.VBox()
+        self.layer_rows: dict[str, dict] = {}
+        self.outline = None
         self.results_map.on_interaction(self._on_click)
         self.click_marker = ipyleaflet.CircleMarker(radius=8, color="#00e5ff", fill_opacity=0, weight=3)
         self.out = {k: W.Output() for k in ("Condition", "Timing", "Imagery", "Parameter behavior", "Pixel inspector")}
@@ -212,10 +260,45 @@ class EarlyDetectionApp:
 
     def _clear_results_layers(self):
         for layer in list(self.results_map.layers):
-            if isinstance(layer, ipyleaflet.TileLayer) and layer.name not in ("Esri.WorldImagery",) and layer.base is False:
+            if not getattr(layer, "base", False):
                 self.results_map.remove(layer)
-            if isinstance(layer, (ipyleaflet.GeoJSON, ipyleaflet.CircleMarker)):
+        self.layer_rows = {}
+        self.layer_panel.children = [W.HTML("<b>Map layers</b> (checked layers are drawn; the most recently checked is on top)")]
+
+    def _keep_on_top(self):
+        for layer in (self.outline, self.click_marker):
+            if layer is not None and layer in self.results_map.layers:
                 self.results_map.remove(layer)
+                self.results_map.add(layer)
+
+    def _toggle_layer(self, name: str, on: bool):
+        layer = self.layer_rows[name]["layer"]
+        if layer in self.results_map.layers:
+            self.results_map.remove(layer)
+        if on:
+            self.results_map.add(layer)
+            self._keep_on_top()
+
+    def _add_result_layer(self, name: str, build_vis, on: bool = False, opacity: float = 1.0, note: str = ""):
+        """Builds one Earth Engine layer, checks a tile over the study area, and adds a row to
+        the layers panel. A failure is shown on its row instead of being skipped silently."""
+        lon, lat = self.run_state["center"]
+        try:
+            layer = drawing.ee_tile_layer(build_vis(), name, opacity)
+            _check_tile(layer, lon, lat)
+        except Exception as exc:
+            reason = str(exc).splitlines()[0][:200]
+            self.layer_rows[name] = {"layer": None, "error": reason}
+            self.layer_panel.children += (W.HTML(f"<span style='color:#b00'>✗ {name}: failed to load ({reason})</span>"),)
+            return
+        box = W.Checkbox(value=on, description=name, indent=False, layout=W.Layout(width="330px"))
+        slider = W.FloatSlider(value=opacity, min=0, max=1, step=0.05, readout=False, layout=W.Layout(width="140px"))
+        W.dlink((slider, "value"), (layer, "opacity"))   # python-side, so it also holds without a live browser
+        box.observe(lambda ch, n=name: self._toggle_layer(n, ch["new"]), "value")
+        self.layer_rows[name] = {"layer": layer, "error": None}
+        self.layer_panel.children += (W.HBox([box, W.HTML("opacity"), slider, W.HTML(f"<i style='color:#666'>{note}</i>")]),)
+        if on:
+            self._toggle_layer(name, True)
 
     def _run(self, _=None):
         if self.area is None:
@@ -250,30 +333,38 @@ class EarlyDetectionApp:
         self.run_state = {"controls": controls, "config": config, "condition": condition, "timing": timing,
                           "timing_years": years, "img_years": img_years, "window": window}
 
-        # --- map layers (drawn lazily by Earth Engine as you pan/zoom)
+        # --- map layers (drawn lazily by Earth Engine as you pan/zoom); each is checked independently
         self._clear_results_layers()
-        w, s, e, n = outputs.aoi_size_report(area)["bbox_degrees"]
-        self.results_map.fit_bounds([[s, w], [n, e]])
-        self.results_map.add(ipyleaflet.GeoJSON(data=geom.getInfo(), name="Study area",
-                                                style={"color": "#ffd400", "weight": 2, "fillOpacity": 0}))
-        for y in img_years:
-            tc = outputs.annual_true_color(geom, y, window).clip(geom).visualize(**render.TRUE_COLOR)
-            self.results_map.add(_tile(tc, f"True color {y}", visible=False))
+        w, s_, e, n = outputs.aoi_size_report(area)["bbox_degrees"]
+        self.run_state["center"] = ((w + e) / 2, (s_ + n) / 2)
+        self.results_map.fit_bounds([[s_, w], [n, e]])
+        self.outline = ipyleaflet.GeoJSON(data=geom.getInfo(), name="Study area",
+                                          style={"color": "#ffd400", "weight": 2, "fillOpacity": 0})
+        self.results_map.add(self.outline)
+        self.status.value = "Preparing map layers…"
         large = outputs.aoi_size_report(area)["area_km2"] > outputs.TESTED_LIVE_KM2
-        nbrs = [outputs.annual_nbr(geom, y, window, reproject=not large) for y in img_years]
-        self.status.value = "Computing the NBR composite stretch…"
-        land = [n_.updateMask(render._not_water()) for n_ in nbrs]
-        low, high = outputs.nbr_stretch(land, geom, scale=120 if large else outputs.SCALE)
-        nbr_vis = ee.Image.cat(land).clip(geom).visualize(min=[low] * 3, max=[high] * 3)
-        self.results_map.add(_tile(nbr_vis, f"NBR composite R={img_years[0]} G={img_years[1]} B={img_years[2]}", visible=False))
+        low = high = None
+        for y in img_years:
+            self._add_result_layer(f"True color {y}", lambda y=y: outputs.annual_true_color(geom, y, window).clip(geom)
+                                   .visualize(**render.TRUE_COLOR), note="reference imagery")
+        def nbr_vis():
+            nonlocal low, high
+            nbrs = [outputs.annual_nbr(geom, y, window, reproject=not large) for y in img_years]
+            land = [n_.updateMask(render._not_water()) for n_ in nbrs]
+            low, high = outputs.nbr_stretch(land, geom, scale=120 if large else outputs.SCALE)
+            return ee.Image.cat(land).clip(geom).visualize(min=[low] * 3, max=[high] * 3)
+        self.status.value = "Preparing the NBR composite…"
+        self._add_result_layer(f"NBR composite R={img_years[0]} G={img_years[1]} B={img_years[2]}", nbr_vis,
+                               note="spectral timing clues")
         if timing is not None:
-            yv = timing.select("first_decrease_year").visualize(min=years[0], max=years[-1],
-                                                                palette=[c[1:] for c in render.YEAR_COLORS[:len(years)]])
-            self.results_map.add(_tile(yv, "First detected season (decrease)", visible=False))
+            self._add_result_layer("First detected season (decrease)", lambda: timing.select("first_decrease_year").visualize(
+                min=years[0], max=years[-1], palette=[c[1:] for c in render.YEAR_COLORS[:len(years)]]),
+                note="see Timing tab for the legend")
         outcome = condition.select("outcome")
-        cv = outcome.updateMask(outcome.lte(outputs.INCREASE)).visualize(
-            min=0, max=2, palette=[render.OUTCOME_COLORS[k][1:] for k in (outputs.DECREASE, outputs.UNCHANGED, outputs.INCREASE)])
-        self.results_map.add(_tile(cv, f"Condition {controls.monitoring_year}", opacity=0.85))
+        self.status.value = "Preparing the condition layer…"
+        self._add_result_layer(f"Condition {controls.monitoring_year}", lambda: outcome.updateMask(outcome.lte(outputs.INCREASE)).visualize(
+            min=0, max=2, palette=[render.OUTCOME_COLORS[k][1:] for k in (outputs.DECREASE, outputs.UNCHANGED, outputs.INCREASE)]),
+            on=True, opacity=0.85, note="see Condition tab for the legend")
 
         # --- tabs
         token = render.auth_token()
@@ -294,29 +385,35 @@ class EarlyDetectionApp:
                                  "and the monitoring year."))
             else:
                 self.status.value = "Summarizing first-detected seasons…"
-                display(Markdown(f"**First detected season**: the earliest of {', '.join(map(str, years))} in which "
-                                 "BULC-D's probability of decrease crossed the threshold. Each season is a separate run "
-                                 "against the same expectation, starting from even odds. It shows detection timing, not a "
-                                 f"verified disturbance date; the first season ({years[0]}) also gathers everything that "
-                                 "was already different by then. Turn on the layer in the map's layer control."))
+                display(Markdown(f"**First detected season**: the earliest of {', '.join(map(str, years))} that BULC-D "
+                                 "finished classified as decrease (a crossing it later retracted doesn't count); the date is "
+                                 "the first crossing within that season. Each season is a separate run against the same "
+                                 "expectation, starting from even odds. It shows detection timing, not a verified disturbance "
+                                 f"date; the first season ({years[0]}) also gathers everything already different by then. "
+                                 "Turn the layer on in the Map layers panel."))
                 display(Markdown(report.detection_year_table(timing, geom, years)))
                 display(W.HTML(render_legend(render.detection_year_legend(years))))
         with self.out["Imagery"]:
             self.status.value = "Drawing annual true color…"
             display(Markdown("Reference imagery, independent of BULC-D. The true-color and NBR-composite layers can also "
-                             "be switched on in the map's layer control, over the condition map."))
+                             "be turned on in the Map layers panel above the results map."))
             report.annual_true_color_row(area, frame, bbox, token, img_years, window,
                                          suptitle="True color: clear-sky median, same window and stretch each year")
+            stretch = f"one stretch {low:.2f}–{high:.2f}" if low is not None else "layer failed to load"
             display(Markdown(f"**NBR composite** (R = {img_years[0]}, G = {img_years[1]}, B = {img_years[2]}; "
-                             f"one stretch {low:.2f}–{high:.2f}): colors are spectral timing clues, not confirmed "
-                             "disturbance dates."))
+                             f"{stretch}): colors are spectral timing clues, not confirmed disturbance dates."))
             display(W.HTML(render_legend(render.nbr_rgb_legend(img_years))))
         with self.out["Parameter behavior"]:
             display(Markdown("Optional, and slower: each runs BULC-D several times on the whole area. Only one "
                              "parameter changes at a time; everything else stays as set above."))
             display(W.HBox([self.sens_btn, self.resp_btn]))
-        self.status.value = ("<b>Done.</b> Switch layers with the control at the top right of the results map, and "
-                             "click any pixel to inspect it.")
+        loaded = [k for k, v in self.layer_rows.items() if v["error"] is None]
+        failed = {k: v["error"] for k, v in self.layer_rows.items() if v["error"] is not None}
+        layers_msg = (f"Map layers: all {len(loaded)} loaded." if not failed else
+                      f"<b style='color:#b00'>Map layers: {len(loaded)} of {len(self.layer_rows)} loaded.</b> "
+                      + "; ".join(f"{k}: failed to load ({v})" for k, v in failed.items()))
+        self.status.value = ("<b>Analysis complete.</b> " + layers_msg +
+                             " Turn layers on in the Map layers panel; click any pixel to inspect it.")
         self.tabs.selected_index = 0
 
     # ------------------------------------------------------------------ parameter behavior (on demand)
@@ -372,8 +469,13 @@ class EarlyDetectionApp:
                 pixel.plot_pixel_history(histories, state["controls"].decision_threshold,
                                          title=f"Pixel at {lat:.5f} N, {abs(lon):.5f} {'W' if lon < 0 else 'E'}")
                 for label, rows in histories.items():
-                    crossed = pixel.first_crossing(rows, state["controls"].decision_threshold)
-                    print(f"{label}: " + (f"first crossed the threshold on {crossed}" if crossed else "never crossed the threshold"))
+                    thr = state["controls"].decision_threshold
+                    crossed = pixel.first_crossing(rows, thr)
+                    finished = rows[-1]["decrease"] > thr
+                    print(f"{label}: " + (f"first crossed the threshold on {crossed}, " +
+                                          ("finished the season as decrease (counts as detected)" if finished
+                                           else "finished below the threshold (does not count)")
+                                          if crossed else "never crossed the threshold"))
         self.status.value = "<b>Done.</b> Click another pixel to compare."
         return histories
 
@@ -384,10 +486,11 @@ class EarlyDetectionApp:
                         self.drawer.map, self.area_source, W.HBox([self.save_name, self.saved_area]), self.asset_id,
                         self.use_area_btn, self.area_info])
         step2 = W.VBox([W.HTML("<h3>2. Expectation and monitoring</h3>"), self.expectation, self.monitoring_year,
-                        self.window, self.relationship, self.sensitivity,
+                        self.window.widget, self.relationship, self.sensitivity,
                         W.HTML("&nbsp;&nbsp;higher flags smaller departures from normal"), self.threshold,
                         W.HTML("&nbsp;&nbsp;how sure BULC-D must be before flagging"), self.timing, self.advanced])
-        step3 = W.VBox([W.HTML("<h3>3. Run and inspect</h3>"), self.run_btn, self.status, self.results_map, self.tabs])
+        step3 = W.VBox([W.HTML("<h3>3. Run and inspect</h3>"), self.run_btn, self.status, self.layer_panel,
+                        self.results_map, self.tabs])
         display(W.VBox([step1, step2, step3]))
 
 

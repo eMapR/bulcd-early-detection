@@ -40,8 +40,10 @@ in Earth Engine.
 
 **Key terms.** A *decrease* in the 2026 condition map means the landscape is
 below its expected condition **during 2026**. It doesn't by itself mean the
-disturbance happened in 2026. *First detected* is when BULC-D's evidence first
-crossed the decision threshold: detection timing, not a verified disturbance date.
+disturbance happened in 2026. *First detected season* is the first monitoring
+season that BULC-D **finished** classified as decrease (a crossing it later
+retracted doesn't count), dated by the first threshold crossing within that
+season: detection timing, not a verified disturbance date.
 
 ```sh
 pip install -e ".[notebook]"      # into the same env as bulcd

@@ -148,6 +148,34 @@ Two-repo split:
   - An Earth Engine request deadline (300 s) was added after unexplained 0%-CPU stalls in
     automated kernel tests.
 
+- **2026-09-30: "first detected" is now end-of-season-confirmed (rule B)**
+  (`combine_season_timing(confirmed=True)`, the default). A season counts only if it ends as
+  decrease; the date is that season's first crossing. Raw first crossing is still available
+  (`confirmed=False`) as a possible future diagnostic/alert product (not built). All notebooks were
+  re-executed with it, and the pixel charts use the corrected product-grid sampling.
+
+- **2026-09-30: interactive app fixes:**
+  - **Layers never displayed** (root cause): in ipyleaflet a raster layer's `visible=False` only sets
+    opacity 0, so Leaflet's layer control could never reveal the true-color, NBR or timing layers.
+    Condition (added last, 85% opaque) also covered anything beneath. Replaced with a Map layers
+    panel: checking a layer adds it on top, and each layer has an opacity slider.
+  - **Failures are now visible:** each layer is built and tile-checked independently; failures show
+    in red and in the status line ("Analysis complete. Map layers: N of M loaded …").
+  - **Seasonal window:** was limited to weekly steps from Apr 1 to Oct 31. Now full-year start/end
+    month-day pickers (Feb 29 excluded), with validation (start before end, no wrap past Dec 31;
+    Run disabled with a message otherwise). The same window applies to expectation and monitoring.
+
+## Reproducibility notes
+
+- **Earth Engine input imagery can change between runs.** Late-September 2026 Sentinel-2 scenes over
+  North Cascades were re-ingested (EE version 2026-09-30 04:20 UTC) between two exports of
+  identical configurations. The outputs differed in 126 pixels (0.11 km²). Compare runs exported
+  close together, re-export the comparison baseline alongside new variants (as the sensor
+  experiment does), and note that a monitoring season still in progress keeps changing.
+- **Leap-year window shift:** `MonitoringControls` computes the seasonal day-of-year window from the
+  monitoring year, so 2024 runs use days 153–274 in every year (Jun 2 – Oct 1 in non-leap baseline
+  years) while 2025/2026 runs use 152–273. A one-day difference; noted, not changed.
+
 ## Unresolved (needs validation; not being investigated in the notebook work)
 
 - **Apostle Islands early-June pattern:** ~76% of 2026 flagged area first crossed the

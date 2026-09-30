@@ -969,3 +969,69 @@ default grid vs 0.78 on the product grid, ~10 m apart). It now samples on the pr
 four example pixels then match their asset crossing dates and end states exactly. Pixel charts
 already embedded in the committed notebooks were made before this fix.
 
+## 2026-09-30 — North Cascades sensor experiment: the mixed L8-only expectation / L8+L9+S2 monitoring setup inflates the "2024" class
+
+`experiments/noca_sensor_timing.py`. Everything identical except the sensor sets:
+- fixed 2018–2023 expectation;
+- independent 2024/2025/2026 seasons from even odds;
+- same window, masks, sensitivity, threshold, matrix, dampening, leveler and grid.
+
+The current setup was re-run too, so all 15 exports read the same input versions.
+
+First detected, rule B (end-of-season confirmed), km²:
+
+| Expectation → monitoring | 2024 | 2025 | 2026 | Never | End-of-season decrease 2024 / 2025 / 2026 |
+|---|---:|---:|---:|---:|---|
+| **L8 → L8+L9+S2 (current)** | **387.8** | 112.0 | 56.6 | 632.9 | 387.8 / 458.7 / 454.2 |
+| L8 → L8 | 157.0 | 142.7 | 78.1 | 811.6 | 157.0 / 228.1 / 245.9 |
+| L8 → L8+L9 | 122.3 | 87.4 | 87.8 | 891.8 | 122.3 / 166.2 / 238.7 |
+| S2 → S2 | 92.3 | 97.4 | 65.4 | 934.2 | 92.3 / 182.6 / 231.2 |
+| L8+S2 → L8+L9+S2 | 91.3 | 87.2 | 60.5 | 950.3 | 91.3 / 170.5 / 213.0 |
+
+- **Every consistent setup cuts the 2024 class by 60–76%.** The setups with Sentinel-2 in both periods are lowest (~91 km²).
+- **Fate of the current 388 km² "2024" class** under consistent setups: only 86–109 km² stays 2024,
+  12–66 km² moves to 2025/2026, and 189–253 km² is never detected.
+- **What remains in 2024 is spatially coherent.** A few large, sharp-edged patches in the north unit
+  persist in every setup: candidates for real change present by 2024 (not verified against
+  imagery). The diffuse scattered 2024 detections are what the mixed setup adds.
+- **Comparison box (rule B, 2024):** 6.24 km² (current) → 0.41–0.43 km² with S2 in both periods, and
+  1.1–2.2 km² Landsat-only. 2026 detections cluster on the visible 2026 loss in the S2-consistent
+  setups.
+- **Observation counts** over the comparison box, per season:
+
+  | Sensor | Jun–Sep scenes | June scenes |
+  |---|---:|---:|
+  | Landsat 8 | ~7 | 1–2 |
+  | Landsat 9 | ~7 | ~2 |
+  | Sentinel-2 | 48–60 | 12–15 |
+
+  In the current setup most monitoring observations are S2, judged against an L8-only expectation.
+  Landsat-only runs are sparse: one example pixel had a single clear 2024 observation.
+- **Rule A (any crossing) still shows transients in Landsat-only runs** (L8 → L8: 217 km² "2024" under
+  rule A vs 157 under rule B), so transient early-season crossings are not purely an S2 effect. The
+  large inflation of the confirmed (rule B) 2024 class is associated with mixing S2 monitoring with an
+  L8-only expectation.
+- **Practical limitations:**
+  - Configs with S2 in the expectation ran fine as batch exports, but `pixel_history` for them hits
+    "User memory limit exceeded" interactively (the same harmonic-fit limit that originally forced
+    the L8-only baseline).
+  - Park-wide timing maps with display enlargement also exceeded memory in this session.
+- **Not adopted, nothing tuned.** Choosing a sensor configuration is a separate decision.
+
+**Conclusion (2026-09-30).** Using a Landsat 8-only expectation with L8+L9+Sentinel-2 monitoring
+substantially inflates the confirmed 2024 detection class at North Cascades. Consistent sensor
+configurations reduce that class by roughly 60–76%. Because Sentinel-2 supplies far more monitoring
+observations than either Landsat sensor, the current mixed configuration effectively compares a
+Sentinel-2-dominated monitoring series against a Landsat 8-only expectation. This indicates a
+**sensor-consistency problem**, but it does **not** yet establish the best production sensor
+configuration; the default configuration is unchanged.
+
+Also:
+- **Transient early-season crossings still occur in Landsat-only runs,** so sensor mismatch does not
+  explain all early-season behavior.
+- **Some sharp-edged North Cascades 2024 patches persist in every sensor configuration** and need
+  independent imagery/reference inspection before interpretation.
+- **S2-inclusive expectation configurations hit the known Earth Engine memory limitation:**
+  - interactively, for pixel histories and live computation;
+  - at park scale they completed only as batch exports.
+

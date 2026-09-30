@@ -248,7 +248,7 @@ The pixel in the cyan ring on the maps above, followed through the three annual 
 - **Top:** each clear observation's NBR (dots) against the value expected from the baseline (dashed line). Each dot is colored by the outcome that observation supports.
 - **Bottom:** BULC-D's probability of decrease as it updates, the 0.5 threshold, and the date it **first crossed** the threshold. Shading marks every period above the threshold.
 
-"First detected" means the *first* crossing. The probability can drop back below the threshold afterward and cross again later; the shading shows whether it did.
+The first-detected season is the first season that **finishes** above the threshold; the date is when the probability first crossed it in that season. A season where the probability crosses and then falls back (shading that ends before the season does) doesn't count.
 
 This chart is the prototype of a planned interactive tool: **click a pixel on the map to see its history.** Set `INSPECT_PIXEL` (in the section 3 setup cell) to any (lon, lat) in the study area to inspect a different location.
 """
@@ -263,7 +263,10 @@ pixel.plot_pixel_history(histories, controls.decision_threshold, title=f"Pixel a
                          save_to=out_dir / "pixel_history.png")
 for label, rows in histories.items():
     crossed = pixel.first_crossing(rows, controls.decision_threshold)
-    print(f"{label}: {'first crossed the threshold on ' + str(crossed) if crossed else 'never crossed the threshold'} "
+    finished = rows[-1]["decrease"] > controls.decision_threshold
+    status = ("finished the season as decrease (counts as detected)" if finished
+              else "finished the season below the threshold (does not count)" if crossed else "")
+    print(f"{label}: {'first crossed the threshold on ' + str(crossed) + ', ' + status if crossed else 'never crossed the threshold'} "
           f"({sum(r['zscore'] is not None for r in rows)} clear observations)")
 """
 
@@ -276,14 +279,14 @@ SITES = [
         area_expr='outputs.apostle_islands()',
         area_desc="Apostle Islands National Lakeshore: the park boundary from the World Database on Protected Areas (not an official NPS file).",
         folder="apostle_islands", run="apostle_2026_v1", pad=500, enlarge=True, out="apostle_islands_2026",
-        pixel=(-90.72623, 47.06706), timing_prefix="apostle", nbr_window=("07-01", "09-15"),
+        pixel=(-90.72858, 47.07683), timing_prefix="apostle", nbr_window=("07-01", "09-15"),
         tc_text="True-color Sentinel-2 at the same extent, with **one fixed stretch** for all three years. At park scale no single date is clear everywhere, so each year is the **median of clear (Cloud Score+) observations from Aug 1 to Sep 15**, the same window every year.",
         tc_code='report.annual_true_color_row(AREA, frame, bbox, token, TIMING_YEARS, ("08-01", "09-15"), suptitle="True color, same window and stretch each year", save_to=out_dir / "true_color_2024_2025_2026.png")',
         focus_expr='drawing.study_area("devils_island")', focus_name="Devils Island", focus_pad=100,
         export_time="about 20 minutes for the whole park",
         focus_text="At park scale a 30 m pixel is smaller than a screen pixel, so here is one island at true resolution. **Devils Island**, the park's northernmost island, has the park's densest cluster of mapped decrease (about 39% of its analyzed land). The same extent is used in section 4.",
         focus_ref='report.annual_true_color_row(focus, focus_frame, focus_bbox, token, TIMING_YEARS, ("08-01", "09-15"), suptitle="Devils Island: true color, same window and stretch each year", save_to=out_dir / "devils_island_true_color.png", marker=INSPECT_PIXEL)',
-        pixel_rule="the pixel nearest the center of the largest patch on Devils Island that BULC-D first detected in 2026.",
+        pixel_rule="the pixel nearest the center of the largest patch on Devils Island first detected in 2026.",
         center="(46.95, -90.72)", zoom=11,
         notes=r"""
 ### What this run shows (prepared 2026-09-29)
@@ -292,9 +295,10 @@ SITES = [
 - **About three-quarters of it first crossed the threshold in the first two weeks of June.** So it is best read as "different from its 2018–2025 normal", not "changed this summer". **Unresolved; needs validation.**
   - Tests on small areas point to one likely contributor: the Landsat-only baseline combined with Sentinel-2 monitoring.
 - **Much of the decrease rings island shorelines and open wetlands, and is concentrated on Devils Island.**
-- **The first-detected-season map flags far more than the 2026 condition map.** Against the fixed 2018–2023 expectation, 64 km² (39% of analyzed forest) is detected in at least one season, 85% of it first in 2026. Against 2018–2025, only 2.3 km² is flagged. So the 2026 season departs strongly from 2018–2023 but only slightly from 2018–2025. **Why is unresolved and needs validation; read the timing map here with caution.**
+- **First detected season:** 3.7 km² in total, split 2.0 km² in 2024, 1.1 km² in 2025 and 0.7 km² in 2026. That's in line with the 2026 condition map. Counting every brief crossing instead would have flagged 64 km², almost all short-lived early-June crossings that BULC-D retracted.
 - **The NBR composite shows few clear year-to-year NBR drops in the park,** so it offers little independent check on timing here.
-- **The inspected pixel** (Devils Island) never crossed the threshold in the 2024 or 2025 runs and first crossed on June 5, 2026, the first observation of that season.
+- **The inspected pixel** (Devils Island) stays within expectation in 2024 and 2025. It first crosses on June 5, 2026, the first observation of that season, and finishes 2026 as decrease.
+- **The early-June pattern is unresolved and needs validation.**
 - **Not field-checked;** no cause is assigned.
 """,
     ),
@@ -305,7 +309,7 @@ SITES = [
         area_expr='outputs.north_cascades()',
         area_desc="North Cascades National Park (2,022 km², two units): the World Database on Protected Areas boundary, excluding Ross Lake and Lake Chelan National Recreation Areas.",
         folder="north_cascades", run="noca_2026_v1", pad=500, enlarge=True, out="north_cascades_2026",
-        pixel=(-121.19697, 48.84079), timing_prefix="noca", nbr_window=("09-05", "09-30"),
+        pixel=(-121.20226, 48.84141), timing_prefix="noca", nbr_window=("09-05", "09-30"),
         tc_text="True-color Sentinel-2 at the same extent, with **one fixed stretch** for all three years. Each year is the **median of clear (Cloud Score+) observations from Sep 5 to 30**, the same window every year. Late July–August 2026 is heavily hazed here, so September is used for every year.",
         tc_code='report.annual_true_color_row(AREA, frame, bbox, token, TIMING_YEARS, ("09-05", "09-30"), suptitle="True color, same window and stretch each year", save_to=out_dir / "true_color_2024_2025_2026.png")',
         focus_expr='drawing.study_area("noca_comparison_box")', focus_name="the North Cascades comparison area", focus_pad=100,
@@ -319,9 +323,10 @@ SITES = [
 
 - **Much more decrease is mapped than at Apostle Islands:** about 32% of analyzed forest (376 of 1,189 km²), plus 2.5% increase. About 833 km² (rock, ice, alpine) isn't analyzed.
 - **It is widespread, heaviest in the north unit, and mostly detected later in the season.** Only about 1% of it was first detected in early June.
-- **The comparison area shows a clearly visible change in clear single-date imagery,** starting between July 15 and 20, 2026. The inspected pixel there never crossed in the 2024 or 2025 runs and first crossed on September 9, 2026, after that change and with few clear observations because of haze.
-- **The first-detected-season map flags far more than the 2026 condition map:** 866 km² (73% of analyzed forest) is detected in at least one season against the fixed 2018–2023 expectation, 82% of it already in 2024.
-- **Its agreement with the NBR composite is poor.** Where NBR fell between 2025 and 2026, only 26% is first detected in 2026, and 47% is "already detected" in 2024. **Unresolved and needs validation; read the timing map here with caution.**
+- **The comparison area shows a clearly visible change in clear single-date imagery,** starting between July 15 and 20, 2026. Much of the comparison area is first detected in 2026.
+- **First detected season:** 556 km², 47% of analyzed forest, split 388 km² in 2024, 112 km² in 2025 and 57 km² in 2026. The large 2024 class is **unresolved and needs validation**. Many pixels there show an early-season dip below expectation every year (see the pixel below).
+- **Agreement with the NBR composite is partial.** Where NBR fell between 2025 and 2026, 40% is first detected in 2026 and 28% in 2024.
+- **The inspected pixel** shows the difference the definition makes. It crossed briefly on June 13, 2024 but finished 2024 within expectation, so 2024 doesn't count. It first crossed on June 17, 2026 and finished 2026 as decrease, so it is first detected in 2026.
 - **Why so much decrease is flagged park-wide is unresolved and needs validation.** Possibilities include real 2026 change, haze or smoke, and how well the baseline model fits steep mountain forest. **Not field-checked;** no cause is assigned.
 """,
     ),
@@ -344,14 +349,14 @@ SITES = [
 
 - **2026 condition:** about 20% of analyzed forest is below its expected condition in 2026 (4.75 of 24.2 km²), and about 3% above it (0.68 km²).
 - **First detected season** (fixed 2018–2023 baseline) splits the detected decrease into:
-  - 2024: 52% (3.73 km²)
-  - 2025: 20% (1.41 km²)
-  - 2026: 28% (2.01 km²)
-- **Timing agrees with the NBR composite:**
-  - Where NBR fell between 2025 and 2026 (yellow), 94% is first detected in 2026.
-  - Where it fell between 2024 and 2025 (red), 94% is first detected in 2025.
-  - Where NBR is low in all three years (dark), 77% is first detected in 2024 and 21% is never detected. The latter may already have been low during the baseline years; not checked.
-- **The inspected pixel** matches its expected NBR (about 0.8) through 2024 and 2025. In 2026 it drops to about 0, and BULC-D first crossed the threshold on June 13, 2026. The true-color images show the spot green in 2024 and 2025 and bare in 2026.
+  - 2024: 50% (3.14 km²)
+  - 2025: 23% (1.42 km²)
+  - 2026: 28% (1.74 km²)
+- **Timing agrees closely with the NBR composite:**
+  - Where NBR fell between 2025 and 2026 (yellow), 96% is first detected in 2026.
+  - Where it fell between 2024 and 2025 (red), 97% is first detected in 2025.
+  - Where NBR is low in all three years (dark), 73% is first detected in 2024 and 26% is never detected. The latter may already have been low during the baseline years; not checked.
+- **The inspected pixel** matches its expected NBR (about 0.8) through 2024 and 2025. In 2026 it drops to about 0; BULC-D first crossed the threshold on June 13, 2026 and finished the season as decrease. The true-color images show the spot green in 2024 and 2025 and bare in 2026.
 - **"2024" detections** can include anything that changed after the baseline years. **Not field-checked;** no cause is assigned.
 """,
     ),
@@ -373,20 +378,20 @@ The timing product needs a baseline that ends **before 2024**, so 2024, 2025 and
 - uses the **same fixed 2018–2023 baseline**;
 - starts from **even odds**; nothing carries over from one year to the next.
 
-A pixel's first detected season is the earliest season whose run crossed the threshold:
+**Definition.** A pixel's first detected season is the **first monitoring season in which BULC-D ultimately classified it as decrease**, meaning it *finished that season* above the threshold. The date shown within that season is the **first time it crossed** the threshold during it.
 
-- **2024:** crossed in 2024;
-- **2025:** not in 2024, crossed in 2025;
-- **2026:** not in 2024 or 2025, crossed in 2026;
-- **no decrease detected:** crossed in none of them.
+- **2024:** finished 2024 as decrease;
+- **2025:** did not finish 2024 as decrease, finished 2025 as decrease;
+- **2026:** finished neither 2024 nor 2025 as decrease, finished 2026 as decrease;
+- **no decrease detected:** finished none of the three as decrease.
 
-The within-season date of that first crossing is kept too.
+A **temporary crossing that BULC-D later retracts** (the probability rises above the threshold, then falls back below it before the season ends) does **not** count as a detection for that season.
 
 How to read it:
 - This is **the first monitoring season in which BULC-D detected a departure from the fixed 2018–2023 expectation**, not necessarily the year the disturbance happened.
 - **"2024" is the first season checked, so it gathers everything already different by then.** That includes change before the 2024 monitoring season, and change during the baseline years that was still departing from the 2018–2023 "normal" in 2024.
 - **Seasons run June–September.** Change during the October–May gap is first detected the following season.
-- **As with any first crossing,** a pixel counts as detected even if its probability later drops back below the threshold.
+- **Why "confirmed" matters:** counting every brief crossing flags many pixels whose probability rises for a few weeks, often early in the season, and then returns to normal. Requiring the season to finish as decrease keeps the departures BULC-D stood by.
 """
 
 TIMING_CODE = r"""

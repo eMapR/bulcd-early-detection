@@ -381,7 +381,7 @@ def nbr_stretch(nbr_images: list[ee.Image], region: ee.Geometry, low: int = 2, h
     return min(lows), max(highs)
 
 
-def combine_season_timing(seasons: dict[int, ee.Image], confirmed: bool = False) -> ee.Image:
+def combine_season_timing(seasons: dict[int, ee.Image], confirmed: bool = True) -> ee.Image:
     """First monitoring season in which P(decrease) crossed the threshold,
     from INDEPENDENT single-season runs (each detection_timing_image(),
     each starting from even odds against the same baseline): year = the
@@ -391,10 +391,11 @@ def combine_season_timing(seasons: dict[int, ee.Image], confirmed: bool = False)
     summaries apply. Avoids the lock-in of one continuous multi-year run
     (docs/findings.md, 2026-09-29).
 
-    confirmed=False (rule A, current): a season counts if P(decrease) crossed
-    the threshold at any time in it. confirmed=True (rule B, EXPERIMENTAL): a
-    season counts only if it ENDS as decrease; the date kept is still that
-    season's first crossing. Derived from the same runs - no BULC-D change."""
+    confirmed=True (default, the user-facing "first detected" definition since
+    2026-09-30): a season counts only if it ENDS as decrease; the date kept is
+    still that season's first threshold crossing. confirmed=False: raw first
+    crossing - any crossing counts, even one BULC-D later retracts (kept for
+    diagnostics; see docs/findings.md). Both derive from the same runs."""
     years = sorted(seasons)
     year = ee.Image(0).toFloat()
     doy = ee.Image(0).toFloat()
