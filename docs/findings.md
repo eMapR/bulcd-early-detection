@@ -870,3 +870,46 @@ start, no parameter changes.
   monitoring, or regional seasonal conditions. **Not investigated** (user direction).
 - Testsite, with distinct harvest patches, agrees well (94%/94%); the parks don't.
 
+## 2026-09-29/30 — Experiment: rolling vs fixed expectation for the first-detected season
+
+**Rolling:** 2018–2023 → 2024 (shared with fixed), 2018–2024 → 2025, 2018–2025 → 2026. Independent
+annual runs from even odds; nothing else changed. New assets `{prefix}_timing2025_base2018_2024_v1`
+and `{prefix}_timing2026_base2018_2025_v1` (27 min for all six). The fixed-baseline assets and code
+are kept. Not adopted; the notebooks are unchanged.
+
+First detected (km²), fixed → rolling:
+
+| Site | 2024 | 2025 | 2026 | Never |
+|---|---|---|---|---|
+| testsite | 3.73 → 3.73 | 1.41 → 1.40 | 2.01 → 2.03 | 17.03 → 17.03 |
+| Apostle Islands | 6.33 → 6.33 | 3.43 → 3.50 | 54.29 → 62.20 | 100.32 → 92.34 |
+| North Cascades | 707.6 → 707.6 | 87.5 → 77.7 | 70.5 → 66.5 | 323.8 → 337.6 |
+
+- **The expectation strategy barely changes the result;** the maps look essentially the same.
+  - testsite keeps its NBR agreement: 94% of 2025→26 NBR loss first detected in 2026, 94% of
+    2024→25 loss in 2025.
+  - North Cascades stays poor (25% of 2025→26 loss first detected in 2026).
+  - The 2024 run is the same in both strategies, so North Cascades' 2024 dominance can't change.
+- **2026 consistency check:** the rolling 2026 run and the 2026 condition product use identical
+  configs. Their end-of-season states match pixel for pixel at testsite and Apostle Islands.
+  - North Cascades differs in 126 pixels (0.11 km²). The late-September 2026 Sentinel-2 scenes there
+    (acquired Sep 16–28) carry an Earth Engine version of 2026-09-30 04:20 UTC, between the two
+    exports, so the input imagery changed between runs.
+  - Every condition-decrease pixel is detected in some season: 0 km² "never".
+- **What actually drives the park results: the first-crossing rule, not the expectation period.**
+  The timing product counts any crossing of 0.5 during a season; the condition product uses the
+  end-of-season state. Area that crossed during the 2026 run but was not decrease at season end:
+
+  | Site | Crossed in 2026, not decrease at season end |
+  |---|---:|
+  | Apostle Islands | 67.7 km² |
+  | North Cascades | 217.6 km² |
+  | testsite | 0.76 km² |
+
+  These transient crossings (like the Devils Island pixel's brief June 5 crossing) dominate the
+  park timing maps. testsite's harvest patches stay above threshold, so it is barely affected.
+- **Conceptual caveat of rolling expectations (documented, not solved):** once a pixel changes in
+  2024, including 2024 in the 2025 expectation begins to fold its changed state into "normal". For
+  a first-detected product that keeps the earliest detection year, that may be acceptable (the
+  pixel was already counted in 2024), but it weakens later-season evidence for persistent changes.
+
