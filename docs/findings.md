@@ -913,3 +913,59 @@ First detected (km²), fixed → rolling:
   a first-detected product that keeps the earliest detection year, that may be acceptable (the
   pixel was already counted in 2024), but it weakens later-season evidence for persistent changes.
 
+## 2026-09-30 — Experiment: timing rule A (raw first crossing) vs B (end-of-season-confirmed)
+
+Fixed 2018–2023 expectation; same annual runs; no BULC-D changes. Only the timing rule changes:
+- **A (current):** a season counts if P(decrease) ever crossed 0.5 in it.
+- **B:** a season counts only if it ENDS as decrease; the date kept is still that season's first
+  crossing.
+
+B is derived from the existing assets (`combine_season_timing(..., confirmed=True)`, experimental
+opt-in; default is still A). Not adopted; notebooks unchanged.
+
+First detected (km²), A → B:
+
+| Site | 2024 | 2025 | 2026 | Detected | Never |
+|---|---|---|---|---|---|
+| testsite | 3.73 → 3.14 | 1.41 → 1.42 | 2.01 → 1.74 | 7.15 → 6.30 | 17.03 → 17.89 |
+| Apostle Islands | 6.33 → 2.00 | 3.43 → 1.05 | 54.29 → 0.66 | 64.05 → 3.71 | 100.32 → 160.66 |
+| North Cascades | 707.6 → 387.8 | 87.5 → 112.0 | 70.5 → 56.5 | 865.5 → 556.4 | 323.8 → 632.9 |
+
+- **Verification:** in every annual run at all three sites, B-eligible pixels equal that season's
+  end-of-season decrease. Every end-decrease pixel has a crossing (0.0000 km² without one). Transient
+  area (crossed, not end-decrease) per season:
+
+  | Site | 2024 | 2025 | 2026 |
+  |---|---:|---:|---:|
+  | testsite | 0.59 | 0.34 | 0.63 |
+  | Apostle Islands | 4.33 | 3.81 | 59.33 |
+  | North Cascades | 319.8 | 202.4 | 200.9 |
+
+- **NBR timing agreement:**
+  - testsite improves slightly: 2025→26 loss 94% → 96% first detected in 2026; 2024→25 loss 94% →
+    97% in 2025.
+  - North Cascades improves: 2025→26 loss first detected in 2026 goes 26% → 40%, "2024" goes 47% → 28%.
+  - Apostle Islands has too little clear NBR loss to check.
+- **Spatial:**
+  - Devils Island goes from nearly all "2026" to 0.39 km² of 2026 plus small 2024/2025 patches in the
+    north-central interior (focus: A 0.96 km² detected → B 0.53).
+  - In the NOCA comparison box, 2026 becomes the largest class (6.4 km²) around the visible mid-July
+    2026 loss, but "2024" still covers 6.2 km².
+- **Example trajectories** (rule-based picks):
+  - A NOCA transient crosses every year in late June to mid-July, then returns to ~0 by September.
+    Early-season NBR sits well below the expected curve, then rejoins it: a recurring early-season
+    shape mismatch, not a disturbance (not investigated).
+  - An Apostle transient: one low June 5, 2026 observation puts P at ~0.50, and it decays within weeks.
+  - Confirmed examples are sustained departures (NOCA: NBR drops late Aug 2026, P reaches 0.78).
+- **Conclusion:** "ever crossed 0.5" is the main reason the park timing maps looked wrong. At
+  Apostle Islands it accounts for ~94% of the detected area. At North Cascades B still leaves
+  substantial 2024 detections, so something else contributes there (early-season model fit and/or
+  sensors).
+
+**Bug fixed during this experiment:** `pixel.pixel_history` sampled with `getRegion` on Earth Engine's
+default grid for computed images, which can be offset from the 30 m UTM grid of the exported
+products. In patchy terrain it read a neighboring pixel (NOCA example: live P(decrease) 0.19 on the
+default grid vs 0.78 on the product grid, ~10 m apart). It now samples on the product's UTM grid. The
+four example pixels then match their asset crossing dates and end states exactly. Pixel charts
+already embedded in the committed notebooks were made before this fix.
+

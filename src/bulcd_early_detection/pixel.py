@@ -34,8 +34,17 @@ CLASSES = ("decrease", "unchanged", "increase")
 CLASS_COLORS = {"decrease": OUTCOME_COLORS[DECREASE], "unchanged": "#8a887f", "increase": OUTCOME_COLORS[INCREASE]}
 
 
-def _table(collection: ee.ImageCollection, point: ee.Geometry, scale: int = 30) -> dict[int, dict]:
-    region = collection.getRegion(point, scale).getInfo()
+def utm_crs_for(lon: float, lat: float) -> str:
+    """UTM zone EPSG code for a coordinate (same rule as outputs.utm_crs)."""
+    zone = int((lon + 180) // 6) + 1
+    return f"EPSG:{(32600 if lat >= 0 else 32700) + zone}"
+
+
+def _table(collection: ee.ImageCollection, point: ee.Geometry, crs: str, scale: int = 30) -> dict[int, dict]:
+    # Sample on the SAME 30 m UTM grid the products are exported on. Earth Engine's
+    # default grid for computed images differs, and in patchy areas it can pick a
+    # neighboring pixel (found 2026-09-30: ~10 m offset gave a different pixel).
+    region = collection.getRegion(point, scale, crs).getInfo()
     header, rows = region[0], region[1:]
     t = header.index("time")
     return {row[t]: {h: v for h, v in zip(header, row)} for row in rows}
@@ -56,10 +65,11 @@ def pixel_history(config: BULCDConfig, lon: float, lat: float) -> list[dict]:
     observation), the class that evidence supports, and P(decrease /
     unchanged / increase) after the update. One monitoring run."""
     point = ee.Geometry.Point([lon, lat])
+    crs = utm_crs_for(lon, lat)
     organized = organize_inputs(config)
-    fitted = _table(organized.expectation_fitted_collection.select(["nbr", "fitted"]), point)
-    zscores = _table(organized.lof_zscore, point)
-    probs = _table(run_bulcd(config).probability_stack, point)
+    fitted = _table(organized.expectation_fitted_collection.select(["nbr", "fitted"]), point, crs)
+    zscores = _table(organized.lof_zscore, point, crs)
+    probs = _table(run_bulcd(config).probability_stack, point, crs)
     band = config.reduction.band
     matrix = config.bulc_advanced_params.custom_transition_matrix
     rows = []

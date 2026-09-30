@@ -381,7 +381,7 @@ def nbr_stretch(nbr_images: list[ee.Image], region: ee.Geometry, low: int = 2, h
     return min(lows), max(highs)
 
 
-def combine_season_timing(seasons: dict[int, ee.Image]) -> ee.Image:
+def combine_season_timing(seasons: dict[int, ee.Image], confirmed: bool = False) -> ee.Image:
     """First monitoring season in which P(decrease) crossed the threshold,
     from INDEPENDENT single-season runs (each detection_timing_image(),
     each starting from even odds against the same baseline): year = the
@@ -389,12 +389,19 @@ def combine_season_timing(seasons: dict[int, ee.Image]) -> ee.Image:
     `outcome` comes from the latest season (masks are identical across
     seasons). Same bands as detection_timing_image(), so the same maps and
     summaries apply. Avoids the lock-in of one continuous multi-year run
-    (docs/findings.md, 2026-09-29)."""
+    (docs/findings.md, 2026-09-29).
+
+    confirmed=False (rule A, current): a season counts if P(decrease) crossed
+    the threshold at any time in it. confirmed=True (rule B, EXPERIMENTAL): a
+    season counts only if it ENDS as decrease; the date kept is still that
+    season's first crossing. Derived from the same runs - no BULC-D change."""
     years = sorted(seasons)
     year = ee.Image(0).toFloat()
     doy = ee.Image(0).toFloat()
     for y in reversed(years):  # earliest season written last, so it wins
         crossed = seasons[y].select("first_decrease_year").mask().And(seasons[y].select("first_decrease_year").unmask(0).gt(0))
+        if confirmed:
+            crossed = crossed.And(seasons[y].select("outcome").eq(DECREASE))
         year = year.where(crossed, y)
         doy = doy.where(crossed, seasons[y].select("first_decrease_doy").unmask(0))
     outcome = seasons[years[-1]].select("outcome")

@@ -30,3 +30,11 @@ def test_history_from_replay_csv_matches_known_fire_crossing():
     assert rows[0]["date"] == datetime.date(2026, 6, 5)
     assert first_crossing(rows, 0.5) is not None and first_crossing(rows, 0.5) > datetime.date(2026, 7, 21)
     assert any(r["supports"] == "decrease" for r in rows)
+
+
+def test_utm_zone_matches_outputs_rule():
+    from bulcd_early_detection.pixel import utm_crs_for
+    assert utm_crs_for(-123.52, 44.82) == "EPSG:32610"
+    assert utm_crs_for(-90.73, 47.07) == "EPSG:32615"
+    assert utm_crs_for(151.2, -33.9) == "EPSG:32756"
+
