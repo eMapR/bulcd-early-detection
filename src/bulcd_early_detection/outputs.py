@@ -27,9 +27,9 @@ SCALE = 30
 # Values of the "outcome" band. Water is masked (no value).
 DECREASE, UNCHANGED, INCREASE, NOT_ANALYZED = 0, 1, 2, 3
 OUTCOME_LABELS = {
-    DECREASE: "Decrease / disturbance",
-    UNCHANGED: "Unchanged",
-    INCREASE: "Increase / growth",
+    DECREASE: "Decrease (below expected)",
+    UNCHANGED: "Unchanged (within expected)",
+    INCREASE: "Increase (above expected)",
     NOT_ANALYZED: "Land not analyzed (non-forest mask)",
 }
 OUTPUT_BANDS = ["outcome", "confidence", "first_detection_doy", "decrease", "unchanged", "increase"]
@@ -140,7 +140,10 @@ def outcome_image(config: BULCDConfig, threshold: float) -> ee.Image:
       `threshold` (masked for unchanged pixels).
     - decrease/unchanged/increase: bulcd's final_probabilities.
     """
-    result = run_bulcd(config)
+    return _outcome_from_result(run_bulcd(config), config, threshold)
+
+
+def _outcome_from_result(result, config: BULCDConfig, threshold: float) -> ee.Image:
     final = result.final_probabilities
     dec, unc, inc = (final.select(b) for b in ("decrease", "unchanged", "increase"))
 
@@ -196,7 +199,8 @@ def ensure_folder(folder: str) -> None:
         ee.data.createAsset({"type": "FOLDER"}, folder)
 
 
-def export_study_area(controls, build, area: StudyArea, folder: str, run_name: str) -> list:
+def export_study_area(controls, build, area: StudyArea, folder: str, run_name: str,
+                      config: BULCDConfig | None = None, image_fn=None) -> list:
     """Starts one Export.image.toAsset task for `area`; returns [task].
 
     `build(controls, **aoi) -> BULCDConfig` - normally config.build_config,
@@ -206,9 +210,10 @@ def export_study_area(controls, build, area: StudyArea, folder: str, run_name: s
     can mosaic several pieces if a larger area ever needs them.
     """
     ensure_folder(folder)
-    config = build(controls, **area.aoi)
+    config = config or build(controls, **area.aoi)
+    image_fn = image_fn or outcome_image
     image = (
-        outcome_image(config, controls.decision_threshold)
+        image_fn(config, controls.decision_threshold)
         .clip(area.geometry)
         .set({"run_name": run_name, "tile": "all", **run_metadata(controls, config)})
     )
@@ -236,14 +241,14 @@ def wait_for(tasks: list, poll_seconds: int = 30) -> dict[str, str]:
         time.sleep(poll_seconds)
 
 
-def load_precomputed(folder: str, run_name: str) -> tuple[ee.Image, list[dict]]:
+def load_precomputed(folder: str, run_name: str, bands: list[str] = OUTPUT_BANDS) -> tuple[ee.Image, list[dict]]:
     """Mosaic of a run's exported tiles, plus each tile's metadata."""
     assets = [a["name"] for a in ee.data.listAssets({"parent": folder})["assets"] if a["name"].split("/")[-1].startswith(f"{run_name}_")]
     if not assets:
         raise FileNotFoundError(f"no precomputed tiles for {run_name!r} in {folder}")
     collection = ee.ImageCollection([ee.Image(a) for a in assets])
     props = collection.toList(len(assets)).map(lambda i: ee.Image(i).toDictionary(["tile", "controls_json", "config_json"])).getInfo()
-    return collection.mosaic().select(OUTPUT_BANDS), props
+    return collection.mosaic().select(bands), props
 
 
 def area_summary(outcome: ee.Image, region: ee.Geometry, crs: str | None = None) -> dict[str, float]:
@@ -291,3 +296,96 @@ def reclassify(outputs_image: ee.Image, threshold: float) -> ee.Image:
         .where(analyzed.And(outputs_image.select("increase").gt(threshold)), INCREASE)
     )
     return outputs_image.addBands(new.rename("outcome"), overwrite=True)
+
+
+# ---------------------------------------------------------------- detection timing
+TIMING_BANDS = ["first_decrease_year", "first_decrease_doy", "outcome"]
+
+
+def detection_timing_image(config: BULCDConfig, threshold: float) -> ee.Image:
+    """For a (typically multi-year) monitoring run: the year and day of year
+    of the FIRST observation bin where P(decrease) exceeded `threshold`
+    (bin END date, as bulcd timestamps bins), masked where it never did or
+    the pixel isn't analyzed; plus `outcome`, the state at the end of the
+    run (same codes as outcome_image). One BULC-D run feeds both."""
+    result = run_bulcd(config)
+    outcome = _outcome_from_result(result, config, threshold).select("outcome")
+
+    def code(img):
+        date = ee.Date(img.get("system:time_start"))
+        value = date.get("year").multiply(1000).add(date.getRelative("day", "year").add(1))
+        return ee.Image.constant(value).toInt32().rename("code").updateMask(img.select("decrease").gt(threshold))
+
+    first = ee.ImageCollection(result.probability_stack.map(code)).min().updateMask(outcome.lte(INCREASE))
+    year = first.divide(1000).floor().rename("first_decrease_year")
+    doy = first.mod(1000).rename("first_decrease_doy")
+    return ee.Image.cat(year.toFloat(), doy.toFloat(), outcome.toFloat())
+
+
+def decrease_year_summary(timing: ee.Image, region: ee.Geometry, years: list[int], crs: str | None = None) -> dict:
+    """km^2 of analyzed land by first-detection year, plus "none" (analyzed,
+    never crossed the threshold)."""
+    analyzed = timing.select("outcome").lte(INCREASE)
+    year = timing.select("first_decrease_year").unmask(0)
+    area = ee.Image.pixelArea().divide(1e6)
+    bands = [area.updateMask(analyzed.And(year.eq(y))).rename(str(y)) for y in years]
+    bands.append(area.updateMask(analyzed.And(year.eq(0))).rename("none"))
+    sums = ee.Image.cat(bands).reduceRegion(
+        ee.Reducer.sum(), region, SCALE, crs=crs or utm_crs(region), maxPixels=1e10, tileScale=4
+    ).getInfo()
+    return {k: (sums.get(k) or 0.0) for k in [*map(str, years), "none"]}
+
+
+# ---------------------------------------------------------------- temporal NBR composite
+def annual_nbr(region: ee.Geometry, year: int, window: tuple[str, str] = ("07-01", "09-15"),
+               crs: str | None = None, cs_threshold: float = 0.6) -> ee.Image:
+    """Sentinel-2 NBR (B8, B12) for one year: median of Cloud Score+-masked
+    observations in the MM-DD `window`, on a fixed 30 m UTM grid. Same
+    processing every year, so years are directly comparable. Reference
+    imagery only - independent of BULC-D's evidence pipeline."""
+    csp = ee.ImageCollection("GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED")
+    col = (
+        ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+        .filterBounds(region)
+        .filterDate(f"{year}-{window[0]}", f"{year}-{window[1]}")
+        .linkCollection(csp, ["cs_cdf"])
+        .map(lambda i: i.updateMask(i.select("cs_cdf").gte(cs_threshold)))
+    )
+    nbr = col.map(lambda i: i.normalizedDifference(["B8", "B12"])).median()
+    return nbr.rename(f"nbr_{year}").reproject(crs=crs or utm_crs(region), scale=SCALE)
+
+
+def nbr_stretch(nbr_images: list[ee.Image], region: ee.Geometry, low: int = 2, high: int = 98) -> tuple[float, float]:
+    """ONE stretch for all years: the lowest `low` and highest `high`
+    percentile across the years' NBR inside `region`."""
+    stats = ee.Image.cat(nbr_images).reduceRegion(
+        ee.Reducer.percentile([low, high]), region, SCALE, maxPixels=1e10
+    ).getInfo()
+    lows = [v for k, v in stats.items() if k.endswith(f"_p{low}") and v is not None]
+    highs = [v for k, v in stats.items() if k.endswith(f"_p{high}") and v is not None]
+    return min(lows), max(highs)
+
+
+def combine_season_timing(seasons: dict[int, ee.Image]) -> ee.Image:
+    """First monitoring season in which P(decrease) crossed the threshold,
+    from INDEPENDENT single-season runs (each detection_timing_image(),
+    each starting from even odds against the same baseline): year = the
+    earliest season that crossed, doy = that season's first-crossing day.
+    `outcome` comes from the latest season (masks are identical across
+    seasons). Same bands as detection_timing_image(), so the same maps and
+    summaries apply. Avoids the lock-in of one continuous multi-year run
+    (docs/findings.md, 2026-09-29)."""
+    years = sorted(seasons)
+    year = ee.Image(0).toFloat()
+    doy = ee.Image(0).toFloat()
+    for y in reversed(years):  # earliest season written last, so it wins
+        crossed = seasons[y].select("first_decrease_year").mask().And(seasons[y].select("first_decrease_year").unmask(0).gt(0))
+        year = year.where(crossed, y)
+        doy = doy.where(crossed, seasons[y].select("first_decrease_doy").unmask(0))
+    outcome = seasons[years[-1]].select("outcome")
+    found = year.gt(0)
+    return ee.Image.cat(
+        year.updateMask(found).updateMask(outcome.mask()).rename("first_decrease_year"),
+        doy.updateMask(found).updateMask(outcome.mask()).rename("first_decrease_doy"),
+        outcome,
+    )

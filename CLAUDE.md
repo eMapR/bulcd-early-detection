@@ -55,4 +55,7 @@ pytest                        # run tests (currently: dependency smoke test only
 - `experiments/` — replay experiment scripts and their per-run outputs/
   findings notes (`experiments/output/`, `experiments/*_findings.md`).
 - `README.md` — install instructions and the BULC-D_rebuild relationship.
+- `tools/build_demo_notebooks.py` — generates all three demo notebooks
+  (`notebooks/*.ipynb`) from one template. Edit it, not the notebooks
+  (re-running overwrites hand edits), then re-execute the notebooks.
 - `../BULC-D_rebuild/CLAUDE.md` — the detection engine's own docs.

@@ -115,6 +115,43 @@ Two-repo split:
   ~1.5 min. Three demo notebooks now: `early_detection_demo.ipynb` (Apostle
   Islands), `north_cascades_demo.ipynb`, `testsite_demo.ipynb`.
 
+- **2026-09-29: notebooks restructured as user-facing demonstrations**, all three
+  generated from `tools/build_demo_notebooks.py` (shared five-part structure,
+  terminology, figure conventions):
+  - "2026 condition relative to expectation" and "first detected" wording.
+  - Section 4 rebuilt as a one-at-a-time sensitivity check:
+    - sensitivity 0.5 | 1.0 | 2.0 maps;
+    - `compare.parameter_response` charts for sensitivity, threshold, dampening
+      and posterior leveler.
+  - A pixel-history chart in every case study (`pixel.py`; rule-based
+    `representative_pixel`), with the pixel marked on the maps.
+  - The generic fire teaching figure was dropped in favor of the study-area pixel.
+  - testsite: first-detected-season map from three independent annual runs
+    (fixed 2018–2023 baseline; `outputs.combine_season_timing`), temporal NBR
+    composite (`outputs.annual_nbr`, `report.nbr_rgb_map`), true-color 2024 / 2025 / 2026.
+  - Runtime about 3–5 min each.
+
+## Unresolved (needs validation; not being investigated in the notebook work)
+
+- **Apostle Islands early-June pattern:** ~76% of 2026 flagged area first crossed the
+  threshold in the first two weeks of June. Leading lead is the Landsat-only baseline vs
+  Sentinel-2 monitoring mismatch (sensor-consistency experiment); not confirmed park-wide.
+- **North Cascades widespread decrease:** ~32% of analyzed forest flagged, mostly later in the
+  season. Candidates: real 2026 change, haze/smoke, baseline-model fit in steep terrain.
+- **Superseded Earth Engine assets** (continuous 2024–2026 timing run, first season exports)
+  are intentionally kept for now; clean up later.
+
+## Future GUI requirements
+
+- **Pixel inspector:** click a map → that pixel's observation time series, its
+  departure from expectation, the decrease/unchanged/increase probability history,
+  and the first threshold-crossing date. The data side exists:
+  `pixel.pixel_history(config, lon, lat)` returns plain rows for any coordinate.
+  The notebook chart (`pixel.plot_pixel_history`) is the prototype.
+- **Intended flow:** choose area → configure monitoring → run/view results →
+  inspect detections → click pixels. Google Earth Engine is the current likely
+  deployment environment (users may not be able to install software). Not final.
+
 ## Active problem
 
 Wednesday (2026-09-30) NPS demo prep. Notebook works end-to-end in both modes.

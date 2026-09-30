@@ -13,6 +13,7 @@ No detection logic lives here - this only assembles bulcd's own config.
 
 from __future__ import annotations
 
+import copy
 import dataclasses
 import datetime
 from dataclasses import dataclass
@@ -157,33 +158,55 @@ def build_config(
     )
 
 
+_SENSOR_NAMES = {"L5": "Landsat 5", "L7": "Landsat 7", "L8": "Landsat 8", "L9": "Landsat 9", "S2": "Sentinel-2"}
+
+
+def _doy_label(doy: int) -> str:
+    return (datetime.date(2025, 1, 1) + datetime.timedelta(days=doy - 1)).strftime("%b %-d")  # non-leap reference year
+
+
 def config_summary(config: BULCDConfig) -> list[tuple[str, str]]:
-    """(setting, value) rows for the parameters that define the baseline -
-    for display, not a replacement for the full config."""
+    """(setting, value) rows in plain language for display - the parameters
+    that define a run, not a replacement for the full config."""
     ev = config.evidence
     adv = config.bulc_advanced_params
 
     def period(p):
         on = {n: s for n, s in p.sensors.items() if s.enabled}
-        years = {(s.first_year, s.last_year - 1) for s in on.values()}
-        doys = {(s.first_doy, s.last_doy) for s in on.values()}
-        return f"{', '.join(on)}; years {sorted(years)}; DOY {sorted(doys)}"
+        years = sorted({(s.first_year, s.last_year - 1) for s in on.values()})
+        doys = sorted({(s.first_doy, s.last_doy) for s in on.values()})
+        yr = ", ".join(f"{a}" if a == b else f"{a}–{b}" for a, b in years)
+        window = ", ".join(f"{_doy_label(a)} – {_doy_label(b)}" for a, b in doys)
+        return f"{yr}, {window} ({', '.join(_SENSOR_NAMES.get(n, n) for n in on)})"
 
-    matrix = (
-        "production (legacy default)"
-        if adv.custom_transition_matrix == PRODUCTION_TRANSITION_MATRIX
-        else "custom / non-production"
-    )
+    modality = [f.name for f in dataclasses.fields(config.modality) if getattr(config.modality, f.name)]
+    model = {("constant", "unimodal"): "average level + one annual cycle"}.get(tuple(modality), ", ".join(modality))
+    masks = [m for m, on in (("water", config.study_area.mask_water), ("non-forest land", config.study_area.mask_non_forest)) if on]
     return [
-        ("Baseline (expectation) period", period(ev.expectation)),
-        ("Monitoring (target) period", period(ev.target)),
-        ("Spectral index", config.reduction.band.upper()),
-        ("Expectation model", ", ".join(f.name for f in dataclasses.fields(config.modality) if getattr(config.modality, f.name))),
-        ("Sensitivity (z-score numerator factor)", str(config.sensitivity.z_score_numerator_factor)),
-        ("Transition matrix", matrix),
-        ("dampening_factor", str(adv.dampening_factor)),
-        ("posterior_leveler", str(adv.posterior_leveler)),
-        ("initializing_leveler", str(adv.initializing_leveler)),
-        ("recency_factor", str(adv.recency_factor)),
-        ("Water mask / non-forest mask", f"{config.study_area.mask_water} / {config.study_area.mask_non_forest}"),
+        ("Baseline (expectation)", period(ev.expectation)),
+        ("Monitoring season", period(ev.target)),
+        ("Vegetation index", config.reduction.band.upper()),
+        ("Seasonal model", model),
+        ("Sensitivity", f"{config.sensitivity.z_score_numerator_factor}"),
+        ("Evidence table", "legacy app's default" if adv.custom_transition_matrix == PRODUCTION_TRANSITION_MATRIX else "custom"),
+        ("Dampening", f"{adv.dampening_factor}"),
+        ("Posterior leveler", f"{adv.posterior_leveler}" + (" (off)" if adv.posterior_leveler == 1.0 else "")),
+        ("Starting odds", "even" if adv.initializing_leveler == 0.0 else f"initial leveler {adv.initializing_leveler}"),
+        ("Recency weighting", "off" if adv.recency_factor == 1.0 else f"{adv.recency_factor}"),
+        ("Not analyzed", ", ".join(masks) or "nothing masked"),
     ]
+
+
+def set_monitoring_years(config: BULCDConfig, first_year: int, last_year: int) -> BULCDConfig:
+    """Copy of `config` whose monitoring (target) period spans first_year..
+    last_year inclusive, same seasonal window each year. bulcd bins each
+    year's season separately and runs them as one continuous sequence, so
+    this answers "when was a departure first detected?" across years. The
+    baseline must end before first_year (not checked here - build the config
+    from controls whose baseline_last_year < first_year)."""
+    config = copy.deepcopy(config)
+    for sensor in config.evidence.target.sensors.values():
+        if sensor.enabled:
+            sensor.first_year = first_year
+            sensor.last_year = last_year + 1  # bulcd's last_year is exclusive
+    return config

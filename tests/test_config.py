@@ -61,3 +61,15 @@ def test_exactly_one_aoi():
         build_config(MonitoringControls())
     with pytest.raises(ValueError):
         build_config(MonitoringControls(), aoi_coordinates=RING, aoi_asset="projects/p/assets/fc")
+
+
+def test_set_monitoring_years_spans_several_seasons_without_touching_the_original():
+    from bulcd_early_detection.config import set_monitoring_years
+
+    base = build_config(MonitoringControls(baseline_last_year=2023), aoi_coordinates=RING)
+    multi = set_monitoring_years(base, 2024, 2026)
+    assert all((s.first_year, s.last_year) == (2024, 2027) for s in multi.evidence.target.sensors.values())
+    assert all((s.first_doy, s.last_doy) == (152, 273) for s in multi.evidence.target.sensors.values())
+    # baseline and the source config are unchanged
+    assert (multi.evidence.expectation.sensors["L8"].first_year, multi.evidence.expectation.sensors["L8"].last_year) == (2018, 2024)
+    assert all((s.first_year, s.last_year) == (2026, 2027) for s in base.evidence.target.sensors.values())

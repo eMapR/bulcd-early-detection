@@ -10,47 +10,87 @@ recovery — cause attribution is handled separately from detection.
 Forest disturbance (e.g. wildfire) is one specific use case, not the
 whole scope.
 
-## Prototype notebook
+## Demonstration notebooks
 
-`notebooks/early_detection_demo.ipynb` is a walkthrough of BULC-D with
-Apostle Islands National Lakeshore (2026) as the example:
+Three notebooks show the same workflow on different landscapes. Each follows
+the same five parts: what BULC-D / Early Detection is; setup and important
+parameters; case-study results; understanding parameter behavior (one
+setting at a time); and trying it on your own area.
 
-1. What BULC-D is (baseline, observations, Bayesian updating, outcomes).
-2. Its important parameters, in plain terms, with the full config available.
-3. The Apostle Islands result (precomputed asset): change map, area totals,
-   confidence, first-detection timing, Sentinel-2 imagery, and a Devils
-   Island close-up.
-4. Parameter effects: one setting changed per map, all at the same
-   Devils Island extent.
-5. Try your own area: draw a polygon (ipyleaflet; saved as
-   `notebooks/aois/<name>.geojson`) or use an Earth Engine
-   FeatureCollection asset. Runs live.
+| Notebook | Study area | Highlights |
+|---|---|---|
+| `notebooks/early_detection_demo.ipynb` | Apostle Islands National Lakeshore (WI) | 2026 condition map, within-season first-detected date, Devils Island close-up |
+| `notebooks/north_cascades_demo.ipynb` | North Cascades National Park (WA) | Large mountain park; clear single-date imagery around a mid-season change |
+| `notebooks/testsite_demo.ipynb` | An Earth Engine FeatureCollection (26 km², western OR) | First-detected-season map (2024/2025/2026), temporal NBR composite, true-color 2024 / 2025 / 2026 |
 
-Running it takes about 2 minutes. Drawing needs JupyterLab 4, Notebook 7
-or VS Code.
+All three include a pixel-history chart (observations vs. expectation,
+probability of decrease, first threshold crossing), with the pixel marked on the maps.
 
-`notebooks/north_cascades_demo.ipynb` is the same walkthrough for North
-Cascades National Park (WDPA boundary, excluding Ross Lake and Lake
-Chelan NRAs; precomputed asset), with a 23 km² comparison box in the
-north unit for the parameter-effects section. Same default settings.
-
-`notebooks/testsite_demo.ipynb` is the same walkthrough for a study area
-supplied as an Earth Engine FeatureCollection
-(`projects/bulcd-python-rebuild/assets/testsite`, one 26 km² polygon in
-western Oregon; precomputed asset). It adds a side-by-side 2024 | 2025 |
-2026 true-color Sentinel-2 comparison next to the change map, and uses the
-whole site for the parameter-effects section. Same default settings.
+**Key terms.** A *decrease* in the 2026 condition map means the landscape is
+below its expected condition **during 2026**. It doesn't by itself mean the
+disturbance happened in 2026. *First detected* is when BULC-D's evidence first
+crossed the decision threshold: detection timing, not a verified disturbance date.
 
 ```sh
 pip install -e ".[notebook]"      # into the same env as bulcd
 jupyter lab notebooks/early_detection_demo.ipynb
 ```
 
-Reusable pieces live in `src/bulcd_early_detection/`: `config.py`
-(simple controls -> full `BULCDConfig`), `outputs.py` (study area,
-outcome layers, export/load), `render.py` (static maps), `drawing.py`
-(drawn AOIs), `compare.py` (parameter comparison), and `report.py`
-(notebook map/table helpers and the one-pixel teaching figure).
+Main results are precomputed Earth Engine assets, so each notebook runs in
+about 3–5 minutes. Drawing an area needs JupyterLab 4, Notebook 7 or VS Code.
+
+**Maintaining the notebooks:** all three are generated from one template,
+`tools/build_demo_notebooks.py`, so their structure and terminology stay in
+sync. Edit the template, not the `.ipynb` files: re-running the script
+overwrites hand edits. Then re-execute each notebook
+(`jupyter nbconvert --to notebook --execute --inplace <name>.ipynb`
+from `notebooks/`).
+
+## Core BULC-D vs. Early Detection additions
+
+The Bayesian method itself is BULC-D's, unchanged. Early Detection adds a
+monitoring workflow, products and diagnostics around it.
+
+- **Core BULC-D** (the legacy Google Earth Engine method, reimplemented in Python
+  in `BULC-D_rebuild`):
+  - seasonal expectation from baseline years;
+  - departures as z-scores, and the evidence table (transition matrix);
+  - Bayesian updating with levelers;
+  - per-pixel probabilities of decrease / unchanged / increase;
+  - the first-change (first threshold crossing) rule.
+- **Early Detection additions** (this repo, around the unchanged method):
+  - plain-language settings over the full configuration;
+  - precomputed study-area runs and area summaries;
+  - "condition relative to expectation" and "first detected" framing;
+  - a first-detected-season product from independent annual runs against a
+    fixed baseline, with the within-season date;
+  - reference imagery: same-date multi-year panels, and a temporal NBR composite;
+  - pixel-history charts;
+  - one-at-a-time parameter sensitivity maps and charts;
+  - drawn-area and FeatureCollection study areas.
+
+## Toward an interactive interface
+
+The notebooks are the current demonstration and reference workflow. The
+longer-term goal is an interactive interface:
+
+choose area → configure monitoring → run/view results → inspect detections → click a pixel to see its history.
+
+Because intended users may not be able to install local software, Google
+Earth Engine is the current likely deployment environment. That's the
+current direction, not a final architecture decision.
+
+Reusable pieces live in `src/bulcd_early_detection/`:
+
+| Module | Purpose |
+|---|---|
+| `config.py` | Simple controls → full `BULCDConfig` |
+| `outputs.py` | Study areas, products, exports, summaries, NBR composites |
+| `render.py` | Maps |
+| `report.py` | Notebook map and table helpers |
+| `compare.py` | Sensitivity maps and response charts |
+| `pixel.py` | Pixel history, usable from any (lon, lat) |
+| `drawing.py` | Drawn areas |
 
 ## Relationship to BULC-D_rebuild
 

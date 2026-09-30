@@ -779,3 +779,69 @@ bulcd runs on the asset directly (`aoi_asset`). Export: 1.4 min.
   early-June share is consistent with patches that were already bare before
   the 2026 season started. Not field-checked.
 
+## 2026-09-29 — A continuous multi-year run locks in and misses later change; use independent annual runs for timing
+
+**Question:** when did BULC-D first detect each departure (testsite, 2024–2026)?
+
+**First attempt:** one continuous run with monitoring 2024–2026 and baseline 2018–2023
+(`config.set_monitoring_years`; engine supports it, no math changes).
+- It put 84% of detected decrease in 2024.
+- It never detected 32% of the pixels that the 2026 single-season run maps as decrease.
+
+**Cause: posterior lock-in.** With the posterior leveler off (our default), a pixel that
+looks normal for one season reaches P(unchanged) ≈ 1.000000. Later evidence cannot
+overturn that.
+- **Example:** an east-patch pixel (123.51845 W, 44.82731 N) with NBR 0.83 / 0.83 / 0.05 in
+  2024 / 2025 / 2026 was at P(unchanged) = 1.000000 from early August 2024 through the
+  whole 2026 season. The obvious 2026 loss was never detected.
+- Consistent with Section 4's posterior-leveler behavior and with the legacy
+  app's use of 0.9. Not a BULC-D bug; a property of long runs without posterior leveling.
+
+**Adopted instead** (no parameter changes): three independent single-season runs
+(2024, 2025, 2026), each with the same fixed 2018–2023 baseline and each starting from even
+odds (`detection_timing_image` per season, `combine_season_timing`). First detected season =
+the earliest season that crossed 0.5; that season's crossing date is kept.
+
+**testsite results** (24.19 km² analyzed):
+
+| First detected | km² | % of detected |
+|---|---:|---:|
+| 2024 | 3.73 | 52% |
+| 2025 | 1.41 | 20% |
+| 2026 | 2.01 | 28% |
+| Never | 17.03 | — |
+
+**Check against the temporal NBR composite** (categories from annual NBR; Jul 1 – Sep 15,
+Cloud Score+):
+
+| NBR pattern | First detected |
+|---|---|
+| Fell 2025→26 ("yellow") | 94% in 2026 |
+| Fell 2024→25 ("red") | 94% in 2025 |
+| Low all three years ("dark") | 77% in 2024, 21% never (possibly already low in the baseline; not checked) |
+
+Representative pixel (rule: nearest the center of the largest 2026 + yellow patch):
+123.52488 W, 44.82438 N. Never crossed in 2024 or 2025; first crossed 2026-06-13.
+
+The continuous-run assets (`testsite_timing_2024_2026_v1`) remain in Earth Engine but aren't used.
+
+## 2026-09-29 — One-at-a-time parameter responses (default config, other settings fixed)
+
+Decrease km² as each parameter moves alone (notebook section 4):
+
+| Parameter | Devils Island | NOCA comparison box | testsite |
+|---|---|---|---|
+| Sensitivity 0.5 → 2.0 | 0.14 → 0.75 | 7.9 → 16.5 | 3.0 → 7.6 |
+| Threshold 0.5 → 0.95 | 0.47 → 0.41 | 13.3 → 9.2 | 4.8 → ~4.3 |
+| Dampening 0.3 → 1.0 | flat | flat | flat |
+| Posterior leveler 1.0 → 0.7 | 0.47 → 0.34 (down) | 13.3 → ~16 (up) | ~4.8 → ~4.3 |
+
+- **In these three examples,** sensitivity produced the largest area response, and dampening had
+  little effect over the tested range. These are example behaviors, not general rules.
+- **The posterior leveler's direction depends on timing:** it reduces decrease where the
+  change was present from the start (Devils Island) and increases it where the change began
+  mid-season (NOCA), because it prevents lock-in on "unchanged".
+- **First crossing vs sustained crossing:** the Devils Island example pixel only just passed 0.5
+  on June 5, fell back below it, then crossed decisively in mid-July. "First detected" follows
+  the legacy first-change rule (a single crossing counts).
+

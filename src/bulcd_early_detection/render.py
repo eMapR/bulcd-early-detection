@@ -152,6 +152,61 @@ def timing_layer(outputs: ee.Image, area: StudyArea, frame: ee.Geometry, first_d
     return _layer(_analyzed_land(outputs).blend(vis), area, frame)
 
 
+def with_marker(vis_image: ee.Image, lon: float, lat: float, radius_m: float = 75) -> ee.Image:
+    """Marks one location (e.g. an inspected pixel) with a ring: dark
+    outline under a bright one, visible on light and dark maps."""
+    ring = ee.FeatureCollection([ee.Feature(ee.Geometry.Point([lon, lat]).buffer(radius_m))])
+    outer = ee.Image().byte().paint(ring, 1, 4).visualize(palette=["111111"])
+    inner = ee.Image().byte().paint(ring, 1, 2).visualize(palette=["00e5ff"])
+    return vis_image.blend(outer).blend(inner)
+
+
+# First-detection year: ordinal, earlier = darker (same family as TIMING_RAMP).
+YEAR_COLORS = ["#7c2d12", "#d4541a", "#f5a54a", "#fbd3a0"]
+NO_DETECTION_COLOR = "#bdbbb3"  # same gray as "unchanged"
+
+
+def detection_year_layer(timing: ee.Image, area: StudyArea, frame: ee.Geometry, years: list[int]) -> ee.Image:
+    """First year P(decrease) crossed the threshold; analyzed land with no
+    crossing in gray, non-analyzed land pale."""
+    outcome = timing.select("outcome")
+    base = outcome.updateMask(outcome.gte(UNCHANGED)).visualize(
+        min=UNCHANGED, max=NOT_ANALYZED, palette=[NO_DETECTION_COLOR[1:], NO_DETECTION_COLOR[1:], OUTCOME_COLORS[NOT_ANALYZED][1:]]
+    ).blend(outcome.updateMask(outcome.eq(DECREASE)).visualize(palette=[NO_DETECTION_COLOR[1:]]))
+    year = timing.select("first_decrease_year")
+    vis = year.visualize(min=years[0], max=years[-1], palette=[c[1:] for c in YEAR_COLORS[: len(years)]])
+    return _layer(base.blend(vis), area, frame)
+
+
+def detection_year_legend(years: list[int]) -> dict[str, str]:
+    legend = {f"Decrease first detected in {y}": c for y, c in zip(years, YEAR_COLORS)}
+    legend["No decrease detected"] = NO_DETECTION_COLOR
+    legend[OUTCOME_LABELS[NOT_ANALYZED]] = OUTCOME_COLORS[NOT_ANALYZED]
+    legend["Water / outside study area"] = WATER_COLOR
+    return legend
+
+
+def nbr_rgb_layer(nbr_images: list[ee.Image], area: StudyArea, frame: ee.Geometry, low: float, high: float) -> ee.Image:
+    """Three years of NBR as R, G, B (oldest = red), one fixed stretch for
+    all channels, shown only inside the study boundary."""
+    rgb = ee.Image.cat(nbr_images).clip(area.geometry).visualize(min=[low] * 3, max=[high] * 3)
+    return ee.Image.constant([245, 245, 243]).visualize(min=0, max=255).blend(rgb).blend(_boundary(area.geometry))
+
+
+def nbr_rgb_legend(years: list[int]) -> dict[str, str]:
+    """Spectral reading of a 3-year NBR composite (R, G, B = years[0..2]);
+    high NBR = bright = more green vegetation / less bare ground."""
+    y0, y1, y2 = years
+    return {
+        f"White/light gray: high NBR all three years": "#e8e8e8",
+        f"Red: high {y0}, low {y1} and {y2} (NBR fell between {y0} and {y1})": "#ff3030",
+        f"Yellow: high {y0} and {y1}, low {y2} (NBR fell between {y1} and {y2})": "#ffe030",
+        f"Cyan: low {y0}, high {y1} and {y2} (NBR rose between {y0} and {y1})": "#30e0ff",
+        f"Blue: low {y0} and {y1}, high {y2} (NBR rose between {y1} and {y2})": "#3060ff",
+        "Dark: low NBR all three years": "#303030",
+    }
+
+
 def reference_layer(area: StudyArea, frame: ee.Geometry, start: str, end: str) -> ee.Image:
     # Per-band stretch (SWIR2, NIR, red): NIR over dense forest runs far
     # higher than the other two, and a shared 0-4000 range saturates it.
@@ -202,6 +257,7 @@ def show_map(
     legend: dict[str, str] | None = None,
     colorbar: dict | None = None,
     save_to: Path | None = None,
+    legend_below: bool = False,
 ):
     """Displays one map PNG with a title, scale bar, and either a
     categorical `legend` ({label: color}) or a `colorbar`
@@ -214,7 +270,10 @@ def show_map(
     scale_bar(ax, _km_per_px(bbox_degrees, img.shape[1]), img.shape[1])
     if legend:
         handles = [Patch(facecolor=c, edgecolor="#999", label=l) for l, c in legend.items()]
-        ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(1.01, 1), frameon=False, fontsize=10)
+        if legend_below:
+            ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(0, -0.02), frameon=False, fontsize=10, ncol=2)
+        else:
+            ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(1.01, 1), frameon=False, fontsize=10)
     if colorbar:
         cmap = LinearSegmentedColormap.from_list("ramp", colorbar["ramp"])
         sm = plt.cm.ScalarMappable(norm=Normalize(colorbar["vmin"], colorbar["vmax"]), cmap=cmap)
@@ -267,9 +326,9 @@ def timing_colorbar(year: int, first_doy: int, last_doy: int) -> dict:
         if first_doy <= doy <= last_doy:
             ticks.append(doy)
             labels.append(datetime.date(year, month, 1).strftime("%b %-d"))
-    return {"ramp": TIMING_RAMP, "vmin": first_doy, "vmax": last_doy, "label": "First date detected", "ticks": ticks, "ticklabels": labels}
+    return {"ramp": TIMING_RAMP, "vmin": first_doy, "vmax": last_doy, "label": "First detected (date)", "ticks": ticks, "ticklabels": labels}
 
 
 def confidence_colorbar(threshold: float) -> dict:
     ticks = sorted({threshold, 0.75, 0.9, 1.0} if threshold < 0.75 else {threshold, 1.0})
-    return {"ramp": CONFIDENCE_RAMP, "vmin": threshold, "vmax": 1, "label": "Probability of mapped change", "ticks": ticks, "ticklabels": [f"{t:.2f}" for t in ticks]}
+    return {"ramp": CONFIDENCE_RAMP, "vmin": threshold, "vmax": 1, "label": "Probability of flagged outcome", "ticks": ticks, "ticklabels": [f"{t:.2f}" for t in ticks]}

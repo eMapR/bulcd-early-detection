@@ -25,6 +25,7 @@ import numpy as np
 from bulcd.config.schema import BULCDConfig
 from bulcd.engine import run_bulcd, study_area_mask
 from matplotlib.colors import to_rgb
+from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
 from . import outputs
@@ -186,3 +187,73 @@ def comparison_table(results: list[dict]) -> str:
         for r in results
     ]
     return "\n".join([head, rule, *rows])
+
+
+# ---------------------------------------------------------------- one-at-a-time parameter response
+def _set_advanced(field_name: str, value: float):
+    def edit(config):
+        setattr(config.bulc_advanced_params, field_name, value)
+    return edit
+
+
+# Parameters swept one at a time (everything else at the notebook's defaults).
+# (label, what it means, values, how to apply, default)
+PARAMETER_SWEEPS = [
+    ("Sensitivity", "scales every departure from normal", [0.5, 0.75, 1.0, 1.5, 2.0],
+     lambda v: {"controls": {"sensitivity": v}}, 1.0),
+    ("Decision threshold", "how sure before a change is mapped", [0.5, 0.6, 0.7, 0.8, 0.9, 0.95],
+     lambda v: {"controls": {"decision_threshold": v}}, 0.5),
+    ("Dampening", "weight of each single observation", [0.3, 0.5, 0.7, 0.9, 1.0],
+     lambda v: {"edit": _set_advanced("dampening_factor", v)}, 0.5),
+    ("Posterior leveler", "pull toward even odds after each update (1 = off)", [0.7, 0.8, 0.9, 0.95, 1.0],
+     lambda v: {"edit": _set_advanced("posterior_leveler", v)}, 1.0),
+]
+
+
+def parameter_response(area: StudyArea, controls, build, sweeps=PARAMETER_SWEEPS) -> list[dict]:
+    """Detected decrease/increase area as each parameter moves alone.
+    Returns rows {parameter, value, is_default, decrease_km2, increase_km2}.
+    Threshold values reuse one BULC-D run (it only re-reads probabilities)."""
+    variants, meta = [], []
+    for label, _, values, apply, default in sweeps:
+        for v in values:
+            variants.append(Variant(f"{label} = {v}", "", **apply(v)))
+            meta.append((label, v, v == default))
+    results = run_comparison(area, controls, build, variants)
+    return [
+        {"parameter": label, "value": v, "is_default": d,
+         "decrease_km2": r["km2"][OUTCOME_LABELS[DECREASE]], "increase_km2": r["km2"][OUTCOME_LABELS[INCREASE]]}
+        for (label, v, d), r in zip(meta, results)
+    ]
+
+
+def plot_parameter_response(rows: list[dict], title: str = "", sweeps=PARAMETER_SWEEPS, save_to=None):
+    """Small multiples, one per parameter: detected decrease and increase
+    area (km^2) against the parameter value; the default is marked."""
+    fig, axes = plt.subplots(1, len(sweeps), figsize=(3.6 * len(sweeps), 3.4), dpi=110, sharey=True, squeeze=False)
+    for ax, (label, meaning, *_rest) in zip(axes[0], sweeps):
+        pr = [r for r in rows if r["parameter"] == label]
+        xs = [r["value"] for r in pr]
+        for key, cls in (("decrease_km2", DECREASE), ("increase_km2", INCREASE)):
+            ax.plot(xs, [r[key] for r in pr], color=OUTCOME_COLORS[cls], lw=2, marker="o", ms=5)
+        default = next(r for r in pr if r["is_default"])
+        ax.axvline(default["value"], color="#999", lw=1, ls=":")
+        ax.text(default["value"], 1.0, " default", transform=ax.get_xaxis_transform(), fontsize=8, color="#666", va="top")
+        ax.set_title(label, fontsize=11, loc="left")
+        ax.set_xlabel(meaning, fontsize=8, color="#555")
+        for side in ("top", "right"):
+            ax.spines[side].set_visible(False)
+        ax.grid(axis="y", color="#e6e5e0", lw=0.8)
+        ax.set_axisbelow(True)
+    axes[0][0].set_ylabel("Area (km²)")
+    handles = [Line2D([], [], color=OUTCOME_COLORS[DECREASE], lw=2, marker="o", label="Decrease detected"),
+               Line2D([], [], color=OUTCOME_COLORS[INCREASE], lw=2, marker="o", label="Increase detected")]
+    fig.legend(handles=handles, loc="lower center", ncol=2, frameon=False, fontsize=9)
+    if title:
+        fig.suptitle(title, x=0.01, ha="left", fontsize=12)
+    fig.tight_layout(rect=(0, 0.08, 1, 0.95))
+    if save_to is not None:
+        save_to.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_to, bbox_inches="tight")
+    plt.show()
+    return fig
