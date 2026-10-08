@@ -1035,3 +1035,208 @@ Also:
   - interactively, for pixel histories and live computation;
   - at park scale they completed only as batch exports.
 
+
+## 2026-10-04 — Legacy GUI vs. Python rebuild, one-pixel equivalence (testsite, −123.56922 44.84283)
+
+Reference: a controlled legacy GUI (V53e) run. L8+L9+S2 (Cross-Sensors), NBR, expectation 2024 / target 2025,
+DOY 1–365, scene cloud 70, day step 3, constant+unimodal, numerator 1, minimum denominator 0.05. Script:
+`experiments/legacy_gui_equivalence.py`; outputs in `experiments/output/legacy_gui_equivalence/<grid>/`.
+The bulcd config was set to the GUI's hardcoded BULC parameters (levelers 0.7/0.7/0.9, start = "unchanged").
+Investigation only; nothing tuned.
+
+- **Python reproduces the GUI's qualitative result.** 2024 sits near the fit. In 2025, NBR drops from about 0.7–0.8 to
+  about 0 starting with the 2025-03-26 S2 bin and stays there. 59 of the 122 three-day target bins have data. Every
+  data bin from 2025-04-04 on is bin 1. P(decrease) is first above 0.5 at the 2025-04-04 bin and plateaus at
+  0.914/0.043/0.043. That plateau is the posterior-leveler fixed point, so it is the maximum reachable.
+- **Stage by stage, the formulas match the fetched legacy source.** The stages checked: 3-day bins (122/122, ends at
+  the bin end, median across sensors), harmonic regressors, OLS fit, residual = observed − fitted, SD (n−1) of
+  expectation residuals, z = clamp((obs − fit) / max(SD, 0.05), ±10), and the BULC fold with leveled transitions and
+  posterior.
+  - A numpy re-derivation using the legacy time variable (fracDOY = 0-based DOY / 365) matches bulcd's probabilities
+    to 5 decimals. bulcd instead uses fractional years since 1970. That shifts the fitted curve by ≤ 0.001 NBR and
+    changes no bins here.
+- **First real input divergence: the S2 scene filter.** Legacy's live S2 path (Cloud Score+,
+  `515-gatherCollections27b` lines 873–877) applies **no** scene-level cloud filter; `CloudCoverThresholdS2` is
+  only used in commented-out code. bulcd's `_s2_evidence` drops scenes with `CLOUDY_PIXEL_PERCENTAGE > 70`.
+  - At this pixel, 5–6 scenes with a clear pixel were dropped. One filled an otherwise-empty 2024 expectation bin
+    (Feb 6, affecting the fit); another filled an empty 2025 target bin (Jun 24, already saturated).
+  - The divergence is small here but systematic. It goes in BULC-D_rebuild, so it is not fixed in this repo.
+- **The sampled pixel depends on the grid.** EPSG:4326 at 30 m and UTM 10N at 30 m hit different pixels: fit
+  0.739 vs 0.796, SD 0.0695 vs 0.0456 (the latter floored to 0.05). Detection timing was the same. Exact numerical
+  comparison needs the legacy chart's sampling scale/CRS.
+- **What the legacy charts plot cannot be confirmed from the source we have.** `getChartResults` lives in
+  `r-2903-Dev:BULC/BULCD/BULCD-Helpers/HelperFunctions-BULCD`, which is not fetched. Likely inputs (inferred from
+  its arguments, `bulcD_input` and `fullBULCReturn`):
+  - `expectCollectionFit` [nbr, fitted] → chart 1;
+  - `targetCollectionFit` → chart 2;
+  - `fullBULCReturn.allProbabilityLayers` → chart 3;
+  - `allEventLayers` (bins, self-masked) → chart 4;
+  - `expectationResiduals` / `targetResiduals` → charts 5/6.
+  - Also unfetched: the bin edge rule `afn_getOneZBin` (`CommonCode:502.8-Binning/502.8-Binning-5`) and the
+    transition dampening `afn_dampenTruthAndAddDummyRow11` (`CommonCode:510.ArrayOperations/510a`).
+- **Not compared yet:** the GUI's own numbers. The GUI screenshots only show shapes. Exact equivalence needs the
+  legacy per-pixel values exported (see PROJECT_STATE "Next steps").
+
+## 2026-10-04 (later) — OG GUI chart CSVs vs. Python: equivalence confirmed; three explained differences
+
+Ground truth: five chart CSVs exported from the legacy GUI for the reference case above (now in
+`experiments/reference_data/legacy_gui_charts/pixel1/`; 122 steps each, 3 decimals). Script: `experiments/legacy_gui_csv_compare.py`; outputs in `experiments/output/legacy_gui_csv_compare/`.
+"Exact" means |diff| ≤ 0.0005. Investigation only; bulcd is unchanged, and the S2 test is a config-only variant.
+
+- **Sampling: the GUI reads each scene at its own native pixel containing the point.**
+  - Python point sampling at 1 m (EPSG:4326 or UTM) reproduces the GUI's NBR: 48/49 exact, with the S2 filter as-is.
+  - 30 m grids sample different pixels: 0/49 exact on UTM 30 m, 3/49 on EPSG:4326 30 m. The previous entry's
+    30 m tables were therefore other pixels.
+  - Native-pixel sampling also determines the fit and SD (0.0378, so the denominator is the 0.05 floor).
+- **Results, with the S2 scene filter removed (`s2_nofilter`):**
+
+  | Stage | Agreement |
+  |---|---|
+  | Time steps | 122/122 identical dates in both periods |
+  | Expectation NBR | 50/50 exact |
+  | Expectation fitted | 119/122 exact (max 0.0006) |
+  | Target NBR | 60/60 exact |
+  | Target fitted | 59/122 exact (max 0.0013) |
+  | Target residual | 26/60 exact (max 0.0013) |
+  | Bins | 60/60 |
+  | Probabilities (lag 1) | 363/363 values exact (max 0.0005) |
+  | Final probabilities | 0.914/0.043/0.043 in both |
+
+- **Divergence 1, imagery (first, and the only one that changes inputs): S2 scene filter.** With bulcd as-is
+  (`CLOUDY_PIXEL_PERCENTAGE ≤ 70`):
+  - The GUI has one more expectation observation (2024-02-06) and one more target observation (2025-06-24).
+    Target NBR differs at 2 steps (max 0.0505): one is the missing step, the other a bin whose median loses a scene.
+  - These feed into the fit, so only 31/122 expectation fitted values are exact (max 0.0033).
+  - Bins agreed 59/59 and probabilities 363/363 anyway.
+  - Turning off the S2 scene filter removes every one of these differences. Confirms the source reading: the legacy
+    Cloud Score+ path has no S2 scene filter.
+- **Divergence 2, harmonic time variable (fit stage): small.**
+  - Refitting the same observations with legacy's `fracDOY` = (0-based DOY of bin end)/365 reproduces GUI fitted
+    values 244/244 exactly and target residuals 60/60.
+  - bulcd's years-since-1970 axis is off by up to 0.0013 NBR (0.026 z). That is too small to change bins here:
+    the nearest z is 0.074 from a cut.
+- **Divergence 3, chart construction, not algorithm: the GUI probability chart is shifted one step.**
+  - GUI row k is the posterior after step k−1. Row 1 (2025-01-04) is the starting prior 0.1/0.8/0.1, and the
+    posterior after the final step is not plotted.
+  - So the GUI's first P(drop) > 0.5 is labeled 2025-04-07, while the update that causes it is the 2025-04-04 step.
+- **Chart meanings, confirmed numerically:**
+  - **"Year vs Fit":** 3-day median NBR (`nbr`, blank = no clear data) and harmonic `fitted` at every step.
+  - **Target residuals:** `targetDifference` = nbr − fitted, only where observed (60/60 consistent).
+  - **Bins:** z-score bin 1–10 at steps with data, blank otherwise.
+  - **Probabilities:** prior-then-posteriors, with the one-step offset above.
+  - The expectation residual chart was not exported.
+- **Still unverified:**
+  - The GUI's SD/denominator and z are not in the exports; they are inferred through 60/60 bin agreement.
+  - The bin edge rule at exactly a cut and the exact transition-dampening code are untested; no value here lies near
+    a cut.
+  - This is one pixel, one case.
+
+## 2026-10-04 (later) — Pixel 2 (stable/green, −123.55299 44.83292): GUI CSVs vs. Python
+
+Same settings as pixel 1. GUI exports are the `*_g.csv` files (now in `experiments/reference_data/legacy_gui_charts/pixel2/`),
+which now include expectation residuals. Script: `experiments/legacy_gui_csv_compare.py`; outputs in
+`experiments/output/legacy_gui_csv_compare/{pixel1,pixel2,pixel2_gui_location}/`. Pixel 1 was rerun and its
+numbers are unchanged. Investigation only; bulcd is unchanged.
+
+- **First divergence at the stated coordinate is the sampled location, not the algorithm.**
+  - Expectation NBR: only 12/52 exact (S2 filter off). Python also has an extra observation (2024-06-29).
+  - Landsat-only steps match exactly; S2 steps mostly do not, so a different S2 pixel is being read.
+  - Offset scan (1 m point sampling): GUI values are reproduced 52/52, with identical presence, only inside one
+    10 m S2 pixel. It lies 0.7–10.5 m east and 1.2–11.5 m north of the stated coordinate; the nearest matching
+    point is +0.9e-5° lon / +1.1e-5° lat.
+  - That is more than 5-decimal rounding (≤ 0.5e-5°). So the point the GUI chart sampled is not exactly the
+    reported coordinate. The mechanism is unknown (marker placement, chart snapping, or coordinate copying).
+- **At the GUI's sampled location (`pixel2_gui_location`, −123.552919 44.832977), S2 filter off:**
+
+  | Stage | Agreement |
+  |---|---|
+  | Expectation NBR | 52/52 exact |
+  | Expectation residuals | 52/52 exact |
+  | Target NBR | 61/61 exact |
+  | Bins | 61/61 |
+  | Probabilities (lag 1) | 363/363 exact |
+  | Fitted with bulcd's time axis | 120/122 (expectation), 96/122 (target), max 0.0008 |
+  | Fitted with legacy fracDOY | 122/122 and 122/122 exact |
+  | Target residuals | 51/61 exact with bulcd's time axis (max 0.0007); 61/61 with legacy fracDOY |
+
+  - This confirms what the expectation-residual chart plots: `expectationDifferenceOptical` = nbr − fitted.
+- **The S2 scene filter matters much more at a stable pixel.**
+  - bulcd as-is at the GUI location loses the same 2024-02-04 S2 scene (expectation) and 2025-06-23 scene (target)
+    as at pixel 1. Those were 2 of 51 expectation values, but they shift the fit by up to 0.0125 NBR.
+  - With z near 0, that flips 12/60 bins between the 4/5/6/7 neighbours. Probabilities: 300/363 exact, max diff
+    0.155; GUI's last plotted value 0.055/0.899/0.045 vs Python 0.098/0.852/0.049.
+  - At pixel 1 (z ≈ −10) the same filter changed nothing downstream.
+- **The harmonic time axis is a real bin-flip risk here.** The nearest z is 0.006 from a cut, while bulcd's time axis
+  is off by up to 0.0008 NBR (0.016 z). No bin flipped in this case.
+- **Chart offset confirmed again.** The GUI's last plotted row (2026-01-02) is the posterior after the 2025-12-30
+  step. The posterior after the final step (Python 0.046/0.911/0.043) is never plotted.
+- **P(same) behaves as a stable pixel should.**
+  - P(same) stays 0.85–0.91 from the first update to the end, except Nov 12–24 (minimum 0.753). There a bin-1
+    observation on 2025-11-09 (z −2.13) and a bin-4 one briefly raise P(drop) to 0.18. It recovers to 0.899.
+  - No threshold crossing. Bins: 35× 6, 14× 5, 5× 4, 4× 7, 2× 3, 1× 1.
+
+## 2026-10-08 — Pixel 3 (increase, −123.54330474162032 44.847525314894625): equivalence now covers decrease, unchanged, and increase
+
+Same settings as pixels 1–2. GUI exports are the `*_b.csv` files. All three pixels' exports moved to
+`experiments/reference_data/legacy_gui_charts/pixel{1,2,3}/`, with filenames unchanged, coordinates, and settings in
+the README there. Script: `experiments/legacy_gui_csv_compare.py`; outputs in
+`experiments/output/legacy_gui_csv_compare/pixel3/`. Investigation only; bulcd and Early Detection are unchanged, and
+the S2 test is a config-only variant.
+
+**Overall conclusion.** We now have controlled GUI-vs-Python validation examples for all three outcomes:
+- decrease (pixel 1);
+- unchanged (pixel 2, at the GUI's sampled location);
+- increase (pixel 3).
+
+With legacy-compatible inputs and settings, each one shows:
+- exact NBR and residuals;
+- exact bins (60/60, 61/61, 61/61);
+- probability trajectories that agree exactly once aligned for the chart offset (363/363 each).
+
+Every remaining difference is one of three known, separately documented ones (below).
+
+- **Point provenance.** The coordinate first given for pixel 3 (−123.54755, 44.83627) matched nothing.
+  - 0/46 NBR values were exact, and no point on a 15 m grid within ±150 m reproduced the GUI series. It was a
+    different click.
+  - The GUI's Charts mode passes all four linked maps to `getChartResults(maps, ...)` (in the unfetched
+    `HelperFunctions-BULCD`), which handles its own clicks. A temporary `maps[0].onClick()` listener is therefore
+    not guaranteed to record the charted point.
+  - The coordinate above was captured at full precision and matches directly; no offset scan was needed.
+- **Results with the S2 scene filter removed (`s2_nofilter`):**
+
+  | Stage | Agreement |
+  |---|---|
+  | Time steps | 122/122 identical dates in both periods |
+  | Expectation NBR | 54/54 exact |
+  | Expectation fitted | 117/122 with bulcd's time axis (max 0.0011); 122/122 with legacy fracDOY |
+  | Expectation residuals | 52/54 with bulcd's time axis; 54/54 with legacy fracDOY |
+  | Target NBR | 61/61 exact |
+  | Target fitted | 23/122 with bulcd's time axis (max 0.0019); 122/122 with legacy fracDOY |
+  | Target residuals | 13/61 with bulcd's time axis (max 0.0019); 61/61 with legacy fracDOY |
+  | Bins | 61/61 |
+  | Probabilities (lag 1) | 363/363 exact |
+  | Final plotted probabilities | 0.044/0.055/0.900 in both |
+
+  - It is a clear increase: z up to 4.45, P(up) 0.900 at the end, P(drop) never above 0.253. This is the first
+    validation of the increase class and the upper bins (8–10).
+  - The nearest z is 0.002 from a bin cut, the closest yet. The bin still agrees, although the edge rule at
+    exactly a cut remains untested.
+- **The three known differences, unchanged:**
+  1. **Sentinel-2 scene filter (imagery; the only one that changes inputs).** bulcd drops S2 scenes with
+     `CLOUDY_PIXEL_PERCENTAGE > 70`; the legacy Cloud Score+ path has no scene filter. Pixel 3 shows it can
+     materially change the classification evidence:
+     - as-is, bulcd loses two 2024 expectation scenes (2024-02-06, 2024-03-07);
+     - that shifts the fit by up to 0.089 NBR and the residual SD from 0.126 to 0.096;
+     - result: **30/61 bins change** (mostly 1–3 bins higher) and only 88/363 probabilities stay exact;
+     - the final outcome is still increase here (0.043/0.043/0.914), but the evidence sequence is substantially
+       different.
+
+     Compare pixel 1 (0 bins changed) and pixel 2 (12/60).
+  2. **Harmonic-fit time axis (fit stage).** Legacy uses fracDOY = (0-based DOY of bin end)/365; bulcd uses
+     fractional years since 1970. The legacy axis reproduces every GUI fitted value and residual exactly. bulcd's
+     is off by up to 0.0019 NBR (0.015 z with this pixel's SD), which flipped no bins here.
+  3. **GUI probability-chart offset (chart construction, not algorithm).** GUI row k is the posterior after step
+     k−1: row 1 is the 0.1/0.8/0.1 prior, and the posterior after the final step (Python 0.043/0.046/0.911) is
+     never plotted. Lag-0 comparison: 207/366; lag 1: 363/363.
+- **Still unverified:** the bin edge rule exactly at a cut, the exact transition-dampening code, and anything
+  outside this one site, sensor set, and year pair. Three pixels, one case.

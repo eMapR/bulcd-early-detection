@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-09-29
+Last updated: 2026-10-08
 
 Concise current-state/handoff doc. Detailed lessons, experimental
 results, and their explanations live in `docs/findings.md` — read it for
@@ -165,6 +165,34 @@ Two-repo split:
     month-day pickers (Feb 29 excluded), with validation (start before end, no wrap past Dec 31;
     Run disabled with a message otherwise). The same window applies to expectation and monitoring.
 
+- **2026-10-04: legacy GUI equivalence, one pixel** (`experiments/legacy_gui_equivalence.py`, testsite,
+  2024 → 2025, L8+L9+S2, day step 3). Python reproduces the GUI's spring-2025 drop. Its formulas match the fetched
+  legacy source stage by stage. The first input divergence is S2: legacy applies no scene-cloud filter; bulcd drops
+  scenes > 70%. Chart semantics are inferred, not confirmed (`HelperFunctions-BULCD` not fetched). Details:
+  `docs/findings.md`, 2026-10-04.
+- **2026-10-04 (later): equivalence confirmed against the GUI's own chart CSVs** (`experiments/legacy_gui_csv_compare.py`).
+  With native-pixel point sampling and no S2 scene filter, Python matches every stage within the CSVs' rounding.
+  Bins match 60/60 and probabilities 363/363 (after the GUI chart's one-step offset). Remaining differences:
+  - the bulcd S2 scene filter (first divergence; changes inputs);
+  - the harmonic time axis (≤ 0.0013 NBR; legacy fracDOY reproduces GUI fits exactly);
+  - the GUI probability chart plotting the prior first.
+- **2026-10-04: pixel 2 (stable) confirms it.** At the location the GUI actually sampled, with S2 filter off: all NBR
+  and residuals exact, bins 61/61, probabilities 363/363. That location is one S2 pixel about 1–11 m NE of the
+  reported coordinate; at the reported coordinate, S2 values differ. The as-is S2 filter flips 12/60 bins here
+  (max ΔP 0.155), so it matters at stable pixels.
+- **2026-10-08: pixel 3 (increase) completes the set. GUI-vs-Python equivalence is validated for decrease,
+  unchanged, and increase.** With legacy-compatible inputs/settings (native-pixel sampling, no S2 scene filter),
+  all three pixels give exact NBR and residuals, exact bins (60/60, 61/61, 61/61), and probability trajectories
+  that agree exactly once aligned (363/363 each). Pixel 3 ends at 0.044/0.055/0.900 (increase) in both. The three
+  known differences stay separate:
+  1. **S2 scene filter:** changes inputs. At pixel 3 it changes **30/61 bins**, so it can materially alter the
+     classification evidence, not just the fit.
+  2. **Harmonic-fit time axis:** ≤ 0.0019 NBR; the legacy fracDOY axis reproduces the GUI exactly.
+  3. **GUI chart's one-step plotting offset:** chart only.
+
+  GUI exports and their coordinates/settings are in `experiments/reference_data/legacy_gui_charts/`. Neither bulcd
+  nor Early Detection behavior was changed. Details: `docs/findings.md`, 2026-10-08.
+
 ## Reproducibility notes
 
 - **Earth Engine input imagery can change between runs.** Late-September 2026 Sentinel-2 scenes over
@@ -266,6 +294,12 @@ is unchanged until this is investigated. Details: `docs/findings.md`,
   also behind the 76%-early-June issue. Not yet tested more widely.
 
 ## Next steps
+
+- Legacy equivalence (validated for decrease/unchanged/increase): decide in BULC-D_rebuild whether to match legacy
+  on the S2 scene filter (pixel 3: 30/61 bins change) and the fracDOY time axis. Still open:
+  - The pixel-2 location offset. Capturing the charted point reliably needs `HelperFunctions-BULCD`'s
+    `getChartResults` source (it handles its own clicks on all four maps), or click listeners on all four maps.
+  - The app/notebooks sample on a 30 m UTM grid, not the GUI's native-pixel sampling.
 
 - Post-demo: decide the Early Detection masking default (recommended:
   water on, forest off, forest optional/custom mask asset).

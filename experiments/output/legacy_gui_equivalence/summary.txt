@@ -1,0 +1,18 @@
+[wgs84_30m] EPSG:4326 30 m
+  bins: expectation 122 (50 with data), target 122 (59 with data)
+  bulcd coefficients: constant=0.7388, cos=0.0741, sin=-0.0142
+  bulcd residual SD = 0.0695; denominator = max(SD, 0.05) = 0.0695
+  legacy-recon (fracDOY) coefficients: constant=0.7388, cos=0.0741, sin=-0.0140; SD = 0.0695
+  max |bulcd fitted - legacy-recon fitted| over target bins = 0.00098
+  max |bulcd P - legacy-recon P| over target bins = 0.00000
+  clear S2 scenes legacy would use but bulcd's scene filter drops: 5
+  first bin with P(decrease) > 0.5: 2025-04-04; final P = 0.914/0.043/0.043
+[utm_30m] EPSG:32610 30 m
+  bins: expectation 122 (49 with data), target 122 (60 with data)
+  bulcd coefficients: constant=0.7961, cos=0.0646, sin=-0.0400
+  bulcd residual SD = 0.0456; denominator = max(SD, 0.05) = 0.0500
+  legacy-recon (fracDOY) coefficients: constant=0.7961, cos=0.0647, sin=-0.0397; SD = 0.0456
+  max |bulcd fitted - legacy-recon fitted| over target bins = 0.00101
+  max |bulcd P - legacy-recon P| over target bins = 0.00000
+  clear S2 scenes legacy would use but bulcd's scene filter drops: 6
+  first bin with P(decrease) > 0.5: 2025-04-04; final P = 0.914/0.043/0.043
