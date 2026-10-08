@@ -16,6 +16,7 @@ from __future__ import annotations
 import bisect
 import csv
 import datetime
+import math
 from pathlib import Path
 
 import ee
@@ -110,12 +111,17 @@ def plot_pixel_history(seasons: dict[str, list[dict]], threshold: float = 0.5, t
                        classes: tuple[str, ...] = ("decrease",), show_nbr: bool = True, save_to=None):
     """One column per monitoring season (label -> rows), sharing y-axes.
 
-    Top: observed NBR against the expected seasonal value (if available),
-    else the z-score; each observation colored by the class its evidence
-    favors. Bottom: probability of `classes` (decrease by default) through
-    the season, the decision threshold, and the first crossing marked.
+    Laid out like the legacy GUI's "Target Year vs. Fit of Expectation" and
+    "Probability Through Time" charts. Top: observed NBR (a line broken where
+    there is no clear observation) against the expected seasonal fit, if
+    available, else the z-score; each observation dot colored by the class its
+    evidence favors. Bottom: probability of `classes` (decrease by default) at
+    each observation's own date - unlike the legacy chart, which plots each
+    posterior one step late - with the decision threshold and the first
+    crossing of each change class marked.
     """
     have_nbr = show_nbr and any(r["observed"] is not None for rows in seasons.values() for r in rows)
+    change = [c for c in classes if c != "unchanged"]
     n = len(seasons)
     fig, axes = plt.subplots(2, n, figsize=(max(4.2 * n + 1.2, 8.5), 6.2), dpi=110, sharey="row", squeeze=False,
                              gridspec_kw={"height_ratios": [1, 1.2]})
@@ -123,28 +129,30 @@ def plot_pixel_history(seasons: dict[str, list[dict]], threshold: float = 0.5, t
         top, bot = axes[0][col], axes[1][col]
         dates = [r["date"] for r in rows]
         obs = [r for r in rows if r["zscore"] is not None]
+        key = "observed" if have_nbr else "zscore"
         if have_nbr:
-            top.plot(dates, [r["expected"] for r in rows], color="#555", lw=1.5, ls="--")
-            ys = [r["observed"] for r in obs]
+            top.plot(dates, [r["expected"] for r in rows], color="#555", lw=1.8)
         else:
             top.axhline(0, color="#999", lw=1)
-            ys = [r["zscore"] for r in obs]
-        top.scatter([r["date"] for r in obs], ys, s=34, c=[CLASS_COLORS[r["supports"]] for r in obs],
-                    edgecolors="white", linewidths=1.2, zorder=3)
-        main = [r[classes[0]] for r in rows]
+        top.plot(dates, [math.nan if r["zscore"] is None else r[key] for r in rows], color="#b9b7ae", lw=1.2, zorder=2)
+        top.scatter([r["date"] for r in obs], [r[key] for r in obs], s=30, c=[CLASS_COLORS[r["supports"]] for r in obs],
+                    edgecolors="white", linewidths=1.1, zorder=3)
         # Shade every period above the threshold: a first crossing need not stay above it.
-        bot.fill_between(dates, threshold, main, where=[v is not None and v > threshold for v in main], step="post",
-                         color=CLASS_COLORS[classes[0]], alpha=0.15, lw=0)
+        for cls in change:
+            vals = [r[cls] for r in rows]
+            bot.fill_between(dates, threshold, vals, where=[v is not None and v > threshold for v in vals], step="post",
+                             color=CLASS_COLORS[cls], alpha=0.15, lw=0)
         for cls in classes:
-            bot.step(dates, [r[cls] for r in rows], where="post", lw=2.2, color=CLASS_COLORS[cls])
+            bot.step(dates, [r[cls] for r in rows], where="post", lw=2, color=CLASS_COLORS[cls])
+            bot.plot(dates, [r[cls] for r in rows], ls="", marker="o", ms=2.5, color=CLASS_COLORS[cls])
         bot.axhline(threshold, color="#555", lw=1, ls=":")
-        crossed = first_crossing(rows, threshold, classes[0])
-        if crossed:
-            bot.axvline(crossed, color="#222", lw=1)
-            bot.annotate(f"first crossed\n{crossed:%Y-%m-%d}", (crossed, threshold), xytext=(6, 18),
-                         textcoords="offset points", fontsize=9, color="#222")
-        else:
-            bot.text(0.03, 0.9, f"never > {threshold}", transform=bot.transAxes, fontsize=9, color="#555")
+        notes = []
+        for cls in change:
+            crossed = first_crossing(rows, threshold, cls)
+            if crossed:
+                bot.axvline(crossed, color=CLASS_COLORS[cls], lw=1)
+            notes.append(f"{cls} first crossed {crossed:%Y-%m-%d}" if crossed else f"{cls} never > {threshold}")
+        bot.set_title(" · ".join(notes), loc="left", fontsize=9, color="#444")
         top.set_title(label, fontsize=11)
         bot.set_ylim(0, 1.02)
         for ax in (top, bot):
@@ -159,14 +167,15 @@ def plot_pixel_history(seasons: dict[str, list[dict]], threshold: float = 0.5, t
     axes[1][0].set_ylabel("Probability")
     handles = [Line2D([], [], marker="o", ls="", color=CLASS_COLORS[c], mec="white", ms=7, label=f"observation favors {c}") for c in CLASSES]
     if have_nbr:
-        handles.append(Line2D([], [], color="#555", ls="--", label="expected (baseline model)"))
-    handles += [Line2D([], [], color=CLASS_COLORS[c], lw=2.2, label=f"P({c})") for c in classes]
+        handles.append(Line2D([], [], color="#555", lw=1.8, label="expected (baseline fit)"))
+        handles.append(Line2D([], [], color="#b9b7ae", lw=1.2, label="observed NBR"))
+    handles += [Line2D([], [], color=CLASS_COLORS[c], lw=2, marker="o", ms=3, label=f"P({c})") for c in classes]
     handles.append(Line2D([], [], color="#555", ls=":", label=f"decision threshold ({threshold})"))
-    handles.append(Patch(facecolor=CLASS_COLORS[classes[0]], alpha=0.15, label=f"P({classes[0]}) above threshold"))
+    handles += [Patch(facecolor=CLASS_COLORS[c], alpha=0.15, label=f"P({c}) above threshold") for c in change]
     fig.legend(handles=handles, loc="lower center", ncol=min(len(handles), 4), frameon=False, fontsize=9)
     if title:
         fig.suptitle(title, x=0.01, ha="left", fontsize=12)
-    fig.tight_layout(rect=(0, 0.1, 1, 0.97))
+    fig.tight_layout(rect=(0, 0.1 + 0.03 * (len(handles) > 8), 1, 0.97))
     if save_to is not None:
         Path(save_to).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(save_to, bbox_inches="tight")

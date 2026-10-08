@@ -226,6 +226,10 @@ Two-repo split:
   and the first threshold-crossing date. The data side exists:
   `pixel.pixel_history(config, lon, lat)` returns plain rows for any coordinate.
   The notebook chart (`pixel.plot_pixel_history`) is the prototype.
+  2026-10-08: the app's inspector now follows the legacy GUI's "Target Year vs. Fit" and "Probability
+  Through Time" layout: all three probabilities, plotted at each observation's own date (no one-step
+  offset), and first crossings for both decrease and increase. It still samples the clicked 30 m result
+  pixel, not GUI-style native pixels (user decision).
 - **Intended flow:** choose area → configure monitoring → run/view results →
   inspect detections → click pixels. Google Earth Engine is the current likely
   deployment environment (users may not be able to install software). Not final.

@@ -466,16 +466,20 @@ class EarlyDetectionApp:
                 display(Markdown("No clear observations here: outside the study area, masked (water or non-forest), "
                                  "or always cloudy. Try another pixel."))
             else:
-                pixel.plot_pixel_history(histories, state["controls"].decision_threshold,
+                thr = state["controls"].decision_threshold
+                pixel.plot_pixel_history(histories, thr, classes=pixel.CLASSES,
                                          title=f"Pixel at {lat:.5f} N, {abs(lon):.5f} {'W' if lon < 0 else 'E'}")
                 for label, rows in histories.items():
-                    thr = state["controls"].decision_threshold
-                    crossed = pixel.first_crossing(rows, thr)
-                    finished = rows[-1]["decrease"] > thr
-                    print(f"{label}: " + (f"first crossed the threshold on {crossed}, " +
-                                          ("finished the season as decrease (counts as detected)" if finished
-                                           else "finished below the threshold (does not count)")
-                                          if crossed else "never crossed the threshold"))
+                    for cls in ("decrease", "increase"):
+                        crossed = pixel.first_crossing(rows, thr, cls)
+                        if not crossed:
+                            continue
+                        finished = rows[-1][cls] > thr
+                        print(f"{label}: {cls} first crossed the threshold on {crossed}, " +
+                              (f"finished the season as {cls} (counts as detected)" if finished
+                               else "finished below the threshold (does not count)"))
+                    if not any(pixel.first_crossing(rows, thr, c) for c in ("decrease", "increase")):
+                        print(f"{label}: never crossed the threshold")
         self.status.value = "<b>Done.</b> Click another pixel to compare."
         return histories
 
