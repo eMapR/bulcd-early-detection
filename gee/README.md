@@ -1,34 +1,58 @@
-# gee/ — Earth Engine Code Editor app (Milestone 1)
+# gee/ — Earth Engine Code Editor app
 
-A GEE JavaScript version of the Early Detection interface. The Python app
-(`src/bulcd_early_detection/app.py`) and notebooks are the specification; this is
-not derived from the legacy GUI's code.
+A GEE JavaScript version of the Early Detection interface. The interactive notebook's
+app (`src/bulcd_early_detection/app.py`) is the UI/functionality reference, and the
+validated Python `bulcd` is the algorithm reference. Nothing here is derived from the
+legacy GUI's code.
 
 BULC-D itself runs in `BULC-D_rebuild/gee/bulcd.js`, a port of the Python `bulcd`
 package held to JS ↔ Python parity there (`gee/tests/run_parity.py`). Per this repo's
-rule, no algorithm code is copied here: these modules only interpret its outputs.
+rule, no algorithm code is copied here: these modules only build configs and interpret
+outputs.
 
 | File | Role | Python counterpart |
 |---|---|---|
-| `config.js` | Fixed, read-only reference case (JSON form of `BULCDConfig`) and display settings | `cases.py legacy_reference()` in BULC-D_rebuild |
-| `outputs.js` | Classification map (decision threshold rule, colors) | `outputs._outcome_from_result()`, `render.OUTCOME_COLORS` |
+| `config.js` | Settings → bulcd config, notebook defaults and limits | `config.build_config()` + `app.EarlyDetectionApp.build()` |
+| `controls.js` | Settings panel (widgets) | `app.py _build_settings_step()` |
+| `aoi.js` | Area size check and limits | `outputs.aoi_size_report()`, `app.py _use_area()` |
+| `outputs.js` | Condition, first-detected season, true color, NBR composite | `outputs._outcome_from_result()`, `detection_timing_image()`, `combine_season_timing()`, `annual_true_color()`, `annual_nbr()`, `nbr_stretch()`; `render` colors |
 | `inspector.js` | Pixel history rows, the two charts | `pixel.pixel_history()`, `plot_pixel_history()` |
-| `app.js` | Code Editor UI: map, legend, map click / lon-lat entry, inspector panel | `app.py` |
+| `app.js` | Code Editor UI: area, settings, run, layers, legend, inspector | `app.py` |
 
-## Milestone 1 scope
+## What the app does
 
-- One known case: the legacy reference case (testsite, 2024 expectation → 2025
-  target, full year, L8+L9+S2, NBR, day step 3, legacy levelers). Python reproduces
-  the legacy GUI exactly at its three reference pixels (BULC-D_rebuild decision 0011).
-  The configuration is fixed; there is no control panel yet.
-- Classification map: decrease / unchanged / increase where P > 0.5, water masked.
-- Pixel selection: click the map (fills the Longitude/Latitude boxes) or type a
-  coordinate and press **Submit Pixel**; a reference-pixel menu selects pixels 1–3.
-- Inspector: "Target Year vs. Fit" (expected fit, observed NBR, each observation
-  colored by the class its evidence favors) and "Probability Through Time"
-  (P(decrease/unchanged/increase) with the decision threshold). Sampled on the 30 m
-  UTM result grid; probabilities are plotted at each observation bin's own date,
-  not one step late as in the legacy chart.
+The app is for investigating Early Detection, not for validation: reference cases,
+reference pixels and other test fixtures live only in `tests/` (`tests/reference_case.js`)
+and are never deployed. Workflow: choose or draw an area → choose parameters → **Run
+Early Detection** → explore the result and reference layers → click or enter a pixel →
+inspect its NBR/fit and probability history.
+
+1. **Area.** A polygon or rectangle drawn with the map's drawing tools (the default; only
+   the latest shape is used), or an Earth Engine FeatureCollection asset. Same size rule
+   as the notebook: over 100 km² warns, over 1,000 km² is blocked unless allowed under
+   Advanced settings.
+2. **Settings,** with the notebook's defaults and limits: expectation years
+   (2018–2023), monitoring year (2026), season start/end (Jun 1–Sep 30), sensitivity
+   (1.0), decision threshold (0.5), first-detected season (on); advanced: dampening
+   (0.5), posterior leveler (1.0), monitoring sensors (L8, L9, S2; the expectation is
+   always Landsat 8), forest-only and water masks (on), allow large areas. A
+   description states the periods in words and blocks invalid settings. Fixed, as in
+   the notebook: the legacy evidence table, cloud 70, day step 4, even starting odds,
+   NBR, average level + one annual cycle.
+3. **Run Early Detection** recomputes for the chosen area. Layers, bottom to top, in
+   the map's Layers control: true color for the monitoring year and the two before;
+   the NBR composite (R/G/B = those years, one stretch, water masked); first detected
+   season (decrease; separate runs for up to three seasons, confirmed definition);
+   **condition** (the primary layer, on at 0.85 opacity); the study-area outline.
+4. **Pixel inspector.** Click the map or type a longitude/latitude and press **Submit
+   Pixel**. "Target Year vs. Fit" and "Probability
+   Through Time", sampled on the 30 m result grid, probabilities at each observation's
+   own date. A run keeps the coordinate boxes, so Submit Pixel inspects the same pixel
+   under new settings; the inspector names the settings of the run it shows.
+
+Not ported yet (in the notebook): saved local areas (the Code Editor can't read local
+files), the Condition/Timing/Imagery summary tabs, the Parameter behavior tab, and the
+inspector's one-column-per-season view.
 
 ## Running it in the Code Editor
 
@@ -61,16 +85,27 @@ as in the legacy GUI, so map tiles take a while.
 ## Parity test (GEE app ↔ Python app)
 
 `tests/run_app_parity.py` runs `app.js` under Node with a stub `ui`
-(`tests/ui_stub.js`), clicks each reference pixel through the app's own map-click
-handler, and compares with the Python app's code on the same case:
+(`tests/ui_stub.js`), drives it through its own buttons and map-click handler, and
+compares with the Python app's code on the same settings:
 
-- `config.js` equals BULC-D_rebuild's `legacy_reference()` config;
-- inspector rows and chart values equal `pixel.pixel_history()` at pixels 1–3;
-- the classification equals `outputs._outcome_from_result()` over a 30 m box.
+1. **Legacy reference case** (`tests/reference_case.js`; not in the GUI), through the
+   app's modules: config equals BULC-D_rebuild's `legacy_reference()`; inspector rows
+   and chart values equal `pixel.pixel_history()` at pixels 1–3; condition equals
+   `outputs._outcome_from_result()` over a 30 m box.
+2. **The GUI** (asset area = the testsite, notebook-default widgets, Run): no
+   validation shortcuts are exposed (checked buttons, area sources and labels); widget
+   defaults equal the notebook's; the config and each first-detected-season config
+   equal `EarlyDetectionApp.build()`; condition and first-detected-season layers equal
+   `outputs.outcome_image()` and `combine_season_timing()` over the box; the inspector
+   equals `pixel_history()` at pixel 1 (map click) and pixel 3 (typed lon/lat + Submit
+   Pixel); layer list in the notebook's order, only condition shown.
+3. **Non-default settings:** configs equal `EarlyDetectionApp.build()` with the same
+   widget values.
 
-It uses BULC-D_rebuild's Node environment and Earth Engine token helper (setup in
-`../BULC-D_rebuild/gee/README.md`). From the `bulcd` env:
+The true-color and NBR layers are reference imagery outside BULC-D and aren't
+compared. It uses BULC-D_rebuild's Node environment and Earth Engine token helper
+(setup in `../BULC-D_rebuild/gee/README.md`). From the `bulcd` env:
 
 ```sh
-cd gee/tests && python run_app_parity.py      # ~10 min
+cd gee/tests && python run_app_parity.py      # ~20 min
 ```

@@ -4,7 +4,7 @@ Git is the source of truth; the Code Editor holds generated copies. Layout
 (mirrors the two git repos, so no algorithm code lands in the app's repo):
 
     users/<user>/BULC-D_rebuild          bulcd       <- ../BULC-D_rebuild/gee/bulcd.js
-    users/<user>/bulcd-early-detection   app, config, outputs, inspector  <- gee/*.js
+    users/<user>/bulcd-early-detection   app, config, outputs, inspector, aoi, controls  <- gee/*.js
 
 Each copy starts with a header naming its source file and commit. In app,
 the OWNER placeholder in its require() paths becomes <user>. Every require()
@@ -24,7 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BULCD_ROOT = ROOT.parent / "BULC-D_rebuild"
 ENGINE_REPO, APP_REPO = "BULC-D_rebuild", "bulcd-early-detection"
-APP_FILES = ("app", "config", "outputs", "inspector")
+APP_FILES = ("app", "config", "outputs", "inspector", "aoi", "controls")
 
 
 def source_version(repo: Path, path: str) -> str:

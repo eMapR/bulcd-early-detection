@@ -1,25 +1,37 @@
-"""GEE app <-> Python app parity for Milestone 1 (the fixed reference case).
+"""GEE app <-> Python app parity.
 
-Runs gee/app.js under Node (tests/app_extract.js, stub `ui`), clicks each
-reference pixel, and compares with the Python app's own code on the same case:
+Runs gee/app.js under Node (tests/app_extract.js, stub `ui`), drives it
+through its own buttons and map-click handler, and compares with the Python
+app's own code (src/bulcd_early_detection) on the same settings:
 
-- config.js REFERENCE_CASE.bulcd is BULC-D_rebuild's legacy_reference() config
-  (gee/tests/cases.py), so the engine underneath is the one held to JS <-> Python
-  parity there (gee/tests/run_parity.py);
-- inspector rows (dates, observed/expected NBR, z-score, supported class,
-  P(decrease/unchanged/increase)) == pixel.pixel_history() at pixels 1-3, and
-  the probability chart plots exactly those values at those dates;
-- outputs.js classification == outputs._outcome_from_result() over a 30 m box.
+1. Legacy reference case (tests/reference_case.js, a test fixture; not in the
+   GUI), through the app's modules: its config == BULC-D_rebuild's
+   legacy_reference() (the case held to JS <-> Python engine parity in
+   gee/tests/run_parity.py); inspector rows and chart values ==
+   pixel.pixel_history() at pixels 1-3; condition ==
+   outputs._outcome_from_result() over a 30 m box.
+2. The GUI (asset area = the testsite, notebook-default widgets, "Run Early
+   Detection"): no validation shortcuts exposed; the widgets' defaults and the
+   config they build == EarlyDetectionApp's defaults and build();
+   first-detected-season configs == build(controls(y)); condition and
+   first-detected-season layers == outputs.outcome_image() and
+   combine_season_timing() over the box; inspector == pixel_history() at pixel 1
+   (map click) and pixel 3 (typed lon/lat + Submit Pixel); layer list in the
+   notebook's order.
+3. A non-default settings combination: configs == EarlyDetectionApp.build()
+   with the same widget values (no computation).
 
-Run from the bulcd env: cd gee/tests && python run_app_parity.py   (~10 min)
+Run from the bulcd env: cd gee/tests && python run_app_parity.py   (~20 min)
 Node and bulcd.js come from ../../BULC-D_rebuild/gee (BULCD_GEE overrides).
 """
 
+import dataclasses
 import json
 import os
 import subprocess
 import sys
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import ee
@@ -29,24 +41,80 @@ BULCD_GEE = Path(os.environ.get("BULCD_GEE", HERE.parents[2] / "BULC-D_rebuild" 
 NODE = os.environ.get("BULCD_NODE", "/Users/clarype/miniconda3/envs/bulcd-gee/bin/node")
 TOL = 1e-6
 BOX = [-123.5725, 44.8300, -123.5400, 44.8500]
-NUMERIC = ("observed", "expected", "zscore", "decrease", "unchanged", "increase")
+TESTSITE = "projects/bulcd-python-rebuild/assets/testsite"
+CLASSES = ("decrease", "unchanged", "increase")
+NUMERIC = ("observed", "expected", "zscore", *CLASSES)
+# Must match app_extract.js VARIANT.
+VARIANT = dict(expectation=(2019, 2023), monitoring_year=2025, start=(5, 15), end=(10, 15), sensitivity=1.5,
+               threshold=0.6, timing=True, dampening=0.7, posterior=0.9, sensors={"L8": True, "L9": True, "S2": False},
+               mask_forest=False, mask_water=True)
 
 sys.path.insert(0, str(BULCD_GEE / "tests"))
 from cases import legacy_reference  # noqa: E402
 
 
-def python_side(pixels):
-    import dataclasses
+def region(image):
+    return ee.ImageCollection([image.set("system:time_start", 0)]).getRegion(
+        ee.Geometry.Rectangle(BOX), 30, "EPSG:32610").getInfo()
 
+
+def python_side(pixels):
     from bulcd.engine import run_bulcd
     from bulcd_early_detection import outputs, pixel
+    from bulcd_early_detection.app import EarlyDetectionApp
+
+    pool = ThreadPoolExecutor(8)
+    out = {"reference": {}, "notebook": {}, "variant": {}}
 
     cfg = legacy_reference()
-    rows = {label: pixel.pixel_history(cfg, lon, lat) for label, (lon, lat) in pixels.items()}
-    outcome = outputs._outcome_from_result(run_bulcd(cfg), cfg, 0.5).select("outcome")
-    box = ee.ImageCollection([outcome.set("system:time_start", 0)]).getRegion(
-        ee.Geometry.Rectangle(BOX), 30, "EPSG:32610").getInfo()
-    return dataclasses.asdict(cfg), rows, box
+    out["reference"]["config"] = dataclasses.asdict(cfg)
+    out["reference"]["rows"] = {k: pool.submit(pixel.pixel_history, cfg, *pixels[k]) for k in pixels}
+    out["reference"]["outcome_box"] = pool.submit(
+        region, outputs._outcome_from_result(run_bulcd(cfg), cfg, 0.5).select("outcome"))
+
+    app = EarlyDetectionApp()
+    c = app.controls()
+    config = app.build(c, aoi_asset=TESTSITE)
+    years = app._timing_years() if app.timing.value else []
+    geom = ee.FeatureCollection(TESTSITE).geometry()
+    nb = out["notebook"]
+    nb["widgets"] = dict(expectation=list(app.expectation.value), monitoring_year=app.monitoring_year.value,
+                         window=list(app.window.value), sensitivity=app.sensitivity.value,
+                         threshold=app.threshold.value, timing=app.timing.value, dampening=app.dampening.value,
+                         posterior=app.posterior.value, sensors={k: b.value for k, b in app.sensors.items()},
+                         mask_forest=app.mask_forest.value, mask_water=app.mask_water.value,
+                         allow_large=app.allow_large.value)
+    nb["config"] = dataclasses.asdict(config)
+    nb["timing_years"] = years
+    nb["timing_configs"] = [dataclasses.asdict(app.build(app.controls(y), aoi_asset=TESTSITE)) for y in years]
+    nb["outcome_box"] = pool.submit(region, outputs.outcome_image(config, c.decision_threshold).clip(geom)
+                                    .select("outcome"))
+    seasons = {y: outputs.detection_timing_image(app.build(app.controls(y), aoi_asset=TESTSITE), c.decision_threshold)
+               for y in years}
+    nb["timing_box"] = pool.submit(region, outputs.combine_season_timing(seasons).clip(geom)
+                                   .select(["first_decrease_year", "first_decrease_doy"]))
+    nb["rows"] = {k: pool.submit(pixel.pixel_history, config, *pixels[k]) for k in (list(pixels)[0], list(pixels)[2])}
+
+    v = VARIANT
+    app.expectation.value = v["expectation"]
+    app.monitoring_year.value = v["monitoring_year"]
+    app.window.start_month.value, app.window.start_day.value = v["start"]
+    app.window.end_month.value, app.window.end_day.value = v["end"]
+    app.sensitivity.value, app.threshold.value, app.timing.value = v["sensitivity"], v["threshold"], v["timing"]
+    app.dampening.value, app.posterior.value = v["dampening"], v["posterior"]
+    for k, on in v["sensors"].items():
+        app.sensors[k].value = on
+    app.mask_forest.value, app.mask_water.value = v["mask_forest"], v["mask_water"]
+    out["variant"]["config"] = dataclasses.asdict(app.build(app.controls(), aoi_asset=TESTSITE))
+    out["variant"]["timing_years"] = app._timing_years()
+    out["variant"]["timing_configs"] = [dataclasses.asdict(app.build(app.controls(y), aoi_asset=TESTSITE))
+                                        for y in app._timing_years()]
+
+    def resolve(x):
+        if isinstance(x, dict):
+            return {k: resolve(val) for k, val in x.items()}
+        return x.result() if hasattr(x, "result") else x
+    return resolve(out)
 
 
 def subset_mismatches(js, py, where="config"):
@@ -69,27 +137,10 @@ def num_close(a, b):
     return (a is None and b is None) or (a is not None and b is not None and abs(a - b) <= TOL)
 
 
-def main():
-    ee.Initialize(project="bulcd-python-rebuild")
-    with tempfile.TemporaryDirectory() as tmp:
-        js_out = Path(tmp) / "js.json"
-        proc = subprocess.Popen([NODE, str(HERE / "app_extract.js"), str(js_out)], cwd=HERE,
-                                env={**os.environ, "BULCD_GEE": str(BULCD_GEE)})
-        # Pixel coordinates come from config.js via a tiny Node read, so both sides use the same numbers.
-        ref = json.loads(subprocess.check_output(
-            [NODE, "-e", "console.log(JSON.stringify(require('../config.js').REFERENCE_CASE.reference_pixels))"],
-            cwd=HERE))
-        pixels = {p["label"]: (p["lon"], p["lat"]) for p in ref}
-        py_cfg, py_rows, py_box = python_side(pixels)
-        if proc.wait() != 0:
-            sys.exit("app_extract.js failed")
-        js = json.loads(js_out.read_text())
-
-    failures = subset_mismatches(js["config"], py_cfg)
-    print(f"config.js == legacy_reference(): {'yes' if not failures else 'NO'}")
-
+def compare_pixels(name, js_pixels, py_rows, threshold):
+    failures = []
     for label, rows in py_rows.items():
-        j = js["pixels"][label]
+        j = js_pixels[label]
         bad = []
         if len(j["rows"]) != len(rows):
             bad.append(f"{len(j['rows'])} JS rows vs {len(rows)} Python rows")
@@ -97,33 +148,126 @@ def main():
             if jr["date"] != str(pr["date"]) or jr["supports"] != pr["supports"] or \
                     not all(num_close(jr[k], pr[k]) for k in NUMERIC):
                 bad.append(f"{jr['date']}: JS {jr} vs Python {pr}")
-        expected_chart = [[r[c] for c in ("decrease", "unchanged", "increase")] + [0.5] for r in j["rows"]]
+        expected_chart = [[r[c] for c in CLASSES] + [threshold] for r in j["rows"]]
         if j["prob_table"] != expected_chart or j["fit_table_rows"] != len(j["rows"]):
             bad.append("chart tables do not hold the inspector rows")
+        if "boxes" in j and j["boxes"] != [repr(j["lon"]), repr(j["lat"])]:
+            bad.append(f"coordinate boxes {j['boxes']} after selecting {j['lon']}, {j['lat']}")
         n_obs = sum(r["zscore"] is not None for r in rows)
-        print(f"{label}: {len(rows)} rows ({n_obs} observations), final "
-              f"{'/'.join(f'{rows[-1][c]:.3f}' for c in ('decrease', 'unchanged', 'increase'))} - "
+        final = "/".join(f"{rows[-1][c]:.3f}" for c in CLASSES) if rows else "-"
+        how = f" via {j['how']}" if "how" in j else ""
+        print(f"  {name} {label}{how}: {len(rows)} rows ({n_obs} observations), final {final} - "
               f"{'match' if not bad else f'{len(bad)} MISMATCHES'}")
         for note in j["notes"]:
-            print(f"    {note}")
-        failures += [f"{label}: {b}" for b in bad[:5]]
+            print(f"      {note}")
+        failures += [f"{name} {label}: {b}" for b in bad[:5]]
+    return failures
 
-    def keyed(region):
-        h = region[0]
-        i, x, y = h.index("outcome"), h.index("longitude"), h.index("latitude")
-        return {(round(r[x], 7), round(r[y], 7)): r[i] for r in region[1:]}
 
-    jb, pb = keyed(js["outcome_box"]), keyed(py_box)
-    diff = [k for k in set(jb) | set(pb) if jb.get(k) != pb.get(k)]
-    counts = {v: sum(1 for x in pb.values() if x == v) for v in sorted({x for x in pb.values() if x is not None})}
-    print(f"classification box: {len(pb)} pixels, classes {counts}, {len(diff)} differ")
-    failures += [f"outcome at {k}: JS {jb.get(k)} vs Python {pb.get(k)}" for k in diff[:5]]
-    print(f"UI: map layers {js['ui']['map_layers']}")
+def compare_box(name, js_region, py_region):
+    def keyed(reg):
+        h = reg[0]
+        bands = [b for b in h if b not in ("id", "longitude", "latitude", "time")]
+        x, y = h.index("longitude"), h.index("latitude")
+        return {(round(r[x], 7), round(r[y], 7), b): r[h.index(b)] for r in reg[1:] for b in bands}
+    jb, pb = keyed(js_region), keyed(py_region)
+    diff = [k for k in set(jb) | set(pb) if not num_close(jb.get(k), pb.get(k))]
+    by_band = {}
+    for (_, _, b), v in pb.items():
+        if v is not None:
+            by_band.setdefault(b, {}).setdefault(v, 0)
+            by_band[b][v] += 1
+    summary = "; ".join(f"{b}: {dict(sorted(c.items()))}" for b, c in by_band.items())
+    print(f"  {name}: {len(pb)} values, {len(diff)} differ ({summary})")
+    return [f"{name} at {k}: JS {jb.get(k)} vs Python {pb.get(k)}" for k in diff[:5]]
+
+
+def main():
+    ee.Initialize(project="bulcd-python-rebuild")
+    ref = json.loads(subprocess.check_output(
+        [NODE, "-e", "console.log(JSON.stringify(require('./reference_case.js').REFERENCE_PIXELS))"], cwd=HERE))
+    pixels = {p["label"]: (p["lon"], p["lat"]) for p in ref}
+    with tempfile.TemporaryDirectory() as tmp:
+        js_out = Path(tmp) / "js.json"
+        proc = subprocess.Popen([NODE, str(HERE / "app_extract.js"), str(js_out)], cwd=HERE,
+                                env={**os.environ, "BULCD_GEE": str(BULCD_GEE)})
+        py = python_side(pixels)
+        if proc.wait() != 0:
+            sys.exit("app_extract.js failed")
+        js = json.loads(js_out.read_text())
+
+    failures = []
+    print(f"Test area (testsite asset via the GUI): {js['area_report']['area_km2']:.1f} km2, verdict {js['area_report']['verdict']}")
+
+    print("1. Legacy reference case (test fixture, through the app's modules)")
+    f = subset_mismatches(js["reference"]["config"], py["reference"]["config"])
+    print(f"  config == legacy_reference(): {'yes' if not f else 'NO'}")
+    failures += f
+    failures += compare_pixels("reference", js["reference"]["pixels"], py["reference"]["rows"], 0.5)
+    failures += compare_box("reference condition", js["reference"]["outcome_box"], py["reference"]["outcome_box"])
+
+    print("2. GUI: asset area, notebook defaults, Run Early Detection")
+    visible = " | ".join(js["gui_labels"] + js["gui_buttons"] + js["gui_area_sources"])
+    f = [f"GUI exposes validation/testing text: {m!r}" for m in
+         ("legacy", "reference case", "reference pixel", "validation", "testsite", "Pixel 1", "Pixel 2", "Pixel 3",
+          "parity", "debug") if m.lower() in visible.lower()]
+    if js["gui_buttons"] != ["Use this area", "Run Early Detection", "Submit Pixel"]:
+        f.append(f"GUI buttons {js['gui_buttons']}")
+    if js["gui_area_sources"] != ["Draw on the map", "Earth Engine asset"]:
+        f.append(f"area sources {js['gui_area_sources']}")
+    print(f"  buttons {js['gui_buttons']}, area sources {js['gui_area_sources']}; "
+          f"no validation shortcuts: {'yes' if not f else 'NO'}")
+    failures += f
+    w, c = py["notebook"]["widgets"], js["notebook"]["controls"]
+    widget_pairs = {
+        "expectation": ([c["expectation_first"], c["expectation_last"]], w["expectation"]),
+        "monitoring_year": (c["monitoring_year"], w["monitoring_year"]),
+        "season": ([c["season_start"], c["season_end"]], w["window"]),
+        "sensitivity": (c["sensitivity"], w["sensitivity"]), "threshold": (c["decision_threshold"], w["threshold"]),
+        "timing": (c["timing"], w["timing"]), "dampening": (c["dampening"], w["dampening"]),
+        "posterior": (c["posterior_leveler"], w["posterior"]), "sensors": (c["sensors"], w["sensors"]),
+        "mask_forest": (c["mask_forest"], w["mask_forest"]), "mask_water": (c["mask_water"], w["mask_water"]),
+        "allow_large": (c["allow_large"], w["allow_large"]),
+    }
+    f = [f"widget default {k}: JS {a!r} vs notebook {b!r}" for k, (a, b) in widget_pairs.items() if a != b]
+    print(f"  widget defaults == notebook: {'yes' if not f else 'NO'}")
+    failures += f
+    f = subset_mismatches(js["notebook"]["config"], py["notebook"]["config"])
+    if js["notebook"]["timing_years"] != py["notebook"]["timing_years"]:
+        f.append(f"timing years JS {js['notebook']['timing_years']} vs {py['notebook']['timing_years']}")
+    for y, a, b in zip(py["notebook"]["timing_years"], js["notebook"]["timing_configs"], py["notebook"]["timing_configs"]):
+        f += subset_mismatches(a, b, f"timing config {y}")
+    print(f"  config and first-detected-season configs ({py['notebook']['timing_years']}) == build(): "
+          f"{'yes' if not f else 'NO'}")
+    failures += f
+    names = [l["name"] for l in js["notebook"]["layers"] if l["name"] not in ("Study area", "Selected pixel")]
+    print(f"  layers (bottom to top): {names}")
+    shown = [l["name"] for l in js["notebook"]["layers"] if l.get("shown") is not False]
+    years = [2024, 2025, 2026]
+    expected = [f"True color {y}" for y in years] + [f"NBR composite R={years[0]} G={years[1]} B={years[2]}",
+                                                     "First detected season (decrease)", "Condition 2026"]
+    if names != expected:
+        failures.append(f"layer list {names} != notebook order {expected}")
+    if [n for n in shown if n not in ("Study area", "Selected pixel")] != ["Condition 2026"]:
+        failures.append(f"layers shown at start: {shown}")
+    failures += compare_box("notebook condition", js["notebook"]["outcome_box"], py["notebook"]["outcome_box"])
+    failures += compare_box("notebook first detected season", js["notebook"]["timing_box"], py["notebook"]["timing_box"])
+    failures += compare_pixels("notebook", js["notebook"]["pixels"], py["notebook"]["rows"], 0.5)
+
+    print("3. Non-default settings (configs only)")
+    f = subset_mismatches(js["variant"]["config"], py["variant"]["config"])
+    if js["variant"]["timing_years"] != py["variant"]["timing_years"]:
+        f.append(f"timing years JS {js['variant']['timing_years']} vs {py['variant']['timing_years']}")
+    for y, a, b in zip(py["variant"]["timing_years"], js["variant"]["timing_configs"], py["variant"]["timing_configs"]):
+        f += subset_mismatches(a, b, f"variant timing config {y}")
+    print(f"  config and first-detected-season configs ({py['variant']['timing_years']}) == build(): "
+          f"{'yes' if not f else 'NO'}")
+    failures += f
 
     if failures:
         print("\nAPP PARITY FAILED")
-        for f in failures:
-            print("  " + f)
+        for line in failures:
+            print("  " + line)
         sys.exit(1)
     print("\nAPP PARITY PASSED")
 

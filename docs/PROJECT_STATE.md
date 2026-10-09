@@ -214,6 +214,19 @@ Two-repo split:
   Pixel 2's final values on the 30 m grid (0.046/0.911/0.043) differ from the GUI's native-pixel ones; that is
   the documented sampling difference.
 
+- **2026-10-09: GEE app runs in the Code Editor (`users/clarype/`), and Milestone 2 brings it close to the
+  notebook.** User-facing only, no validation shortcuts (reference case and pixels live in `gee/tests/`).
+  Area: drawn polygon/rectangle or asset, with the notebook's size limits. Settings: the notebook's controls,
+  defaults and limits (`config.js`, `controls.js`). Layers: true color ×3, NBR composite, first detected season,
+  condition (primary). Inspector unchanged; the lon/lat boxes survive reruns. `gee/tests/run_app_parity.py`
+  passes: reference case (through the modules) as before; GUI exposes no validation shortcuts; notebook-default
+  widgets and configs (incl. first-detected-season and a non-default variant) equal `EarlyDetectionApp.build()`;
+  condition and first-detected-season layers equal Python on 6,339 box pixels; inspector (map click and typed
+  lon/lat) equals `pixel_history()`. Code Editor `require()` paths must be string literals (`gee/README.md`).
+  Not ported yet: saved local areas, summary tabs, Parameter behavior tab, per-season inspector columns.
+  BULC-D_rebuild: bulcd.js defaulted `mask_non_forest` to false (Python: True); fixed, and `run_parity.py` now
+  checks default-filling.
+
 ## Reproducibility notes
 
 - **Earth Engine input imagery can change between runs.** Late-September 2026 Sentinel-2 scenes over
