@@ -16,7 +16,7 @@ outputs.
 | `controls.js` | Settings panel (widgets) | `app.py _build_settings_step()` |
 | `aoi.js` | Area size check and limits | `outputs.aoi_size_report()`, `app.py _use_area()` |
 | `outputs.js` | Condition, first-detected season, true color, NBR composite | `outputs._outcome_from_result()`, `detection_timing_image()`, `combine_season_timing()`, `annual_true_color()`, `annual_nbr()`, `nbr_stretch()`; `render` colors |
-| `inspector.js` | Pixel history rows, the two charts | `pixel.pixel_history()`, `plot_pixel_history()` |
+| `inspector.js` | Pixel history rows, the expectation fit at the pixel, the charts | `pixel.pixel_history()`, `plot_pixel_history()` |
 | `app.js` | Code Editor UI: area, settings, run, layers, legend, inspector | `app.py` |
 
 ## What the app does
@@ -45,8 +45,10 @@ inspect its NBR/fit and probability history.
    season (decrease; separate runs for up to three seasons, confirmed definition);
    **condition** (the primary layer, on at 0.85 opacity); the study-area outline.
 4. **Pixel inspector.** Click the map or type a longitude/latitude and press **Submit
-   Pixel**. "Target Year vs. Fit" and "Probability
-   Through Time", sampled on the 30 m result grid, probabilities at each observation's
+   Pixel**. "Expectation -> Monitoring" (the expectation-period observations the fit
+   used, the fitted curve through both periods, and the monitoring observations) with
+   a summary of the fit at the pixel, then "Target Year vs. Fit" and "Probability
+   Through Time", all sampled on the 30 m result grid, probabilities at each observation's
    own date. A run keeps the coordinate boxes, so Submit Pixel inspects the same pixel
    under new settings; the inspector names the settings of the run it shows.
 
@@ -98,7 +100,9 @@ compares with the Python app's code on the same settings:
    equal `EarlyDetectionApp.build()`; condition and first-detected-season layers equal
    `outputs.outcome_image()` and `combine_season_timing()` over the box; the inspector
    equals `pixel_history()` at pixel 1 (map click) and pixel 3 (typed lon/lat + Submit
-   Pixel); layer list in the notebook's order, only condition shown.
+   Pixel); the inspector's expectation period (observations used in the fit, fitted
+   curve, coefficients, residual SD, R2) equals Python bulcd's expectation fit at
+   those pixels; layer list in the notebook's order, only condition shown.
 3. **Non-default settings:** configs equal `EarlyDetectionApp.build()` with the same
    widget values.
 

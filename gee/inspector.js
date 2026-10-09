@@ -10,6 +10,11 @@
 // plotted at each observation bin's own date (bins are dated at their END);
 // the legacy chart plots each one a step late.
 //
+// expectationQuery() adds the expectation period: the binned observations the
+// fit was computed from, the fitted curve at their dates (bulcd.js
+// addFittedBand(), the same function that scores the monitoring year) and the
+// fit's coefficients, residual SD and R2 at the pixel. Diagnostic only.
+//
 // historyQuery() builds the Earth Engine request; historyRows(), the table
 // builders and crossingNotes() are pure functions; the chart builders need
 // the Code Editor's `ui`. Plain ES5.
@@ -36,6 +41,23 @@ function historyQuery(result, config, lon, lat) {
     fitted: organized.expectation_fitted_collection.select([band, 'fitted']).getRegion(point, 30, crs),
     zscore: organized.lof_zscore.getRegion(point, 30, crs),
     probability: result.probability_stack.select(CLASSES).getRegion(point, 30, crs)
+  });
+}
+
+// The expectation period at one location (see the header).
+function expectationQuery(bulcd, result, config, lon, lat) {
+  var point = ee.Geometry.Point([lon, lat]);
+  var crs = utmCrsFor(lon, lat);
+  var organized = result.organized, fit = organized.expectation_fit;
+  var band = config.reduction.band;
+  var withFit = organized.expectation_collection.map(bulcd.addHarmonicTerms).map(function (image) {
+    return bulcd.addFittedBand(image, fit.coefficients, fit.regressor_names);
+  });
+  return ee.Dictionary({
+    observations: withFit.select([band, 'fitted']).getRegion(point, 30, crs),
+    fit: fit.coefficients.addBands(fit.residual_stddev).addBands(fit.r2)
+      .reduceRegion({reducer: ee.Reducer.first(), geometry: point, scale: 30, crs: crs}),
+    regressors: fit.regressor_names
   });
 }
 
@@ -82,6 +104,46 @@ function historyRows(tables, config) {
     CLASSES.forEach(function (c) { row[c] = probs[t][c]; });
     return row;
   });
+}
+
+// Expectation-period rows, one per observation bin, sorted by time: observed
+// is null for a bin with no clear observation; expected is the fitted curve.
+function expectationRows(tables, config) {
+  var obs = byTime(tables.observations), band = config.reduction.band;
+  return Object.keys(obs).map(Number).sort(function (a, b) { return a - b; }).map(function (t) {
+    return {time: t, date: utcDateString(t), observed: value(obs[t], band), expected: value(obs[t], 'fitted')};
+  });
+}
+
+function round(x, digits) {
+  return x === null || x === undefined ? 'n/a' : x.toFixed(digits);
+}
+
+// Plain-language summary of the expectation fit at the pixel.
+function expectationSummary(tables, rows, config) {
+  var fit = tables.fit || {}, regressors = tables.regressors, band = config.reduction.band.toUpperCase();
+  var used = rows.filter(function (r) { return r.observed !== null; });
+  // The configured years (inclusive); bins are dated at their end, so the last
+  // bin of a Dec 31 season carries a January date.
+  var first = Infinity, last = -Infinity, sensors = config.evidence.expectation.sensors;
+  for (var k in sensors) {
+    if (!sensors[k].enabled) continue;
+    first = Math.min(first, sensors[k].first_year);
+    last = Math.max(last, sensors[k].last_year - 1);  // bulcd's last_year is exclusive
+  }
+  var span = first === last ? String(first) : first + '-' + last;
+  var lines = ['Expectation fit at this pixel: ' + used.length + ' clear observations (of ' + rows.length +
+               ' ' + config.evidence.day_step_size + '-day bins) in ' + span + '.'];
+  var shape = 'Fitted mean ' + band + ' ' + round(fit.constant, 3);
+  if (regressors.indexOf('cos') >= 0 && fit.cos != null && fit.sin != null) {
+    shape += ', seasonal amplitude ' + round(Math.sqrt(fit.cos * fit.cos + fit.sin * fit.sin), 3);
+  }
+  if (regressors.indexOf('t') >= 0) shape += ', within-year trend ' + round(fit.t, 3);
+  lines.push(shape + '; residual SD ' + round(fit.residual_stddev, 3) + '; R2 ' + round(fit.r2, 2) + '.');
+  lines.push('Model terms: ' + regressors.join(' + ') + '. The same curve is used for every year. Monitoring ' +
+             'z-scores are (observed - fitted) x sensitivity / max(residual SD, ' +
+             config.sensitivity.z_score_denominator_factor + ').');
+  return lines;
 }
 
 function hasObservations(rows) {
@@ -138,6 +200,30 @@ function targetFitTable(rows, band) {
   };
 }
 
+// "Expectation -> Monitoring": the fitted curve through both periods, the
+// expectation observations it was fit to, and each monitoring observation
+// colored by the class its evidence favors. A blank row between the periods
+// breaks the line across any gap.
+function timelineTable(expRows, rows, band) {
+  var cols = [{label: 'Date', type: 'date'}, {label: 'fitted expectation', type: 'number'},
+              {label: 'expectation ' + band.toUpperCase() + ' (used in the fit)', type: 'number'}];
+  CLASSES.forEach(function (c) { cols.push({label: 'monitoring favors ' + c, type: 'number'}); });
+  var out = expRows.map(function (r) {
+    return {c: [cell(chartDate(r.date)), cell(r.expected), cell(r.observed), cell(null), cell(null), cell(null)]};
+  });
+  if (expRows.length) {
+    var last = expRows[expRows.length - 1].date.split('-');
+    out.push({c: [cell(new Date(Number(last[0]), Number(last[1]) - 1, Number(last[2]) + 1)), cell(null), cell(null),
+                  cell(null), cell(null), cell(null)]});
+  }
+  rows.forEach(function (r) {
+    var c = [cell(chartDate(r.date)), cell(r.expected), cell(null)];
+    CLASSES.forEach(function (k) { c.push(cell(r.supports === k ? r.observed : null)); });
+    out.push({c: c});
+  });
+  return {cols: cols, rows: out};
+}
+
 // "Probability Through Time": P(decrease/unchanged/increase) at each
 // observation's own date, plus the decision threshold.
 function probabilityTable(rows, threshold) {
@@ -177,6 +263,16 @@ function targetFitChart(rows, band) {
                   options({title: 'Target Year vs. Fit', vAxis: {title: band.toUpperCase()}, series: series}));
 }
 
+function timelineChart(expRows, rows, band) {
+  var series = {0: {color: EXPECTED_COLOR, lineWidth: 2, pointSize: 0},
+                1: {color: '#222222', lineWidth: 0, pointSize: 4}};
+  CLASSES.forEach(function (c, i) { series[2 + i] = {color: CLASS_COLORS[c], lineWidth: 0, pointSize: 5}; });
+  return ui.Chart(timelineTable(expRows, rows, band), 'LineChart',
+                  options({title: 'Expectation -> Monitoring: observations and fit',
+                           hAxis: {format: 'MMM yyyy', gridlines: {color: 'transparent'}},
+                           vAxis: {title: band.toUpperCase()}, series: series}));
+}
+
 function probabilityChart(rows, threshold) {
   var series = {};
   CLASSES.forEach(function (c, i) { series[i] = {color: CLASS_COLORS[c], lineWidth: 2, pointSize: 3}; });
@@ -192,6 +288,11 @@ exports.utmCrsFor = utmCrsFor;
 exports.historyQuery = historyQuery;
 exports.supportedClass = supportedClass;
 exports.historyRows = historyRows;
+exports.expectationQuery = expectationQuery;
+exports.expectationRows = expectationRows;
+exports.expectationSummary = expectationSummary;
+exports.timelineTable = timelineTable;
+exports.timelineChart = timelineChart;
 exports.hasObservations = hasObservations;
 exports.firstCrossing = firstCrossing;
 exports.crossingNotes = crossingNotes;

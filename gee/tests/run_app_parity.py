@@ -16,8 +16,10 @@ app's own code (src/bulcd_early_detection) on the same settings:
    first-detected-season configs == build(controls(y)); condition and
    first-detected-season layers == outputs.outcome_image() and
    combine_season_timing() over the box; inspector == pixel_history() at pixel 1
-   (map click) and pixel 3 (typed lon/lat + Submit Pixel); layer list in the
-   notebook's order.
+   (map click) and pixel 3 (typed lon/lat + Submit Pixel); the inspector's
+   expectation period (bins, observations, fitted curve, coefficients, residual
+   SD, R2) == Python bulcd's expectation fit at those pixels, and its timeline
+   chart holds those rows; layer list in the notebook's order.
 3. A non-default settings combination: configs == EarlyDetectionApp.build()
    with the same widget values (no computation).
 
@@ -58,6 +60,27 @@ def region(image):
         ee.Geometry.Rectangle(BOX), 30, "EPSG:32610").getInfo()
 
 
+def expectation_history(config, lon, lat):
+    """The expectation period at one pixel from Python bulcd: the binned
+    observations the fit uses, the fitted curve at their dates and the fit's
+    per-pixel values (bulcd.inputs internals; diagnostic comparison only)."""
+    from bulcd.inputs import _add_fitted_band, _add_harmonic_terms, _fit_expectation_model, organize_inputs
+    from bulcd_early_detection.pixel import utm_crs_for
+    band = config.reduction.band
+    collection = organize_inputs(config).expectation_collection
+    fit = _fit_expectation_model(collection, config.modality, band)
+    with_fit = collection.map(_add_harmonic_terms).map(
+        lambda img: _add_fitted_band(img, fit.coefficients, fit.regressor_names))
+    point, crs = ee.Geometry.Point([lon, lat]), utm_crs_for(lon, lat)
+    reg = with_fit.select([band, "fitted"]).getRegion(point, 30, crs).getInfo()
+    h = reg[0]
+    rows = sorted(({"time": r[h.index("time")], "observed": r[h.index(band)], "expected": r[h.index("fitted")]}
+                   for r in reg[1:]), key=lambda r: r["time"])
+    stats = fit.coefficients.addBands(fit.residual_stddev).addBands(fit.r2).reduceRegion(
+        ee.Reducer.first(), point, 30, crs).getInfo()
+    return {"rows": rows, "fit": stats, "regressors": fit.regressor_names}
+
+
 def python_side(pixels):
     from bulcd.engine import run_bulcd
     from bulcd_early_detection import outputs, pixel
@@ -94,6 +117,8 @@ def python_side(pixels):
     nb["timing_box"] = pool.submit(region, outputs.combine_season_timing(seasons).clip(geom)
                                    .select(["first_decrease_year", "first_decrease_doy"]))
     nb["rows"] = {k: pool.submit(pixel.pixel_history, config, *pixels[k]) for k in (list(pixels)[0], list(pixels)[2])}
+    nb["expectation"] = {k: pool.submit(expectation_history, config, *pixels[k])
+                         for k in (list(pixels)[0], list(pixels)[2])}
 
     v = VARIANT
     app.expectation.value = v["expectation"]
@@ -161,6 +186,33 @@ def compare_pixels(name, js_pixels, py_rows, threshold):
         for note in j["notes"]:
             print(f"      {note}")
         failures += [f"{name} {label}: {b}" for b in bad[:5]]
+    return failures
+
+
+def compare_expectation(name, js_pixels, py_exp):
+    failures = []
+    for label, py in py_exp.items():
+        j = js_pixels[label]["expectation"]
+        bad = []
+        if [r["time"] for r in j["rows"]] != [r["time"] for r in py["rows"]]:
+            bad.append(f"{len(j['rows'])} JS expectation bins vs {len(py['rows'])} Python")
+        for jr, pr in zip(j["rows"], py["rows"]):
+            if not (num_close(jr["observed"], pr["observed"]) and num_close(jr["expected"], pr["expected"])):
+                bad.append(f"{jr['date']}: JS {jr} vs Python {pr}")
+        if j["regressors"] != py["regressors"]:
+            bad.append(f"regressors {j['regressors']} vs {py['regressors']}")
+        for k, v in py["fit"].items():
+            if not num_close(j["fit"].get(k), v):
+                bad.append(f"fit {k}: JS {j['fit'].get(k)} vs Python {v}")
+        if not j["timeline_matches"]:
+            bad.append("timeline chart does not hold the expectation and monitoring rows")
+        n_obs = sum(r["observed"] is not None for r in py["rows"])
+        print(f"  {name} {label} expectation: {len(py['rows'])} bins ({n_obs} observations), "
+              f"fit {', '.join(f'{k} {v:.3f}' for k, v in py['fit'].items() if v is not None)} - "
+              f"{'match' if not bad else f'{len(bad)} MISMATCHES'}")
+        for line in j["summary"]:
+            print(f"      {line}")
+        failures += [f"{name} {label} expectation: {b}" for b in bad[:5]]
     return failures
 
 
@@ -253,6 +305,7 @@ def main():
     failures += compare_box("notebook condition", js["notebook"]["outcome_box"], py["notebook"]["outcome_box"])
     failures += compare_box("notebook first detected season", js["notebook"]["timing_box"], py["notebook"]["timing_box"])
     failures += compare_pixels("notebook", js["notebook"]["pixels"], py["notebook"]["rows"], 0.5)
+    failures += compare_expectation("notebook", js["notebook"]["pixels"], py["notebook"]["expectation"])
 
     print("3. Non-default settings (configs only)")
     f = subset_mismatches(js["variant"]["config"], py["variant"]["config"])

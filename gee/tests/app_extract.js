@@ -5,7 +5,9 @@
 //   2. app.js main() with a stub `ui`, driven through its own widgets: asset area
 //      (the testsite), notebook-default settings, "Run Early Detection";
 //      condition and first-detected-season layers over the box; the inspector at
-//      pixel 1 by map click and at pixel 3 by typed lon/lat + Submit Pixel.
+//      pixel 1 by map click and at pixel 3 by typed lon/lat + Submit Pixel,
+//      including the expectation period (observations used in the fit, the fitted
+//      curve, the fit's coefficients/residual SD/R2) and the timeline chart.
 //   3. The configs a non-default settings combination produces (no computation).
 // usage: node app_extract.js <out.json>
 const fs = require('fs');
@@ -70,13 +72,22 @@ async function selectPixels(handle, created, map, pixels, how, threshold) {
     } else {
       map.state.handlers.click({ lon: p.lon, lat: p.lat });
     }
-    await waitFor(() => created.charts.length >= before + 2 || /No clear|failed/.test(labelText(created)),
+    await waitFor(() => created.charts.length >= before + 3 || /No clear|failed/.test(labelText(created)),
                   'the inspector at ' + p.label);
-    const [fit, prob] = created.charts.slice(before);
+    const [timeline, fit, prob] = created.charts.slice(before);
     const run = handle.state.run;
     const tables = await evaluate(inspector.historyQuery(run.result, run.config, p.lon, p.lat));
     const rows = inspector.historyRows(tables, run.config);
+    const exp = await evaluate(inspector.expectationQuery(bulcd, run.result, run.config, p.lon, p.lat));
+    const expRows = inspector.expectationRows(exp, run.config);
     out[p.label] = pixelRecord(p, rows, fit && fit.table, prob && prob.table, threshold);
+    out[p.label].expectation = {
+      rows: expRows, fit: exp.fit, regressors: exp.regressors,
+      summary: inspector.expectationSummary(exp, expRows, run.config),
+      timeline_matches: !!timeline && JSON.stringify(timeline.table) ===
+        JSON.stringify(inspector.timelineTable(expRows, rows, run.config.reduction.band)),
+      timeline_rows: timeline ? timeline.table.rows.length : 0,
+    };
     out[p.label].how = how[p.label] || 'click';
     out[p.label].boxes = [handle.lonBox.getValue(), handle.latBox.getValue()];
   }

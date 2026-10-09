@@ -313,11 +313,14 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
     showMarker(lon, lat);
     results.clear();
     setMessage(inspectStatus, 'Loading the pixel history at ' + lat.toFixed(5) + ', ' + lon.toFixed(5) + '...');
-    inspector.historyQuery(run.result, run.config, lon, lat).evaluate(function (tables, error) {
+    ee.Dictionary({history: inspector.historyQuery(run.result, run.config, lon, lat),
+                   expectation: inspector.expectationQuery(bulcd, run.result, run.config, lon, lat)})
+      .evaluate(function (both, error) {
       if (mine !== state.request) return;
       if (error) return setMessage(inspectStatus, 'Pixel history failed: ' + error + '\nTry again or another pixel.',
                                    true);
-      var rows = inspector.historyRows(tables, run.config);
+      var rows = inspector.historyRows(both.history, run.config);
+      var expRows = inspector.expectationRows(both.expectation, run.config);
       if (!inspector.hasObservations(rows)) {
         return setMessage(inspectStatus, 'No clear observations here: outside the study area, masked (water or ' +
                                          'non-forest), or always cloudy. Try another pixel.', true);
@@ -325,6 +328,10 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
       setMessage(inspectStatus, 'Pixel at ' + lat.toFixed(5) + ' N, ' + Math.abs(lon).toFixed(5) +
                  (lon < 0 ? ' W' : ' E') + '\nCoordinate: ' + lon + ', ' + lat +
                  ' (lon, lat); sampled on the 30 m result grid\nRun: ' + run.label);
+      results.add(inspector.timelineChart(expRows, rows, run.config.reduction.band));
+      inspector.expectationSummary(both.expectation, expRows, run.config).forEach(function (line) {
+        results.add(ui.Label(line, SMALL));
+      });
       results.add(inspector.targetFitChart(rows, run.config.reduction.band));
       results.add(inspector.probabilityChart(rows, run.threshold));
       inspector.crossingNotes(rows, run.threshold).forEach(function (note) {
