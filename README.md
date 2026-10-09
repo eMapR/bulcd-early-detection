@@ -107,6 +107,59 @@ Reusable pieces live in `src/bulcd_early_detection/`:
 | `drawing.py` | Drawn areas |
 | `app.py` | The interactive prototype (ipywidgets + ipyleaflet) |
 
+## Runtime environment (Miniforge, e.g. on Windows)
+
+`environment.yml` is a minimal **user** environment for the Python/Jupyter
+workflow (the `bulcd` engine plus these notebooks and the interactive app):
+conda-forge only, no test or notebook-generator tools. In a **Miniforge
+Prompt**, with `BULC-D_rebuild` and `bulcd-early-detection` side by side in
+one folder (outside OneDrive):
+
+```bat
+cd C:\path\to\bulcd-early-detection
+conda env create -f environment.yml
+conda activate bulcd
+pip install --no-deps --no-build-isolation -e ..\BULC-D_rebuild -e .
+earthengine authenticate
+jupyter lab notebooks\early_detection_interactive.ipynb
+```
+
+(`mamba env create -f environment.yml` is equivalent; recent Miniforge
+includes both.) The `pip` line downloads nothing: it links the two local
+folders into the environment, so keep them where they are.
+
+The notebooks call `ee.Initialize(project="bulcd-python-rebuild")`. Use a
+Google Cloud project registered for Earth Engine that your account can use:
+either be added to that project, or change the project name in the first
+code cell.
+
+**Behind an agency network (TLS inspection, proxies).**
+- *Certificate errors* (`CondaSSLError`, `CERTIFICATE_VERIFY_FAILED`) usually
+  mean HTTPS is inspected and re-signed with an agency root certificate that
+  conda and Python don't trust. Get that root certificate (`.pem`) from IT.
+  - Build a combined bundle: the environment's `certifi` bundle with the
+    agency certificate appended. A bundle holding only the agency
+    certificate breaks sites that aren't inspected.
+  - Point conda at the bundle: `conda config --set ssl_verify C:\path\bundle.pem`.
+  - Point Python and Earth Engine at it inside the environment:
+    `conda env config vars set SSL_CERT_FILE=C:\path\bundle.pem REQUESTS_CA_BUNDLE=C:\path\bundle.pem HTTPLIB2_CA_CERTS=C:\path\bundle.pem -n bulcd`.
+    Then reactivate. The Earth Engine client uses `httplib2`, which ignores
+    the Windows certificate store and needs `HTTPLIB2_CA_CERTS`.
+  - Don't turn verification off (`ssl_verify false`).
+- *Proxy*: if one is required, set `HTTPS_PROXY`/`HTTP_PROXY` (and
+  `proxy_servers` in `.condarc` for conda).
+- *Sites that must be reachable*:
+  - `conda.anaconda.org`: conda-forge, during setup only.
+  - `accounts.google.com` and `oauth2.googleapis.com`: sign-in.
+  - `earthengine.googleapis.com`: computation and map tiles.
+  - The interactive map's basemap tile servers, if those are blocked, the
+    basemap is blank but the Earth Engine layers still draw.
+- *Sign-in*: `earthengine authenticate` opens a browser and returns to a
+  `localhost` address. If that is blocked, run it in a notebook as
+  `ee.Authenticate(auth_mode="notebook")` and paste the code it gives you.
+  An agency-managed Google account may also need Earth Engine enabled by
+  its administrator.
+
 ## Relationship to BULC-D_rebuild
 
 This repo does **not** contain the detection algorithm. The Bayesian

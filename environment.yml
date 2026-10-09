@@ -1,0 +1,34 @@
+# BULC-D runtime environment: the Python/Jupyter BULC-D workflow (the bulcd
+# engine from BULC-D_rebuild plus this repo's Early Detection notebooks and
+# interactive app). For users, not development: no pytest, no notebook
+# generator tooling.
+#
+# conda-forge only, so it works with Miniforge on Windows, macOS and Linux:
+#   mamba env create -f environment.yml
+#
+# The two BULC-D packages are NOT installed from here: install them afterwards
+# from the BULC-D_rebuild and bulcd-early-detection folders with
+#   pip install --no-deps --no-build-isolation -e ..\BULC-D_rebuild -e .
+# (README "Runtime environment"). --no-deps: pip never re-resolves or replaces
+# anything conda installed; --no-build-isolation + setuptools below: pip needs
+# no PyPI access at all.
+name: bulcd
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.11
+  - pip
+  - setuptools>=68     # builds the two BULC-D packages without PyPI
+  # bulcd engine (BULC-D_rebuild/pyproject.toml)
+  - earthengine-api>=1.7
+  - pyyaml>=6
+  # Early Detection (src/bulcd_early_detection imports and the [notebook] extra)
+  - numpy
+  - matplotlib-base>=3.9
+  - google-auth
+  - requests
+  - ipywidgets>=8.1
+  - ipyleaflet>=0.20
+  - jupyterlab>=4
+  - ipykernel
