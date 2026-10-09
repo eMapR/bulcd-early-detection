@@ -6,11 +6,8 @@
 // runs in BULC-D_rebuild's gee/bulcd.js, held to JS <-> Python parity; this
 // repo only interprets its outputs (outputs.js, inspector.js).
 //
-// Module paths are placeholders until the deployment location is decided
-// (README.md). Plain ES5.
-
-var BULCD_MODULE = 'users/OWNER/BULC-D_rebuild:gee/bulcd';
-var APP_MODULE_ROOT = 'users/OWNER/bulcd-early-detection:gee/';
+// The require() paths at the bottom use OWNER as a placeholder;
+// tools/build_gee_deploy.py fills in the Earth Engine username. Plain ES5.
 
 var MARKER_COLOR = '#ffd400';
 
@@ -159,7 +156,12 @@ if (typeof exports !== 'undefined') exports.main = main;
 
 // Code Editor entry point. Node (the tests) has `process` and calls main()
 // itself with locally required modules.
+// require() paths MUST be string literals: the Code Editor only loads modules it
+// finds as literal require('...') calls in the source, so require(variable)
+// fails with "Module not found" (README.md).
 if (typeof process === 'undefined') {
-  main(require(BULCD_MODULE), require(APP_MODULE_ROOT + 'config'), require(APP_MODULE_ROOT + 'outputs'),
-       require(APP_MODULE_ROOT + 'inspector'));
+  main(require('users/OWNER/BULC-D_rebuild:bulcd'),
+       require('users/OWNER/bulcd-early-detection:config'),
+       require('users/OWNER/bulcd-early-detection:outputs'),
+       require('users/OWNER/bulcd-early-detection:inspector'));
 }

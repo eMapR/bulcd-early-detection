@@ -42,7 +42,19 @@ users/<user>/bulcd-early-detection    app  config  outputs  inspector
 
 `python tools/build_gee_deploy.py <user>` writes the five files to `dist/gee/` (not
 tracked) with `app`'s module paths set for `<user>` and a header naming each file's
-source commit. Paste each into the matching Code Editor file and run `app`. After any
+source commit.
+
+**Code Editor requirement: `require()` paths must be string literals.** The Code
+Editor only loads modules it finds as literal `require('users/…:…')` calls in a
+script's source. A path held in a variable or built at run time, e.g.
+`require(BULCD_MODULE)` or `require(root + 'config')`, fails with "Module not found
+at <path>", even when the path is correct and the module exists. Found 2026-10-09:
+all such calls failed (including a public module), while the same paths written as
+literals loaded. So `app.js` writes each path in full, with `OWNER` as the placeholder
+username (`require('users/OWNER/bulcd-early-detection:config')`), and the generator
+substitutes the username. The generator also refuses to write output where any
+`require()` lacks a literal path, or names a file it didn't generate. Keep any new
+module imports in this form. Paste each into the matching Code Editor file and run `app`. After any
 change in git, re-run the script and re-paste. The whole case is computed on the fly,
 as in the legacy GUI, so map tiles take a while.
 
