@@ -109,3 +109,14 @@ compared. It uses BULC-D_rebuild's Node environment and Earth Engine token helpe
 ```sh
 cd gee/tests && python run_app_parity.py      # ~20 min
 ```
+
+`tests/controls_check.js` is a quick offline check of the settings panel (no
+Earth Engine). It covers three things:
+
+- The day list follows the month: Mar 31 switched to April becomes Apr 30, and February has 28 days.
+- Dec 31 is valid.
+- The expectation years are inclusive, with one season per year.
+
+```sh
+node gee/tests/controls_check.js
+```

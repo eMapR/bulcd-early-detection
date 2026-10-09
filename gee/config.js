@@ -112,6 +112,20 @@ function timingYears(c) {
   return years.slice(-MAX_TIMING_SEASONS);
 }
 
+// How many seasons the expectation years cover. Both years are inclusive and
+// the season window is applied once in each; all of those observations are fit
+// together into one expected value per pixel (buildConfig() passes last_year + 1
+// because bulcd's last_year is exclusive).
+function expectationSummary(c) {
+  if (c.expectation_first > c.expectation_last) return '';
+  var n = c.expectation_last - c.expectation_first + 1;
+  var years = n === 1 ? String(c.expectation_first)
+                      : n === 2 ? c.expectation_first + ' and ' + c.expectation_last
+                                : 'each year ' + c.expectation_first + '-' + c.expectation_last;
+  return c.expectation_first + '-' + c.expectation_last + ' uses ' + n + ' annual season' + (n === 1 ? '' : 's') +
+         ' (the season window in ' + years + ').';
+}
+
 // The notebook's plain-language description of the periods (app.py _describe()).
 function describeControls(c) {
   var win = monthDayLabel(c.season_start) + '-' + monthDayLabel(c.season_end);
@@ -180,6 +194,7 @@ exports.DAYS_IN_MONTH = DAYS_IN_MONTH;
 exports.copy = copy;
 exports.dayOfYear = dayOfYear;
 exports.validateControls = validateControls;
+exports.expectationSummary = expectationSummary;
 exports.timingYears = timingYears;
 exports.describeControls = describeControls;
 exports.buildConfig = buildConfig;

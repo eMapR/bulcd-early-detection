@@ -63,6 +63,7 @@ function makeControls(appConfig, onChange) {
   var sensitivity = slider(r.sensitivity, d.sensitivity, changed);
   var threshold = slider(r.decision_threshold, d.decision_threshold, changed);
   var timing = ui.Checkbox({label: 'Also map the first-detected season', value: d.timing, onChange: changed});
+  var expectationNote = ui.Label('', HINT);
   var relationship = ui.Label('', {fontSize: '12px', whiteSpace: 'pre-wrap', margin: '6px 8px',
                                    padding: '4px 6px', border: '1px solid #2a78d6'});
 
@@ -93,14 +94,19 @@ function makeControls(appConfig, onChange) {
 
   var panel = ui.Panel([
     ui.Label('Expectation years', LABEL), row([expFirst, ui.Label('to'), expLast]),
+    expectationNote,
     ui.Label('Monitoring year', LABEL), monitoring,
     ui.Label('Season (each expectation year and the monitoring year)', LABEL),
     row(start.widgets.concat([ui.Label('to')]).concat(end.widgets)),
     relationship,
     ui.Label('Sensitivity', LABEL), sensitivity,
-    ui.Label('higher flags smaller departures from normal', HINT),
+    ui.Label('Scales how far each new observation is from the expected NBR before it counts as evidence: ' +
+             'higher makes smaller departures count as change, so more pixels are flagged and sooner; lower ' +
+             'needs larger departures.', HINT),
     ui.Label('Decision threshold', LABEL), threshold,
-    ui.Label('how sure BULC-D must be before flagging', HINT),
+    ui.Label("A pixel is mapped as decrease or increase only if that class's probability ends the season " +
+             'above this value (its first-detected date is when it first crossed it); raising it needs stronger, ' +
+             'more consistent evidence and flags fewer pixels, later; lowering it flags more, sooner.', HINT),
     timing, showAdvanced, advanced
   ]);
 
@@ -119,6 +125,7 @@ function makeControls(appConfig, onChange) {
 
   function describe() {
     var c = read(), problem = appConfig.validateControls(c);
+    expectationNote.setValue(appConfig.expectationSummary(c));
     if (problem) {
       relationship.setValue(problem + ' Run is blocked until this is fixed.');
       relationship.style().set({color: '#b00', border: '1px solid #b00'});
