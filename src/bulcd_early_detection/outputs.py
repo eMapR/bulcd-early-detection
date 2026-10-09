@@ -14,6 +14,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import time
+import warnings
 from dataclasses import dataclass
 
 import ee
@@ -241,8 +242,17 @@ def wait_for(tasks: list, poll_seconds: int = 30) -> dict[str, str]:
         time.sleep(poll_seconds)
 
 
+# Precomputed runs exported before BULC-D_rebuild decision 0011 (2026-10-08: no Sentinel-2
+# scene-cloud filter by default; legacy fracDOY harmonic time axis). They reflect the old
+# behavior; loading one warns. Regenerate as _v2 before citing them as current results.
+PRE_PARITY_RUN_SUFFIX = "_v1"
+
+
 def load_precomputed(folder: str, run_name: str, bands: list[str] = OUTPUT_BANDS) -> tuple[ee.Image, list[dict]]:
     """Mosaic of a run's exported tiles, plus each tile's metadata."""
+    if run_name.endswith(PRE_PARITY_RUN_SUFFIX):
+        warnings.warn(f"{run_name!r} is a pre-parity (v1) result: computed before BULC-D_rebuild decision 0011 "
+                      "(S2 scene filter, years-since-1970 time axis). Not the current BULC-D behavior.", stacklevel=2)
     assets = [a["name"] for a in ee.data.listAssets({"parent": folder})["assets"] if a["name"].split("/")[-1].startswith(f"{run_name}_")]
     if not assets:
         raise FileNotFoundError(f"no precomputed tiles for {run_name!r} in {folder}")

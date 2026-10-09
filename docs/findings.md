@@ -1240,3 +1240,60 @@ Every remaining difference is one of three known, separately documented ones (be
      never plotted. Lag-0 comparison: 207/366; lag 1: 363/363.
 - **Still unverified:** the bin edge rule exactly at a cut, the exact transition-dampening code, and anything
   outside this one site, sensor set, and year pair. Three pixels, one case.
+
+## 2026-10-08 (later) — BULC-D_rebuild decision 0011: legacy S2 behavior and time axis are now the default; GUI equivalence holds with no tweaks
+
+**Validation result.** With normal/default settings, Python now exactly reproduces the legacy GUI for the
+controlled decrease, unchanged, and increase pixels through observed NBR, fitted expectation, residuals, bins, and
+aligned probability trajectories. The remaining GUI probability-date difference is a plotting offset, not an
+algorithm difference. The GEE JavaScript engine (`../BULC-D_rebuild/gee/bulcd.js`) in turn matches Python to
+floating-point precision (max difference 2.7e-15 over every per-step value at pixels 1–3 and a 30 m box of final
+probabilities; `gee/tests/run_parity.py`).
+
+**The existing `_v1` Early Detection assets are pre-0011 outputs and should not be treated as current results.**
+
+BULC-D_rebuild changed two defaults to match legacy (decision 0011,
+`../BULC-D_rebuild/docs/decisions/0011-legacy-s2-scene-filter-and-fracdoy-time-axis.md`):
+- **No Sentinel-2 scene-cloud filter by default.** `cloud_cover_threshold` keeps the legacy meaning and applies to
+  Landsat only. A new opt-in, `s2_scene_cloud_threshold`, re-enables the `CLOUDY_PIXEL_PERCENTAGE` filter.
+- **Harmonic time axis is legacy fracDOY**, i.e. (0-based DOY of the bin end) / 365.
+
+Configs keep the GUI's parameters as-is: cloud 70 for every sensor, and this repo's `config.py` is unchanged.
+
+**Acceptance (normal implementation, no config workaround).** `experiments/legacy_gui_csv_compare.py` now has two
+variants: `default` and the `s2_scene_filter` opt-in. Pre-0011 outputs were moved to
+`experiments/output/legacy_gui_csv_compare/_pre_0011/`.
+
+| Pixel | NBR (exp/target) | Fitted (exp/target) | Target residuals | Bins | Probabilities (lag 1) | Final plotted |
+|---|---|---|---|---|---|---|
+| 1 decrease | 50/50, 60/60 | 122/122, 122/122 | 60/60 | 60/60 | 363/363 | 0.914/0.043/0.043 |
+| 2 unchanged (GUI location) | 52/52, 61/61 | 122/122, 122/122 | 61/61 | 61/61 | 363/363 | 0.055/0.899/0.045 |
+| 3 increase | 54/54, 61/61 | 122/122, 122/122 | 61/61 | 61/61 | 363/363 | 0.044/0.055/0.900 |
+
+- All are exact to the CSVs' 3-decimal rounding. The fitted curves now match with bulcd's own time axis, not only a
+  numpy re-fit.
+- Of the three documented differences, only the GUI chart's one-step plotting offset remains. It is a chart
+  convention, not part of the algorithm.
+- Pixel 2 at its *reported* coordinate still differs because that is a different S2 pixel (the location offset
+  above).
+- With the opt-in S2 filter, the old effects reappear: 0, 12 and 30 changed bins at pixels 1, 2 and 3.
+
+**Effect on the Early Detection default testsite run** (app defaults: testsite, expectation 2018–2023, monitoring
+2026 Jun 1–Sep 30, L8 baseline, L8+L9+S2 monitoring, forest and water masks, threshold 0.5). It was compared pixel by
+pixel on the 30 m grid: 27,179 analyzed pixels. The "old with S2 filter off" run used the old code with the S2
+threshold at 100, which isolates the two effects.
+
+| Comparison | Pixels changing class | Main moves | Mean / p99 / max \|ΔP(decrease)\| |
+|---|---|---|---|
+| S2 filter only (old → old with S2 off) | 103 (0.38%) | 62 unchanged→decrease, 25 increase→unchanged, 13 decrease→unchanged | 0.003 / 0.096 / 0.72 |
+| Time axis only (old S2-off → new) | 11 (0.04%) | small, mixed | 0.0002 / 0.0000 / 0.34 |
+| Net (old → new) | 106 (0.39%) | 61 unchanged→decrease, 25 increase→unchanged, 14 decrease→unchanged | 0.003 / 0.098 / 0.72 |
+
+Class totals went from 6,387 / 19,660 / 1,132 (old) to 6,434 / 19,632 / 1,113 (new) for decrease / unchanged /
+increase.
+
+- At this site and season, the change is small and comes almost entirely from S2: the extra, partly cloudy
+  scenes in the 2026 monitoring season.
+- The time axis barely matters here, because the 2018–2023 baseline is Landsat-only.
+- Cloudier parks (Apostle Islands in June, North Cascades) were not measured. Their v1 assets are pre-0011 and
+  `outputs.load_precomputed()` now warns when loading any `_v1` run.

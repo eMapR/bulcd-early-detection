@@ -1,0 +1,46 @@
+##### pixel1 (-123.56922, 44.84283)
+=== as_is ===
+python residual SD 0.03783 -> denominator 0.05000
+time steps: expectation GUI 122 / Python 122, same dates: True; target GUI 122 / Python 122, same dates: True
+1 expectation NBR presence: GUI 50, Python 49, both 49; GUI-only ['2024-02-06']; Python-only []
+  expectation NBR     n=49 exact=48/49 max=0.0025 mean=0.0003
+2 expectation fitted  n=122 exact=31/122 max=0.0033 mean=0.0014
+  legacy-fracDOY refit n=122 exact=31/122 max=0.0033 mean=0.0014
+3 target NBR presence: GUI 60, Python 59, both 59; GUI-only ['2025-06-24']; Python-only []
+  target NBR          n=59 exact=57/59 max=0.0505 mean=0.0020
+  target fitted       n=122 exact=32/122 max=0.0029 mean=0.0012
+  legacy-fracDOY refit n=122 exact=31/122 max=0.0033 mean=0.0014
+4 target residual     n=59 exact=19/59 max=0.0519 mean=0.0027
+  legacy-fracDOY refit n=59 exact=20/59 max=0.0524 mean=0.0028
+  python z range -10.00..2.04; nearest z to a bin cut: 0.039
+  residual presence: GUI 60, Python 59, both 59; GUI-only ['2025-06-24']; Python-only []
+5 bins: agree 59/59; presence: GUI 60, Python 59, both 59; GUI-only ['2025-06-24']; Python-only []
+6 probabilities lag 0: values exact 319/366 max=0.3168 mean=0.0069
+6 probabilities lag 1: values exact 363/363 max=0.0005 mean=0.0003
+  GUI first row 2025-01-04: 0.1/0.8/0.1  (legacy starting prior = 0.1/0.8/0.1)
+7 first P(drop)>0.5: GUI row 2025-04-07, Python step 2025-04-04
+  GUI P(same): min 0.043 max 0.913 final 0.043; GUI P(drop) max 0.914, P(up) max 0.184
+  final: GUI 0.914/0.043/0.043 (2026-01-02, = posterior after step 2025-12-30); Python after 2025-12-30: 0.914/0.043/0.043; Python after last step 2026-01-02 (never plotted by the GUI): 0.914/0.043/0.043
+
+=== s2_nofilter ===
+python residual SD 0.03765 -> denominator 0.05000
+time steps: expectation GUI 122 / Python 122, same dates: True; target GUI 122 / Python 122, same dates: True
+1 expectation NBR presence: GUI 50, Python 50, both 50; GUI-only []; Python-only []
+  expectation NBR     n=50 exact=50/50 max=0.0005 mean=0.0002
+2 expectation fitted  n=122 exact=119/122 max=0.0006 mean=0.0003
+  legacy-fracDOY refit n=122 exact=122/122 max=0.0005 mean=0.0003
+3 target NBR presence: GUI 60, Python 60, both 60; GUI-only []; Python-only []
+  target NBR          n=60 exact=60/60 max=0.0005 mean=0.0003
+  target fitted       n=122 exact=59/122 max=0.0013 mean=0.0006
+  legacy-fracDOY refit n=122 exact=122/122 max=0.0005 mean=0.0003
+4 target residual     n=60 exact=26/60 max=0.0013 mean=0.0006
+  legacy-fracDOY refit n=60 exact=60/60 max=0.0005 mean=0.0003
+  python z range -10.00..2.08; nearest z to a bin cut: 0.074
+  residual presence: GUI 60, Python 60, both 60; GUI-only []; Python-only []
+5 bins: agree 60/60; presence: GUI 60, Python 60, both 60; GUI-only []; Python-only []
+6 probabilities lag 0: values exact 319/366 max=0.3168 mean=0.0069
+6 probabilities lag 1: values exact 363/363 max=0.0005 mean=0.0003
+  GUI first row 2025-01-04: 0.1/0.8/0.1  (legacy starting prior = 0.1/0.8/0.1)
+7 first P(drop)>0.5: GUI row 2025-04-07, Python step 2025-04-04
+  GUI P(same): min 0.043 max 0.913 final 0.043; GUI P(drop) max 0.914, P(up) max 0.184
+  final: GUI 0.914/0.043/0.043 (2026-01-02, = posterior after step 2025-12-30); Python after 2025-12-30: 0.914/0.043/0.043; Python after last step 2026-01-02 (never plotted by the GUI): 0.914/0.043/0.043

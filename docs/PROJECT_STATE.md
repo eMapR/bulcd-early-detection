@@ -193,6 +193,17 @@ Two-repo split:
   GUI exports and their coordinates/settings are in `experiments/reference_data/legacy_gui_charts/`. Neither bulcd
   nor Early Detection behavior was changed. Details: `docs/findings.md`, 2026-10-08.
 
+- **2026-10-08: BULC-D_rebuild decision 0011 (legacy S2 + fracDOY now default).** With normal/default settings,
+  Python now exactly reproduces the legacy GUI for the controlled decrease, unchanged, and increase pixels through
+  observed NBR, fitted expectation, residuals, bins, and aligned probability trajectories (bins 60/60, 61/61, 61/61;
+  aligned probabilities 363/363 each). The remaining GUI probability-date difference is a plotting offset, not an
+  algorithm difference. The GEE JavaScript engine (`BULC-D_rebuild/gee/bulcd.js`) in turn matches Python to
+  floating-point precision (max diff 2.7e-15). The S2 scene filter is now an opt-in (`s2_scene_cloud_threshold`).
+  - Effect on the Early Detection default testsite run: 0.39% of analyzed pixels change class, almost all from S2.
+  - **All existing `_v1` precomputed assets are pre-0011 outputs and should not be treated as current results**;
+    `load_precomputed()` warns. Regenerate the important ones as `_v2` after reviewing the impact.
+  - Details: `docs/findings.md` 2026-10-08 (later).
+
 ## Reproducibility notes
 
 - **Earth Engine input imagery can change between runs.** Late-September 2026 Sentinel-2 scenes over
@@ -299,8 +310,10 @@ is unchanged until this is investigated. Details: `docs/findings.md`,
 
 ## Next steps
 
-- Legacy equivalence (validated for decrease/unchanged/increase): decide in BULC-D_rebuild whether to match legacy
-  on the S2 scene filter (pixel 3: 30/61 bins change) and the fracDOY time axis. Still open:
+- Legacy equivalence: done. BULC-D_rebuild decision 0011 matches legacy (no default S2 scene filter, fracDOY), and
+  pixels 1–3 are exact with the default implementation. Next: the GEE app on `BULC-D_rebuild/gee/bulcd.js`, held to
+  JS ↔ Python parity (`gee/tests/run_parity.py`), Milestone 1 = the legacy reference case. Regenerate `_v1` assets
+  as `_v2` after reviewing the impact. Still open:
   - The pixel-2 location offset. Capturing the charted point reliably needs `HelperFunctions-BULCD`'s
     `getChartResults` source (it handles its own clicks on all four maps), or click listeners on all four maps.
   - The app/notebooks sample on a 30 m UTM grid, not the GUI's native-pixel sampling.

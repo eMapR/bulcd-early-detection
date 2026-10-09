@@ -1,46 +1,20 @@
 ##### pixel3 (-123.54330474162032, 44.847525314894625)
-=== as_is ===
-python residual SD 0.09554 -> denominator 0.09554
-time steps: expectation GUI 122 / Python 122, same dates: True; target GUI 122 / Python 122, same dates: True
-1 expectation NBR presence: GUI 54, Python 52, both 52; GUI-only ['2024-02-06', '2024-03-07']; Python-only []
-  expectation NBR     n=52 exact=51/52 max=0.0147 mean=0.0005
-2 expectation fitted  n=122 exact=2/122 max=0.0893 mean=0.0420
-  legacy-fracDOY refit n=122 exact=2/122 max=0.0891 mean=0.0419
-  expectation residual n=52 exact=2/52 max=0.0843 mean=0.0222; legacy-fracDOY refit n=52 exact=2/52 max=0.0843 mean=0.0222
-  expectation residual presence: GUI 54, Python 52, both 52; GUI-only ['2024-02-06', '2024-03-07']; Python-only []
-3 target NBR presence: GUI 61, Python 61, both 61; GUI-only []; Python-only []
-  target NBR          n=61 exact=60/61 max=0.0341 mean=0.0008
-  target fitted       n=122 exact=1/122 max=0.0893 mean=0.0420
-  legacy-fracDOY refit n=122 exact=2/122 max=0.0891 mean=0.0420
-4 target residual     n=61 exact=1/61 max=0.0952 mean=0.0344
-  legacy-fracDOY refit n=61 exact=0/61 max=0.0933 mean=0.0345
-  python z range -1.35..6.79; nearest z to a bin cut: 0.004
-  residual presence: GUI 61, Python 61, both 61; GUI-only []; Python-only []
-5 bins: agree 31/61; presence: GUI 61, Python 61, both 61; GUI-only []; Python-only []
-  bin mismatches (date, GUI, Python, Python z): [('2025-01-19', 9.0, 10, 3.367), ('2025-01-22', 8.0, 10, 2.745), ('2025-01-25', 8.0, 10, 2.321), ('2025-01-28', 7.0, 10, 2.199), ('2025-01-31', 7.0, 9, 1.917), ('2025-02-27', 7.0, 9, 1.847), ('2025-03-02', 5.0, 7, 0.81), ('2025-03-08', 5.0, 7, 0.782), ('2025-03-20', 8.0, 10, 2.265), ('2025-03-26', 4.0, 6, 0.004), ('2025-04-04', 5.0, 6, 0.311), ('2025-04-16', 3.0, 4, -0.867), ('2025-04-22', 3.0, 4, -0.937), ('2025-05-25', 6.0, 7, 0.63), ('2025-06-03', 7.0, 8, 1.22), ('2025-06-09', 7.0, 8, 1.022), ('2025-06-18', 7.0, 8, 1.261), ('2025-07-15', 6.0, 7, 0.51), ('2025-08-02', 6.0, 5, -0.019), ('2025-08-17', 6.0, 5, -0.055), ('2025-09-22', 8.0, 9, 1.791), ('2025-09-25', 7.0, 8, 1.094), ('2025-09-28', 7.0, 8, 1.164), ('2025-10-04', 8.0, 9, 1.815), ('2025-10-07', 8.0, 9, 1.655), ('2025-10-10', 8.0, 9, 1.664), ('2025-10-16', 9.0, 10, 2.334), ('2025-10-19', 8.0, 10, 2.079), ('2025-10-22', 9.0, 10, 2.848), ('2025-11-09', 9.0, 10, 2.805)]
-6 probabilities lag 0: values exact 58/366 max=0.7382 mean=0.1265
-6 probabilities lag 1: values exact 88/363 max=0.7255 mean=0.1219
-  GUI first row 2025-01-04: 0.1/0.8/0.1  (legacy starting prior = 0.1/0.8/0.1)
-7 first P(drop)>0.5: GUI row None, Python step None
-  GUI P(same): min 0.055 max 0.914 final 0.055; GUI P(drop) max 0.253, P(up) max 0.9
-  final: GUI 0.044/0.055/0.9 (2026-01-02, = posterior after step 2025-12-30); Python after 2025-12-30: 0.043/0.043/0.914; Python after last step 2026-01-02 (never plotted by the GUI): 0.043/0.043/0.914
-
-=== s2_nofilter ===
-python residual SD 0.12625 -> denominator 0.12625
+=== default ===
+python residual SD 0.12624 -> denominator 0.12624
 time steps: expectation GUI 122 / Python 122, same dates: True; target GUI 122 / Python 122, same dates: True
 1 expectation NBR presence: GUI 54, Python 54, both 54; GUI-only []; Python-only []
   expectation NBR     n=54 exact=54/54 max=0.0005 mean=0.0002
-2 expectation fitted  n=122 exact=117/122 max=0.0011 mean=0.0003
+2 expectation fitted  n=122 exact=122/122 max=0.0005 mean=0.0003
   legacy-fracDOY refit n=122 exact=122/122 max=0.0005 mean=0.0003
-  expectation residual n=54 exact=52/54 max=0.0005 mean=0.0003; legacy-fracDOY refit n=54 exact=54/54 max=0.0005 mean=0.0003
+  expectation residual n=54 exact=54/54 max=0.0005 mean=0.0003; legacy-fracDOY refit n=54 exact=54/54 max=0.0005 mean=0.0003
   expectation residual presence: GUI 54, Python 54, both 54; GUI-only []; Python-only []
 3 target NBR presence: GUI 61, Python 61, both 61; GUI-only []; Python-only []
   target NBR          n=61 exact=61/61 max=0.0005 mean=0.0002
-  target fitted       n=122 exact=23/122 max=0.0019 mean=0.0010
+  target fitted       n=122 exact=122/122 max=0.0005 mean=0.0002
   legacy-fracDOY refit n=122 exact=122/122 max=0.0005 mean=0.0002
-4 target residual     n=61 exact=13/61 max=0.0019 mean=0.0010
+4 target residual     n=61 exact=61/61 max=0.0005 mean=0.0002
   legacy-fracDOY refit n=61 exact=61/61 max=0.0005 mean=0.0002
-  python z range -1.39..4.45; nearest z to a bin cut: 0.002
+  python z range -1.38..4.45; nearest z to a bin cut: 0.005
   residual presence: GUI 61, Python 61, both 61; GUI-only []; Python-only []
 5 bins: agree 61/61; presence: GUI 61, Python 61, both 61; GUI-only []; Python-only []
 6 probabilities lag 0: values exact 207/366 max=0.3023 mean=0.0190
@@ -49,3 +23,29 @@ time steps: expectation GUI 122 / Python 122, same dates: True; target GUI 122 /
 7 first P(drop)>0.5: GUI row None, Python step None
   GUI P(same): min 0.055 max 0.914 final 0.055; GUI P(drop) max 0.253, P(up) max 0.9
   final: GUI 0.044/0.055/0.9 (2026-01-02, = posterior after step 2025-12-30); Python after 2025-12-30: 0.044/0.055/0.900; Python after last step 2026-01-02 (never plotted by the GUI): 0.043/0.046/0.911
+
+=== s2_scene_filter ===
+python residual SD 0.09553 -> denominator 0.09553
+time steps: expectation GUI 122 / Python 122, same dates: True; target GUI 122 / Python 122, same dates: True
+1 expectation NBR presence: GUI 54, Python 52, both 52; GUI-only ['2024-02-06', '2024-03-07']; Python-only []
+  expectation NBR     n=52 exact=51/52 max=0.0147 mean=0.0005
+2 expectation fitted  n=122 exact=2/122 max=0.0891 mean=0.0419
+  legacy-fracDOY refit n=122 exact=2/122 max=0.0891 mean=0.0419
+  expectation residual n=52 exact=2/52 max=0.0843 mean=0.0222; legacy-fracDOY refit n=52 exact=2/52 max=0.0843 mean=0.0222
+  expectation residual presence: GUI 54, Python 52, both 52; GUI-only ['2024-02-06', '2024-03-07']; Python-only []
+3 target NBR presence: GUI 61, Python 61, both 61; GUI-only []; Python-only []
+  target NBR          n=61 exact=60/61 max=0.0341 mean=0.0008
+  target fitted       n=122 exact=2/122 max=0.0891 mean=0.0420
+  legacy-fracDOY refit n=122 exact=2/122 max=0.0891 mean=0.0420
+4 target residual     n=61 exact=0/61 max=0.0933 mean=0.0345
+  legacy-fracDOY refit n=61 exact=0/61 max=0.0933 mean=0.0345
+  python z range -1.33..6.80; nearest z to a bin cut: 0.008
+  residual presence: GUI 61, Python 61, both 61; GUI-only []; Python-only []
+5 bins: agree 31/61; presence: GUI 61, Python 61, both 61; GUI-only []; Python-only []
+  bin mismatches (date, GUI, Python, Python z): [('2025-01-19', 9.0, 10, 3.361), ('2025-01-22', 8.0, 10, 2.74), ('2025-01-25', 8.0, 10, 2.317), ('2025-01-28', 7.0, 10, 2.197), ('2025-01-31', 7.0, 9, 1.916), ('2025-02-27', 7.0, 9, 1.858), ('2025-03-02', 5.0, 7, 0.821), ('2025-03-08', 5.0, 7, 0.796), ('2025-03-20', 8.0, 10, 2.282), ('2025-03-26', 4.0, 6, 0.023), ('2025-04-04', 5.0, 6, 0.331), ('2025-04-16', 3.0, 4, -0.845), ('2025-04-22', 3.0, 4, -0.915), ('2025-05-25', 6.0, 7, 0.651), ('2025-06-03', 7.0, 8, 1.239), ('2025-06-09', 7.0, 8, 1.04), ('2025-06-18', 7.0, 8, 1.276), ('2025-07-15', 6.0, 7, 0.516), ('2025-08-02', 6.0, 5, -0.021), ('2025-08-17', 6.0, 5, -0.061), ('2025-09-22', 8.0, 9, 1.774), ('2025-09-25', 7.0, 8, 1.076), ('2025-09-28', 7.0, 8, 1.146), ('2025-10-04', 8.0, 9, 1.796), ('2025-10-07', 8.0, 9, 1.635), ('2025-10-10', 8.0, 9, 1.644), ('2025-10-16', 9.0, 10, 2.313), ('2025-10-19', 8.0, 10, 2.058), ('2025-10-22', 9.0, 10, 2.827), ('2025-11-09', 9.0, 10, 2.784)]
+6 probabilities lag 0: values exact 58/366 max=0.7382 mean=0.1265
+6 probabilities lag 1: values exact 88/363 max=0.7255 mean=0.1219
+  GUI first row 2025-01-04: 0.1/0.8/0.1  (legacy starting prior = 0.1/0.8/0.1)
+7 first P(drop)>0.5: GUI row None, Python step None
+  GUI P(same): min 0.055 max 0.914 final 0.055; GUI P(drop) max 0.253, P(up) max 0.9
+  final: GUI 0.044/0.055/0.9 (2026-01-02, = posterior after step 2025-12-30); Python after 2025-12-30: 0.043/0.043/0.914; Python after last step 2026-01-02 (never plotted by the GUI): 0.043/0.043/0.914

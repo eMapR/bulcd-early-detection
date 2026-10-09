@@ -247,12 +247,23 @@ class EarlyDetectionApp:
         self.results_map.on_interaction(self._on_click)
         self.click_marker = ipyleaflet.CircleMarker(radius=8, color="#00e5ff", fill_opacity=0, weight=3)
         self.out = {k: W.Output() for k in ("Condition", "Timing", "Imagery", "Parameter behavior", "Pixel inspector")}
-        self.tabs = W.Tab(children=list(self.out.values()))
+        # Coordinate entry: a map click fills these; Submit re-inspects exactly this coordinate, so a
+        # rerun with other parameters can be compared at the same 30 m pixel. Text (not FloatText)
+        # boxes keep the coordinate exactly as clicked or typed.
+        self.pixel_lon = W.Text(description="Longitude", placeholder="e.g. -123.54330", layout=W.Layout(width="260px"))
+        self.pixel_lat = W.Text(description="Latitude", placeholder="e.g. 44.84753", layout=W.Layout(width="260px"))
+        self.pixel_btn = W.Button(description="Submit Pixel", icon="crosshairs", layout=W.Layout(width="140px"))
+        self.pixel_btn.on_click(self._submit_pixel)
+        tabs = dict(self.out)
+        tabs["Pixel inspector"] = W.VBox([W.HBox([self.pixel_lon, self.pixel_lat, self.pixel_btn]), self.out["Pixel inspector"]])
+        self.tabs = W.Tab(children=list(tabs.values()))
         for i, k in enumerate(self.out):
             self.tabs.set_title(i, k)
         with self.out["Pixel inspector"]:
-            display(Markdown("After a run, **click any pixel on the results map** to see its observations, departure from "
-                             "expectation, probability of decrease, the threshold, and when it first crossed."))
+            display(Markdown("After a run, **click any pixel on the results map**, or enter a longitude and latitude and "
+                             "press **Submit Pixel**, to see its observations, departure from expectation, the "
+                             "probabilities, the threshold, and when they first crossed. A click fills the boxes, so "
+                             "after changing parameters and rerunning, Submit Pixel inspects the same 30 m pixel again."))
         self.sens_btn = W.Button(description="Sensitivity maps (0.5 | 1.0 | 2.0)", icon="th", layout=W.Layout(width="280px"))
         self.resp_btn = W.Button(description="Response curves (4 parameters)", icon="line-chart", layout=W.Layout(width="280px"))
         self.sens_btn.on_click(self._sensitivity_maps)
@@ -442,6 +453,23 @@ class EarlyDetectionApp:
         if event.get("type") != "click" or not self.run_state:
             return
         lat, lon = event["coordinates"]
+        self._inspect_safely(lon, lat)
+
+    def _submit_pixel(self, _=None):
+        try:
+            lon, lat = float(self.pixel_lon.value), float(self.pixel_lat.value)
+        except ValueError:
+            self.status.value = "<b style='color:#b00'>Enter a numeric longitude and latitude (decimal degrees).</b>"
+            return
+        if not (-180 <= lon <= 180 and -90 <= lat <= 90):
+            self.status.value = "<b style='color:#b00'>Longitude must be within ±180 and latitude within ±90.</b>"
+            return
+        if not self.run_state:
+            self.status.value = "<b style='color:#b00'>Run the analysis first, then submit a pixel.</b>"
+            return
+        self._inspect_safely(lon, lat)
+
+    def _inspect_safely(self, lon: float, lat: float):
         try:
             self.inspect(lon, lat)
         except Exception as exc:  # e.g. an Earth Engine timeout: report it, keep the app usable
@@ -450,6 +478,7 @@ class EarlyDetectionApp:
     def inspect(self, lon: float, lat: float):
         """Pixel history at (lon, lat) - the click handler; callable directly."""
         state = self.run_state
+        self.pixel_lon.value, self.pixel_lat.value = repr(lon), repr(lat)
         self.click_marker.location = (lat, lon)
         if self.click_marker not in self.results_map.layers:
             self.results_map.add(self.click_marker)
@@ -469,6 +498,7 @@ class EarlyDetectionApp:
                 thr = state["controls"].decision_threshold
                 pixel.plot_pixel_history(histories, thr, classes=pixel.CLASSES,
                                          title=f"Pixel at {lat:.5f} N, {abs(lon):.5f} {'W' if lon < 0 else 'E'}")
+                print(f"Coordinate: {lon!r}, {lat!r} (lon, lat); sampled on the 30 m result grid")
                 for label, rows in histories.items():
                     for cls in ("decrease", "increase"):
                         crossed = pixel.first_crossing(rows, thr, cls)

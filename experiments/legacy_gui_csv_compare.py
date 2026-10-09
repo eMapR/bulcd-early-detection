@@ -15,10 +15,14 @@ each scene is read at its own native pixel containing the point. A probe
 of grids found that this is what reproduces the GUI's NBR (30 m grids do not);
 see docs/findings.md 2026-10-04 (second entry).
 
-Variants (config only - bulcd code is unchanged):
-    as_is       bulcd as configured (S2 scene filter CLOUDY_PIXEL_PERCENTAGE <= 70)
-    s2_nofilter S2 scene threshold 100, i.e. no S2 scene filter, like the
-                legacy Cloud Score+ path
+Variants:
+    default         bulcd's normal implementation, configured like the GUI run. Since
+                    BULC-D_rebuild decision 0011 that means no S2 scene filter and the
+                    legacy fracDOY time axis - the acceptance case.
+    s2_scene_filter bulcd's opt-in S2 scene filter (s2_scene_cloud_threshold = 70,
+                    CLOUDY_PIXEL_PERCENTAGE <= 70; not legacy), to show what it changes.
+(Before decision 0011 the variants were as_is = S2 filter at 70 + years-since-1970 axis,
+and s2_nofilter = S2 threshold 100; see docs/findings.md 2026-10-04 to 2026-10-08.)
 
 Investigation only. Writes experiments/output/legacy_gui_csv_compare/<pixel>/:
     <variant>_steps.csv   per time step: GUI and Python values side by side
@@ -231,15 +235,15 @@ def compare(label: str, config, pixel: dict, out: Path) -> list[str]:
 
 def main() -> None:
     import sys
-    as_is = build_config()
-    nofilter = copy.deepcopy(as_is)
-    for p in (nofilter.evidence.expectation, nofilter.evidence.target):
-        p.sensors["S2"].cloud_cover_threshold = 100
+    default = build_config()
+    s2_filter = copy.deepcopy(default)
+    for p in (s2_filter.evidence.expectation, s2_filter.evidence.target):
+        p.sensors["S2"].s2_scene_cloud_threshold = 70
     for name in sys.argv[1:] or PIXELS:
         out = OUT / name
         out.mkdir(parents=True, exist_ok=True)
         lines = [f"##### {name} {PIXELS[name]['lonlat']}"]
-        for label, cfg in (("as_is", as_is), ("s2_nofilter", nofilter)):
+        for label, cfg in (("default", default), ("s2_scene_filter", s2_filter)):
             lines += compare(label, cfg, PIXELS[name], out) + [""]
         (out / "summary.txt").write_text("\n".join(lines))
         print("\n".join(lines))
