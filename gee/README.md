@@ -30,13 +30,21 @@ rule, no algorithm code is copied here: these modules only interpret its outputs
   UTM result grid; probabilities are plotted at each observation bin's own date,
   not one step late as in the legacy chart.
 
-## Running it
+## Running it in the Code Editor
 
-Deployment location is not decided yet. To run in the Code Editor, put `bulcd.js`
-and these four files in Earth Engine script repositories and set `BULCD_MODULE`
-and `APP_MODULE_ROOT` at the top of `app.js` to their `users/<owner>/<repo>:<path>`
-locations, then run `app.js`. The whole case is computed on the fly, as in the
-legacy GUI, so map tiles take a while.
+Git is the source of truth; the Code Editor holds generated copies. Two Code Editor
+repositories, mirroring the two git repos:
+
+```
+users/<user>/BULC-D_rebuild           bulcd
+users/<user>/bulcd-early-detection    app  config  outputs  inspector
+```
+
+`python tools/build_gee_deploy.py <user>` writes the five files to `dist/gee/` (not
+tracked) with `app`'s module paths set for `<user>` and a header naming each file's
+source commit. Paste each into the matching Code Editor file and run `app`. After any
+change in git, re-run the script and re-paste. The whole case is computed on the fly,
+as in the legacy GUI, so map tiles take a while.
 
 ## Parity test (GEE app ↔ Python app)
 
