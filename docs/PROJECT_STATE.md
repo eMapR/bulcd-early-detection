@@ -204,6 +204,16 @@ Two-repo split:
     `load_precomputed()` warns. Regenerate the important ones as `_v2` after reviewing the impact.
   - Details: `docs/findings.md` 2026-10-08 (later).
 
+- **2026-10-08: GEE app Milestone 1 (`gee/`, see `gee/README.md`).** Code Editor app on
+  `BULC-D_rebuild/gee/bulcd.js`: the fixed legacy reference case (read-only config), classification map,
+  map-click and lon/lat + Submit Pixel selection, and the two-chart inspector ("Target Year vs. Fit",
+  "Probability Through Time" at correct dates, 30 m grid). `gee/tests/run_app_parity.py` drives the app's own
+  click handler under Node and passed: config equals BULC-D_rebuild's `legacy_reference()`; inspector rows and
+  chart values equal `pixel.pixel_history()` at pixels 1–3 (122 rows each); classification equals
+  `outputs._outcome_from_result()` on 6,339 box pixels. Not yet run in the Code Editor (deployment location TBD).
+  Pixel 2's final values on the 30 m grid (0.046/0.911/0.043) differ from the GUI's native-pixel ones; that is
+  the documented sampling difference.
+
 ## Reproducibility notes
 
 - **Earth Engine input imagery can change between runs.** Late-September 2026 Sentinel-2 scenes over
