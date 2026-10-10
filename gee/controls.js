@@ -100,13 +100,10 @@ function makeControls(appConfig, onChange) {
     row(start.widgets.concat([ui.Label('to')]).concat(end.widgets)),
     relationship,
     ui.Label('Sensitivity', LABEL), sensitivity,
-    ui.Label('Scales how far each new observation is from the expected NBR before it counts as evidence: ' +
-             'higher makes smaller departures count as change, so more pixels are flagged and sooner; lower ' +
-             'needs larger departures.', HINT),
+    ui.Label('Higher sensitivity makes the model more responsive to smaller departures from expected ' +
+             'conditions.', HINT),
     ui.Label('Decision threshold', LABEL), threshold,
-    ui.Label("A pixel is mapped as decrease or increase only if that class's probability ends the season " +
-             'above this value (its first-detected date is when it first crossed it); raising it needs stronger, ' +
-             'more consistent evidence and flags fewer pixels, later; lowering it flags more, sooner.', HINT),
+    ui.Label('How confident BULC-D must be before identifying a change.', HINT),
     timing, showAdvanced, advanced
   ]);
 
