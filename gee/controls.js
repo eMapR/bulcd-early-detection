@@ -1,6 +1,6 @@
 // Settings panel: the interactive notebook's controls (app.py
 // _build_settings_step()) as Code Editor widgets. Defaults and limits come from
-// config.js NOTEBOOK_DEFAULTS / RANGES; read() returns a controls object for
+// config.js APP_DEFAULTS / RANGES; read() returns a controls object for
 // config.js buildConfig(). Needs the Code Editor's `ui`. Plain ES5.
 
 var LABEL = {fontSize: '12px', margin: '6px 8px 0 8px'};
@@ -51,7 +51,7 @@ function slider(r, value, onChange) {
 
 // Builds the panel. onChange() is called after any setting changes.
 function makeControls(appConfig, onChange) {
-  var d = appConfig.NOTEBOOK_DEFAULTS, r = appConfig.RANGES;
+  var d = appConfig.APP_DEFAULTS, r = appConfig.RANGES;
   var changed = function () { describe(); if (onChange) onChange(); };
   var expYears = range(r.expectation_years[0], r.expectation_years[1]);
 
@@ -61,7 +61,8 @@ function makeControls(appConfig, onChange) {
   var start = monthDay(appConfig, d.season_start, changed);
   var end = monthDay(appConfig, d.season_end, changed);
   var sensitivity = slider(r.sensitivity, d.sensitivity, changed);
-  var threshold = slider(r.decision_threshold, d.decision_threshold, changed);
+  var decreaseThreshold = slider(r.threshold, d.decrease_threshold, changed);
+  var increaseThreshold = slider(r.threshold, d.increase_threshold, changed);
   var timing = ui.Checkbox({label: 'Also map the first-detected season', value: d.timing, onChange: changed});
   var expectationNote = ui.Label('', HINT);
   var relationship = ui.Label('', {fontSize: '12px', whiteSpace: 'pre-wrap', margin: '6px 8px',
@@ -80,7 +81,8 @@ function makeControls(appConfig, onChange) {
                                 onChange: changed});
 
   var advanced = ui.Panel([
-    ui.Label('Normally left alone. Defaults match the demonstration notebooks.', HINT),
+    ui.Label('Normally left alone. Dampening, posterior leveler and the masks start at the original BULC-D ' +
+             'GUI\'s settings.', HINT),
     ui.Label('Dampening', LABEL), dampening,
     ui.Label('how much weight each single observation carries (1 = full)', HINT),
     ui.Label('Posterior leveler', LABEL), posterior,
@@ -102,7 +104,8 @@ function makeControls(appConfig, onChange) {
     ui.Label('Sensitivity', LABEL), sensitivity,
     ui.Label('Higher sensitivity makes the model more responsive to smaller departures from expected ' +
              'conditions.', HINT),
-    ui.Label('Decision threshold', LABEL), threshold,
+    ui.Label('Decrease threshold', LABEL), decreaseThreshold,
+    ui.Label('Increase threshold', LABEL), increaseThreshold,
     ui.Label('How confident BULC-D must be before identifying a change.', HINT),
     timing, showAdvanced, advanced
   ]);
@@ -114,7 +117,8 @@ function makeControls(appConfig, onChange) {
       expectation_first: Number(expFirst.getValue()), expectation_last: Number(expLast.getValue()),
       monitoring_year: Number(monitoring.getValue()),
       season_start: start.get(), season_end: end.get(),
-      sensitivity: sensitivity.getValue(), decision_threshold: threshold.getValue(), timing: timing.getValue(),
+      sensitivity: sensitivity.getValue(), decrease_threshold: decreaseThreshold.getValue(),
+      increase_threshold: increaseThreshold.getValue(), timing: timing.getValue(),
       dampening: dampening.getValue(), posterior_leveler: posterior.getValue(), sensors: s,
       mask_forest: maskForest.getValue(), mask_water: maskWater.getValue(), allow_large: allowLarge.getValue()
     };

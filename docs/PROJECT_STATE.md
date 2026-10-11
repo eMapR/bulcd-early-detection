@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-10-08
+Last updated: 2026-10-11
 
 Concise current-state/handoff doc. Detailed lessons, experimental
 results, and their explanations live in `docs/findings.md` — read it for
@@ -226,6 +226,15 @@ Two-repo split:
   Not ported yet: saved local areas, summary tabs, Parameter behavior tab, per-season inspector columns.
   BULC-D_rebuild: bulcd.js defaulted `mask_non_forest` to false (Python: True); fixed, and `run_parity.py` now
   checks default-filling.
+- **2026-10-11: both interactive apps (GEE and Python) open with the original BULC-D GUI's algorithm
+  defaults**, read from the legacy source (`gee/tests/legacy_gui.js`): sensitivity 1.0, separate decrease
+  0.65 / increase 0.75 thresholds (strict `>`, as its `.gt()`; first-detected season uses the decrease
+  threshold), dampening 0.7, posterior leveler 0.9, starting odds 0.1/0.8/0.1 (`initializing_leveler` 0.7),
+  no forest mask, water masked. Years, season, sensors and cloud cover had no legacy default; theirs are Early
+  Detection choices. Day step stays 4 (legacy slider default 3). Why: the same-pixel old/new GUI comparison
+  matched exactly except the early probabilities, explained by even vs 10/80/10 starting odds. The
+  demonstration notebooks (`config.py` defaults, `compare.PARAMETER_SWEEPS`) are unchanged. Checked by
+  `gee/tests/controls_check.js`, `tests/test_app_defaults.py` and `gee/tests/run_app_parity.py`.
 
 ## Reproducibility notes
 

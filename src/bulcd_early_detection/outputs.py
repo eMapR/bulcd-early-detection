@@ -21,6 +21,8 @@ import ee
 from bulcd.config.schema import BULCDConfig
 from bulcd.engine import run_bulcd, study_area_mask
 
+from .config import class_thresholds
+
 WDPA_POLYGONS = "WCMC/WDPA/current/polygons"
 PARK_NAME = "Apostle Islands National Lakeshore"
 SCALE = 30
@@ -129,22 +131,26 @@ def _first_crossing_doy(probability_stack: ee.ImageCollection, band: str, thresh
     return ee.ImageCollection(probability_stack.map(event_doy)).min()
 
 
-def outcome_image(config: BULCDConfig, threshold: float) -> ee.Image:
+def outcome_image(config: BULCDConfig, threshold: float, increase_threshold: float | None = None) -> ee.Image:
     """Runs BULC-D once and derives the monitoring layers (bands in
     OUTPUT_BANDS order, all float):
 
-    - outcome: DECREASE/INCREASE where that class's final probability
-      exceeds `threshold` (>= 0.5, so at most one can), else UNCHANGED;
+    - outcome: DECREASE where P(decrease) exceeds `threshold`, INCREASE
+      where P(increase) exceeds `increase_threshold` (default: `threshold`;
+      both >= 0.5, so at most one can), else UNCHANGED - the original BULC-D
+      GUI's .gt() rule (its defaults: 0.65 decrease, 0.75 increase);
       NOT_ANALYZED on land excluded by the non-forest mask; masked on water.
     - confidence: final probability of the mapped outcome class.
-    - first_detection_doy: first date the mapped change class crossed
-      `threshold` (masked for unchanged pixels).
+    - first_detection_doy: first date the mapped change class crossed its
+      threshold (masked for unchanged pixels).
     - decrease/unchanged/increase: bulcd's final_probabilities.
     """
-    return _outcome_from_result(run_bulcd(config), config, threshold)
+    return _outcome_from_result(run_bulcd(config), config, threshold, increase_threshold)
 
 
-def _outcome_from_result(result, config: BULCDConfig, threshold: float) -> ee.Image:
+def _outcome_from_result(result, config: BULCDConfig, threshold: float,
+                         increase_threshold: float | None = None) -> ee.Image:
+    t = class_thresholds(threshold, increase_threshold)
     final = result.final_probabilities
     dec, unc, inc = (final.select(b) for b in ("decrease", "unchanged", "increase"))
 
@@ -156,7 +162,7 @@ def _outcome_from_result(result, config: BULCDConfig, threshold: float) -> ee.Im
     land = study_area_mask(water_only)
 
     changed = (
-        ee.Image.constant(UNCHANGED).where(dec.gt(threshold), DECREASE).where(inc.gt(threshold), INCREASE)
+        ee.Image.constant(UNCHANGED).where(dec.gt(t["decrease"]), DECREASE).where(inc.gt(t["increase"]), INCREASE)
     ).updateMask(analyzed).updateMask(dec.mask())
     outcome = (
         ee.Image.constant(NOT_ANALYZED).where(changed.mask(), changed).updateMask(land).rename("outcome")
@@ -164,8 +170,8 @@ def _outcome_from_result(result, config: BULCDConfig, threshold: float) -> ee.Im
 
     confidence = unc.where(changed.eq(DECREASE), dec).where(changed.eq(INCREASE), inc).rename("confidence")
 
-    first_dec = _first_crossing_doy(result.probability_stack, "decrease", threshold)
-    first_inc = _first_crossing_doy(result.probability_stack, "increase", threshold)
+    first_dec = _first_crossing_doy(result.probability_stack, "decrease", t["decrease"])
+    first_inc = _first_crossing_doy(result.probability_stack, "increase", t["increase"])
     first = (
         first_dec.updateMask(changed.eq(DECREASE))
         .unmask(first_inc.updateMask(changed.eq(INCREASE)))
@@ -294,16 +300,18 @@ def early_detection_share(outcome: ee.Image, region: ee.Geometry, first_doy: int
     return {"changed_km2": total, "early_km2": sums.get("early") or 0.0, "early_share": (sums.get("early") or 0.0) / total if total else 0.0}
 
 
-def reclassify(outputs_image: ee.Image, threshold: float) -> ee.Image:
-    """Re-applies the decision rule at another threshold (>= 0.5) to
-    existing outputs - no new BULC-D run, since the threshold only acts on
-    the final probabilities. Masked areas are unchanged."""
+def reclassify(outputs_image: ee.Image, threshold: float, increase_threshold: float | None = None) -> ee.Image:
+    """Re-applies the decision rule at other thresholds (>= 0.5; increase
+    defaults to `threshold`) to existing outputs - no new BULC-D run, since
+    the thresholds only act on the final probabilities. Masked areas are
+    unchanged."""
+    t = class_thresholds(threshold, increase_threshold)
     outcome = outputs_image.select("outcome")
     analyzed = outcome.lte(INCREASE)
     new = (
         outcome.where(analyzed, UNCHANGED)
-        .where(analyzed.And(outputs_image.select("decrease").gt(threshold)), DECREASE)
-        .where(analyzed.And(outputs_image.select("increase").gt(threshold)), INCREASE)
+        .where(analyzed.And(outputs_image.select("decrease").gt(t["decrease"])), DECREASE)
+        .where(analyzed.And(outputs_image.select("increase").gt(t["increase"])), INCREASE)
     )
     return outputs_image.addBands(new.rename("outcome"), overwrite=True)
 
@@ -312,14 +320,15 @@ def reclassify(outputs_image: ee.Image, threshold: float) -> ee.Image:
 TIMING_BANDS = ["first_decrease_year", "first_decrease_doy", "outcome"]
 
 
-def detection_timing_image(config: BULCDConfig, threshold: float) -> ee.Image:
+def detection_timing_image(config: BULCDConfig, threshold: float, increase_threshold: float | None = None) -> ee.Image:
     """For a (typically multi-year) monitoring run: the year and day of year
-    of the FIRST observation bin where P(decrease) exceeded `threshold`
-    (bin END date, as bulcd timestamps bins), masked where it never did or
-    the pixel isn't analyzed; plus `outcome`, the state at the end of the
-    run (same codes as outcome_image). One BULC-D run feeds both."""
+    of the FIRST observation bin where P(decrease) exceeded `threshold` (the
+    decrease threshold) (bin END date, as bulcd timestamps bins), masked
+    where it never did or the pixel isn't analyzed; plus `outcome`, the state
+    at the end of the run (same codes as outcome_image, with
+    `increase_threshold`). One BULC-D run feeds both."""
     result = run_bulcd(config)
-    outcome = _outcome_from_result(result, config, threshold).select("outcome")
+    outcome = _outcome_from_result(result, config, threshold, increase_threshold).select("outcome")
 
     def code(img):
         date = ee.Date(img.get("system:time_start"))

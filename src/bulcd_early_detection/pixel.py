@@ -28,6 +28,7 @@ from bulcd.inputs import organize_inputs
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
+from .config import class_thresholds
 from .render import OUTCOME_COLORS
 from .outputs import DECREASE, INCREASE, UNCHANGED
 
@@ -92,6 +93,26 @@ def first_crossing(rows: list[dict], threshold: float, cls: str = "decrease") ->
     return next((r["date"] for r in rows if r[cls] is not None and r[cls] > threshold), None)
 
 
+def crossing_notes(rows: list[dict], threshold: float, increase_threshold: float | None = None) -> list[str]:
+    """One sentence per change class that crossed its threshold (decrease:
+    `threshold`; increase: `increase_threshold`, default `threshold`), saying
+    whether it finished the season above it (only that counts)."""
+    t = class_thresholds(threshold, increase_threshold)
+    notes = []
+    for cls in ("decrease", "increase"):
+        crossed = first_crossing(rows, t[cls], cls)
+        if not crossed:
+            continue
+        finished = rows[-1][cls] > t[cls]
+        notes.append(f"{cls} first crossed its threshold ({t[cls]}) on {crossed}, " +
+                     (f"finished the season as {cls} (counts as detected)" if finished
+                      else "finished below its threshold (does not count)"))
+    if not notes:
+        notes.append("never crossed a threshold (" + (str(t["decrease"]) if t["decrease"] == t["increase"] else
+                                                      f"decrease {t['decrease']}, increase {t['increase']}") + ")")
+    return notes
+
+
 def history_from_replay_csv(path: Path, bin_cuts: list[float], matrix: list[list[float]]) -> list[dict]:
     """Rows in pixel_history() form from a Milestone 1 replay CSV
     (experiments/output/*.csv) - no observed/expected values there."""
@@ -108,7 +129,8 @@ def history_from_replay_csv(path: Path, bin_cuts: list[float], matrix: list[list
 
 
 def plot_pixel_history(seasons: dict[str, list[dict]], threshold: float = 0.5, title: str = "",
-                       classes: tuple[str, ...] = ("decrease",), show_nbr: bool = True, save_to=None):
+                       classes: tuple[str, ...] = ("decrease",), show_nbr: bool = True, save_to=None,
+                       increase_threshold: float | None = None):
     """One column per monitoring season (label -> rows), sharing y-axes.
 
     Laid out like the legacy GUI's "Target Year vs. Fit of Expectation" and
@@ -117,11 +139,20 @@ def plot_pixel_history(seasons: dict[str, list[dict]], threshold: float = 0.5, t
     available, else the z-score; each observation dot colored by the class its
     evidence favors. Bottom: probability of `classes` (decrease by default) at
     each observation's own date - unlike the legacy chart, which plots each
-    posterior one step late - with the decision threshold and the first
-    crossing of each change class marked.
+    posterior one step late - with each change class's threshold (decrease:
+    `threshold`; increase: `increase_threshold`, default `threshold`) and its
+    first crossing marked.
     """
+    t = class_thresholds(threshold, increase_threshold)
     have_nbr = show_nbr and any(r["observed"] is not None for rows in seasons.values() for r in rows)
     change = [c for c in classes if c != "unchanged"]
+    # One dotted grey line for a shared threshold; otherwise one per change class, in its color.
+    if len({t[c] for c in change}) <= 1:
+        threshold_lines = [(t[change[0]] if change else threshold, "#555")]
+        threshold_labels = [f"decision threshold ({threshold_lines[0][0]})"]
+    else:
+        threshold_lines = [(t[c], CLASS_COLORS[c]) for c in change]
+        threshold_labels = [f"{c} threshold ({t[c]})" for c in change]
     n = len(seasons)
     fig, axes = plt.subplots(2, n, figsize=(max(4.2 * n + 1.2, 8.5), 6.2), dpi=110, sharey="row", squeeze=False,
                              gridspec_kw={"height_ratios": [1, 1.2]})
@@ -140,18 +171,19 @@ def plot_pixel_history(seasons: dict[str, list[dict]], threshold: float = 0.5, t
         # Shade every period above the threshold: a first crossing need not stay above it.
         for cls in change:
             vals = [r[cls] for r in rows]
-            bot.fill_between(dates, threshold, vals, where=[v is not None and v > threshold for v in vals], step="post",
+            bot.fill_between(dates, t[cls], vals, where=[v is not None and v > t[cls] for v in vals], step="post",
                              color=CLASS_COLORS[cls], alpha=0.15, lw=0)
         for cls in classes:
             bot.step(dates, [r[cls] for r in rows], where="post", lw=2, color=CLASS_COLORS[cls])
             bot.plot(dates, [r[cls] for r in rows], ls="", marker="o", ms=2.5, color=CLASS_COLORS[cls])
-        bot.axhline(threshold, color="#555", lw=1, ls=":")
+        for value, color in threshold_lines:
+            bot.axhline(value, color=color, lw=1, ls=":")
         notes = []
         for cls in change:
-            crossed = first_crossing(rows, threshold, cls)
+            crossed = first_crossing(rows, t[cls], cls)
             if crossed:
                 bot.axvline(crossed, color=CLASS_COLORS[cls], lw=1)
-            notes.append(f"{cls} first crossed {crossed:%Y-%m-%d}" if crossed else f"{cls} never > {threshold}")
+            notes.append(f"{cls} first crossed {crossed:%Y-%m-%d}" if crossed else f"{cls} never > {t[cls]}")
         bot.set_title(" · ".join(notes), loc="left", fontsize=9, color="#444")
         top.set_title(label, fontsize=11)
         bot.set_ylim(0, 1.02)
@@ -170,8 +202,8 @@ def plot_pixel_history(seasons: dict[str, list[dict]], threshold: float = 0.5, t
         handles.append(Line2D([], [], color="#555", lw=1.8, label="expected (baseline fit)"))
         handles.append(Line2D([], [], color="#b9b7ae", lw=1.2, label="observed NBR"))
     handles += [Line2D([], [], color=CLASS_COLORS[c], lw=2, marker="o", ms=3, label=f"P({c})") for c in classes]
-    handles.append(Line2D([], [], color="#555", ls=":", label=f"decision threshold ({threshold})"))
-    handles += [Patch(facecolor=CLASS_COLORS[c], alpha=0.15, label=f"P({c}) above threshold") for c in change]
+    handles += [Line2D([], [], color=color, ls=":", label=label) for (_, color), label in zip(threshold_lines, threshold_labels)]
+    handles += [Patch(facecolor=CLASS_COLORS[c], alpha=0.15, label=f"P({c}) above its threshold") for c in change]
     fig.legend(handles=handles, loc="lower center", ncol=min(len(handles), 4), frameon=False, fontsize=9)
     if title:
         fig.suptitle(title, x=0.01, ha="left", fontsize=12)

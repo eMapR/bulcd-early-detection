@@ -28,10 +28,19 @@ function copy(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
 
-// DECREASE/INCREASE where that class's final probability exceeds `threshold`
-// (>= 0.5, so at most one can), else UNCHANGED; NOT_ANALYZED on land excluded
-// by the non-forest mask; masked on water. Band 'outcome', float.
-function outcomeImage(bulcd, result, config, threshold) {
+// {decrease: threshold, increase: increaseThreshold, or threshold when that is
+// not given} (config.py class_thresholds()).
+function classThresholds(threshold, increaseThreshold) {
+  return {decrease: threshold, increase: increaseThreshold == null ? threshold : increaseThreshold};
+}
+
+// DECREASE where P(decrease) exceeds `threshold`, INCREASE where P(increase)
+// exceeds `increaseThreshold` (default `threshold`; both >= 0.5, so at most one
+// can), else UNCHANGED - the original BULC-D GUI's .gt() rule (its defaults:
+// 0.65 decrease, 0.75 increase); NOT_ANALYZED on land excluded by the
+// non-forest mask; masked on water. Band 'outcome', float.
+function outcomeImage(bulcd, result, config, threshold, increaseThreshold) {
+  var t = classThresholds(threshold, increaseThreshold);
   var final = result.final_probabilities;
   var dec = final.select('decrease'), inc = final.select('increase');
 
@@ -42,7 +51,7 @@ function outcomeImage(bulcd, result, config, threshold) {
   waterOnly.study_area.mask_non_forest = false;
   var land = bulcd.studyAreaMask(waterOnly);
 
-  var changed = ee.Image.constant(UNCHANGED).where(dec.gt(threshold), DECREASE).where(inc.gt(threshold), INCREASE)
+  var changed = ee.Image.constant(UNCHANGED).where(dec.gt(t.decrease), DECREASE).where(inc.gt(t.increase), INCREASE)
     .updateMask(analyzed).updateMask(dec.mask());
   return ee.Image.constant(NOT_ANALYZED).where(changed.mask(), changed).updateMask(land).rename('outcome')
     .toFloat();
@@ -70,12 +79,12 @@ function outcomeVis() {
 // ---------------------------------------------------------------- detection timing
 
 // Year and day of year of the FIRST observation bin where P(decrease) exceeded
-// `threshold` (bin END date), masked where it never did or the pixel isn't
-// analyzed; plus `outcome`, the state at the end of the run.
-// outputs.py detection_timing_image().
-function detectionTimingImage(bulcd, config, threshold) {
+// `threshold` (the decrease threshold; bin END date), masked where it never did
+// or the pixel isn't analyzed; plus `outcome`, the state at the end of the run
+// (with `increaseThreshold`). outputs.py detection_timing_image().
+function detectionTimingImage(bulcd, config, threshold, increaseThreshold) {
   var result = bulcd.runBulcd(config);
-  var outcome = outcomeImage(bulcd, result, config, threshold);
+  var outcome = outcomeImage(bulcd, result, config, threshold, increaseThreshold);
   var first = result.probability_stack.map(function (img) {
     var date = ee.Date(img.get('system:time_start'));
     var value = date.get('year').multiply(1000).add(date.getRelative('day', 'year').add(1));
@@ -169,6 +178,7 @@ function nbrStretchFromStats(stats) {
   return [Math.min.apply(null, lows), Math.max.apply(null, highs)];
 }
 
+exports.classThresholds = classThresholds;
 exports.DECREASE = DECREASE;
 exports.UNCHANGED = UNCHANGED;
 exports.INCREASE = INCREASE;

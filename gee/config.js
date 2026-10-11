@@ -3,9 +3,12 @@
 //
 // buildConfig(controls, aoi) mirrors the interactive notebook
 // (src/bulcd_early_detection/config.py build_config() plus app.py
-// EarlyDetectionApp.build()); NOTEBOOK_DEFAULTS and RANGES are the notebook's
-// widget defaults and limits. gee/tests/run_app_parity.py checks the result
-// against the Python app's own build() for the same settings.
+// EarlyDetectionApp.build()); RANGES are the notebook's widget limits.
+// APP_DEFAULTS are the settings the app opens with: the original BULC-D GUI's
+// values wherever it had a default (gee/tests/controls_check.js checks them
+// against the legacy source), the notebook's elsewhere.
+// gee/tests/run_app_parity.py checks the result against the Python app's own
+// build() for the same settings.
 //
 // Plain ES5 (Code Editor compatible). No Earth Engine calls here.
 
@@ -35,19 +38,35 @@ var MONITORING_SENSORS = ['L8', 'L9', 'S2'];
 var SENSOR_LABELS = {L8: 'Landsat 8', L9: 'Landsat 9', S2: 'Sentinel-2'};
 var MAX_TIMING_SEASONS = 3;
 
-// app.py widget defaults.
-var NOTEBOOK_DEFAULTS = {
-  expectation_first: 2018, expectation_last: 2023,
-  monitoring_year: 2026,
-  season_start: '06-01', season_end: '09-30',  // MM-DD
-  sensitivity: 1.0,
-  decision_threshold: 0.5,
-  timing: true,                                // also map the first-detected season
-  dampening: 0.5,
-  posterior_leveler: 1.0,
-  sensors: {L8: true, L9: true, S2: true},     // monitoring sensors
-  mask_forest: true,                           // analyze forest only (Hansen tree cover >= 10%)
-  mask_water: true,
+// Starting probabilities, as in the original BULC-D GUI (initializingLeveler 0.7
+// applied to "unchanged"): 0.1 decrease / 0.8 unchanged / 0.1 increase. Fixed;
+// not a control.
+var INITIALIZING_LEVELER = 0.7;
+
+// The settings the app opens with.
+//   Original BULC-D GUI defaults: sensitivity (ZScoreNumeratorFactor 1),
+//   separate decrease/increase thresholds (its drop 0.65 / gain 0.75 sliders),
+//   dampening (transitionLeveler 0.7), posterior leveler (posteriorLeveler 0.9),
+//   no forest mask, water masked. (Also fixed above/in bulcd: INITIALIZING_LEVELER,
+//   the transition matrix, bin cuts, z-score denominator 0.05, NBR, constant +
+//   one annual cycle.)
+//   No original default, so these are Early Detection choices: the original GUI
+//   left the sensors, expectation and target years, days of year and cloud cover
+//   blank for the user to enter.
+// src/bulcd_early_detection/app.py LEGACY_DEFAULTS holds the same values.
+var APP_DEFAULTS = {
+  expectation_first: 2018, expectation_last: 2023,  // Early Detection choice
+  monitoring_year: 2026,                            // Early Detection choice
+  season_start: '06-01', season_end: '09-30',       // MM-DD; Early Detection choice
+  sensitivity: 1.0,                                 // original GUI
+  decrease_threshold: 0.65,                         // original GUI (drop)
+  increase_threshold: 0.75,                         // original GUI (gain)
+  timing: true,                                     // also map the first-detected season
+  dampening: 0.7,                                   // original GUI
+  posterior_leveler: 0.9,                           // original GUI
+  sensors: {L8: true, L9: true, S2: true},          // monitoring sensors; Early Detection choice
+  mask_forest: false,                               // original GUI: no forest mask
+  mask_water: true,                                 // original GUI: water masked
   allow_large: false
 };
 
@@ -56,7 +75,7 @@ var RANGES = {
   expectation_years: [2016, 2025],
   monitoring_years: [2024, 2025, 2026],
   sensitivity: {min: 0.25, max: 3.0, step: 0.05},
-  decision_threshold: {min: 0.5, max: 0.99, step: 0.01},
+  threshold: {min: 0.5, max: 0.99, step: 0.01},     // each of the decrease and increase thresholds
   dampening: {min: 0.1, max: 1.0, step: 0.05},
   posterior_leveler: {min: 0.5, max: 1.0, step: 0.05}
 };
@@ -98,7 +117,8 @@ function validateControls(c) {
            monthDayLabel(c.season_end) + ". (A window can't wrap past Dec 31; each year's window runs within " +
            'that calendar year.)';
   }
-  if (!(c.decision_threshold >= 0.5 && c.decision_threshold < 1.0)) return 'The decision threshold must be in [0.5, 1).';
+  if (!(c.decrease_threshold >= 0.5 && c.decrease_threshold < 1.0)) return 'The decrease threshold must be in [0.5, 1).';
+  if (!(c.increase_threshold >= 0.5 && c.increase_threshold < 1.0)) return 'The increase threshold must be in [0.5, 1).';
   if (!(c.sensitivity > 0)) return 'Sensitivity must be positive.';
   if (!MONITORING_SENSORS.some(function (s) { return c.sensors[s]; })) return 'Select at least one monitoring sensor.';
   return null;
@@ -137,7 +157,7 @@ function describeControls(c) {
   var years = timingYears(c);
   if (c.timing && years.length) {
     lines.push('First detected season: separate runs for ' + years.join(', ') + ', each judged against the same ' +
-               'expectation and starting from even odds.');
+               'expectation and starting from the same odds (10% decrease, 80% unchanged, 10% increase).');
   }
   return lines;
 }
@@ -172,7 +192,8 @@ function buildConfig(c, aoi) {
     modality: {constant: true, unimodal: true},
     sensitivity: {z_score_numerator_factor: round2(c.sensitivity)},
     bulc_advanced_params: {custom_transition_matrix: PRODUCTION_TRANSITION_MATRIX, recency_factor: 1.0,
-                           dampening_factor: round2(c.dampening), posterior_leveler: round2(c.posterior_leveler)}
+                           dampening_factor: round2(c.dampening), posterior_leveler: round2(c.posterior_leveler),
+                           initializing_leveler: INITIALIZING_LEVELER}
   };
 }
 
@@ -185,7 +206,8 @@ function withMonitoringYear(c, year) {
 }
 
 exports.PRODUCTION_TRANSITION_MATRIX = PRODUCTION_TRANSITION_MATRIX;
-exports.NOTEBOOK_DEFAULTS = NOTEBOOK_DEFAULTS;
+exports.INITIALIZING_LEVELER = INITIALIZING_LEVELER;
+exports.APP_DEFAULTS = APP_DEFAULTS;
 exports.RANGES = RANGES;
 exports.MONITORING_SENSORS = MONITORING_SENSORS;
 exports.SENSOR_LABELS = SENSOR_LABELS;

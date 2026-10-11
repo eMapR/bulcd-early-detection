@@ -29,6 +29,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
 from . import outputs
+from .config import class_thresholds
 from .outputs import DECREASE, INCREASE, NOT_ANALYZED, OUTCOME_LABELS, UNCHANGED, StudyArea
 from .render import OUTCOME_COLORS, OUTSIDE_COLOR, WATER_COLOR, scale_bar
 
@@ -100,9 +101,12 @@ def fetch_run(config: BULCDConfig, area: StudyArea, grid: dict) -> dict[str, np.
     return {b: np.asarray(arr[b], dtype=float) for b in _BANDS}
 
 
-def classify(run: dict[str, np.ndarray], threshold: float, mask_water: bool, mask_non_forest: bool) -> np.ndarray:
-    """Outcome codes per pixel, same rule as outputs.outcome_image();
-    NaN outside the area, and on water when masked."""
+def classify(run: dict[str, np.ndarray], threshold: float, mask_water: bool, mask_non_forest: bool,
+             increase_threshold: float | None = None) -> np.ndarray:
+    """Outcome codes per pixel, same rule as outputs.outcome_image()
+    (decrease: `threshold`; increase: `increase_threshold`, default
+    `threshold`); NaN outside the area, and on water when masked."""
+    t = class_thresholds(threshold, increase_threshold)
     inside = run["inside"] > 0
     land = run["land"] > 0 if mask_water else np.ones_like(inside)
     analyzed = inside & land & (run["decrease"] >= 0)
@@ -111,8 +115,8 @@ def classify(run: dict[str, np.ndarray], threshold: float, mask_water: bool, mas
     classes = np.full(inside.shape, np.nan)
     classes[inside & land] = NOT_ANALYZED
     classes[analyzed] = UNCHANGED
-    classes[analyzed & (run["decrease"] > threshold)] = DECREASE
-    classes[analyzed & (run["increase"] > threshold)] = INCREASE
+    classes[analyzed & (run["decrease"] > t["decrease"])] = DECREASE
+    classes[analyzed & (run["increase"] > t["increase"])] = INCREASE
     return classes
 
 
@@ -135,7 +139,8 @@ def run_comparison(area: StudyArea, controls, build, variants: list[Variant]) ->
             t0 = time.time()
             runs[key] = fetch_run(config, area, grid)
             print(f"{time.time() - t0:.0f} s")
-        classes = classify(runs[key], c.decision_threshold, config.study_area.mask_water, config.study_area.mask_non_forest)
+        classes = classify(runs[key], c.decision_threshold, config.study_area.mask_water, config.study_area.mask_non_forest,
+                           c.increase_threshold)
         km2 = {OUTCOME_LABELS[k]: float(np.sum(classes == k)) * PIXEL_M**2 / 1e6 for k in OUTCOME_LABELS}
         results.append({"variant": v, "classes": classes, "inside": runs[key]["inside"] > 0, "km2": km2})
     return results
@@ -197,6 +202,7 @@ def _set_advanced(field_name: str, value: float):
 
 
 # Parameters swept one at a time (everything else at the notebook's defaults).
+# The interactive app passes its own (app.APP_PARAMETER_SWEEPS).
 # (label, what it means, values, how to apply, default)
 PARAMETER_SWEEPS = [
     ("Sensitivity", "scales every departure from normal", [0.5, 0.75, 1.0, 1.5, 2.0],

@@ -3,8 +3,9 @@
 //      through the app's modules: condition over a box and inspector rows and
 //      chart tables at reference pixels 1-3.
 //   2. app.js main() with a stub `ui`, driven through its own widgets: asset area
-//      (the testsite), notebook-default settings, "Run Early Detection";
-//      condition and first-detected-season layers over the box; the inspector at
+//      (the testsite), default settings, "Run Early Detection";
+//      condition (with the final probabilities, to check the decision rule) and
+//      first-detected-season layers over the box; the inspector at
 //      pixel 1 by map click and at pixel 3 by typed lon/lat + Submit Pixel,
 //      including the expectation period (observations used in the fit, the fitted
 //      curve, the fit's coefficients/residual SD/R2) and the timeline chart.
@@ -31,9 +32,9 @@ const BOX = [-123.5725, 44.8300, -123.5400, 44.8500];
 // Must match run_app_parity.py VARIANT.
 const VARIANT = {
   expectation_first: 2019, expectation_last: 2023, monitoring_year: 2025, season_start: '05-15',
-  season_end: '10-15', sensitivity: 1.5, decision_threshold: 0.6, timing: true, dampening: 0.7,
-  posterior_leveler: 0.9, sensors: { L8: true, L9: true, S2: false }, mask_forest: false, mask_water: true,
-  allow_large: false,
+  season_end: '10-15', sensitivity: 1.5, decrease_threshold: 0.6, increase_threshold: 0.8, timing: true,
+  dampening: 0.5, posterior_leveler: 1.0, sensors: { L8: true, L9: true, S2: false }, mask_forest: true,
+  mask_water: true, allow_large: false,
 };
 
 function waitFor(predicate, what, ms = 900000) {
@@ -51,18 +52,18 @@ function labelText(created) {
   return created.labels.map((l) => l.state.value).join('\n');
 }
 
-function pixelRecord(p, rows, fit, prob, threshold) {
+function pixelRecord(p, rows, fit, prob, threshold, increaseThreshold) {
   return {
     lon: p.lon, lat: p.lat, rows,
     fit_table_rows: fit ? fit.rows.length : 0,
     prob_table: prob ? prob.rows.map((r) => r.c.slice(1).map((x) => x.v)) : null,
-    notes: inspector.crossingNotes(rows, threshold),
+    notes: inspector.crossingNotes(rows, threshold, increaseThreshold),
   };
 }
 
 // Selects each pixel the way a user does - a map click, or typing the coordinate and
 // pressing Submit Pixel - and records what the inspector charted.
-async function selectPixels(handle, created, map, pixels, how, threshold) {
+async function selectPixels(handle, created, map, pixels, how, thresholds) {
   const out = {};
   for (const p of pixels) {
     const before = created.charts.length;
@@ -81,7 +82,8 @@ async function selectPixels(handle, created, map, pixels, how, threshold) {
     const rows = inspector.historyRows(tables, run.config);
     const exp = await evaluate(inspector.expectationQuery(bulcd, run.result, run.config, p.lon, p.lat));
     const expRows = inspector.expectationRows(exp, run.config);
-    out[p.label] = pixelRecord(p, rows, fit && fit.table, prob && prob.table, threshold);
+    out[p.label] = pixelRecord(p, rows, fit && fit.table, prob && prob.table, thresholds.decrease,
+                               thresholds.increase);
     out[p.label].expectation = {
       rows: expRows, fit: exp.fit, regressors: exp.regressors,
       summary: inspector.expectationSummary(exp, expRows, run.config),
@@ -119,7 +121,7 @@ async function main(out) {
                                                  inspector.probabilityTable(rows, THRESHOLD), THRESHOLD);
   }
 
-  // 2. The GUI: asset area, notebook-default settings, Run Early Detection.
+  // 2. The GUI: asset area, default settings, Run Early Detection.
   const handle = app.main(bulcd, appConfig, outputs, inspector, aoi, controlsUi);
   const map = created.maps[0];
   data.gui_labels = created.labels.map((l) => l.state.value).filter(Boolean);
@@ -127,11 +129,11 @@ async function main(out) {
   data.gui_area_sources = handle.source.items().items;
   handle.source.setValue(handle.AREA_SOURCES.asset);
   handle.assetBox.setValue(TESTSITE);
-  // 2. Notebook defaults, through the widgets and the Run button.
+  // 2. Default settings (config.js APP_DEFAULTS), through the widgets and the Run button.
   const controls = handle.controls.read();
   data.notebook.controls = controls;
   handle.runButton.state.handlers.click();
-  await waitFor(() => handle.state.run, 'the notebook-default run');
+  await waitFor(() => handle.state.run, 'the default run');
   const run = handle.state.run, area = handle.state.area;
   data.area_report = area.report;
   data.notebook.label = run.label;
@@ -143,9 +145,10 @@ async function main(out) {
                 'the NBR composite stretch');
   data.notebook.layers = map.state.layers.items.map((l) => ({ name: l.name, shown: l.shown, opacity: l.opacity }));
   data.notebook.outcome_box = await boxRegion(run.outcome.select('outcome'));
+  data.notebook.final_box = await boxRegion(run.result.final_probabilities.select(['decrease', 'increase']));
   data.notebook.timing_box = await boxRegion(run.timing.select(['first_decrease_year', 'first_decrease_doy']));
   data.notebook.pixels = await selectPixels(handle, created, map, [REFERENCE_PIXELS[0], REFERENCE_PIXELS[2]],
-                                            { [REFERENCE_PIXELS[2].label]: 'submit' }, controls.decision_threshold);
+                                            { [REFERENCE_PIXELS[2].label]: 'submit' }, run.thresholds);
 
   // 3. Non-default settings: configs only.
   data.variant.config = bulcd.withDefaults(appConfig.buildConfig(VARIANT, area.aoi));

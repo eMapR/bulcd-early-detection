@@ -102,7 +102,7 @@ async function main() {
     const exp = await evaluate(realInspector.expectationQuery(bulcd, result, config, A.lon, A.lat));
     const expRows = realInspector.expectationRows(exp, config);
     const same = tablesClose;
-    assert(same(prob, realInspector.probabilityTable(rows, controls.decision_threshold)),
+    assert(same(prob, realInspector.probabilityTable(rows, controls.decrease_threshold, controls.increase_threshold)),
            how + ': probability chart = fresh computation at A');
     assert(same(fit, realInspector.targetFitTable(rows, config.reduction.band)), how + ': fit chart = fresh at A');
     assert(same(timeline, realInspector.timelineTable(expRows, rows, config.reduction.band)),

@@ -31,6 +31,28 @@ from .config import MonitoringControls, build_config
 REQUEST_DEADLINE_MS = 300_000
 EXAMPLE_ASSETS = {"testsite (western Oregon, 26 km²)": "projects/bulcd-python-rebuild/assets/testsite"}
 MAX_TIMING_SEASONS = 3
+# Algorithm defaults: the original BULC-D GUI's, as in the GEE app (gee/config.js
+# APP_DEFAULTS; read from the legacy source, see gee/tests/legacy_gui.js).
+# The expectation years, monitoring year, season and sensors had no default
+# there (the user entered them); theirs below are Early Detection choices.
+LEGACY_DEFAULTS = {"sensitivity": 1.0, "decrease_threshold": 0.65, "increase_threshold": 0.75, "dampening": 0.7,
+                   "posterior_leveler": 0.9, "mask_forest": False, "mask_water": True}
+# The Parameter behavior tab's response curves, "default" marked at the values above.
+APP_PARAMETER_SWEEPS = [
+    ("Sensitivity", "scales every departure from normal", [0.5, 0.75, 1.0, 1.5, 2.0],
+     lambda v: {"controls": {"sensitivity": v}}, LEGACY_DEFAULTS["sensitivity"]),
+    ("Decrease threshold", "how sure before a decrease is mapped", [0.5, 0.6, 0.65, 0.7, 0.8, 0.9, 0.95],
+     lambda v: {"controls": {"decision_threshold": v}}, LEGACY_DEFAULTS["decrease_threshold"]),
+    ("Increase threshold", "how sure before an increase is mapped", [0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 0.95],
+     lambda v: {"controls": {"increase_threshold": v}}, LEGACY_DEFAULTS["increase_threshold"]),
+    ("Dampening", "weight of each single observation", [0.3, 0.5, 0.7, 0.9, 1.0],
+     lambda v: {"edit": compare._set_advanced("dampening_factor", v)}, LEGACY_DEFAULTS["dampening"]),
+    ("Posterior leveler", "pull toward even odds after each update (1 = off)", [0.7, 0.8, 0.9, 0.95, 1.0],
+     lambda v: {"edit": compare._set_advanced("posterior_leveler", v)}, LEGACY_DEFAULTS["posterior_leveler"]),
+]
+# Starting probabilities 0.1 decrease / 0.8 unchanged / 0.1 increase
+# (initializingLeveler 0.7 on "unchanged"). Fixed; not a control.
+INITIALIZING_LEVELER = 0.7
 
 
 _MONTHS = [(datetime.date(2025, m, 1).strftime("%b"), m) for m in range(1, 13)]
@@ -154,20 +176,29 @@ class EarlyDetectionApp:
                                             style=style, layout=wide)
         self.monitoring_year = W.Dropdown(options=[2024, 2025, 2026], value=2026, description="Monitoring year:", style=style)
         self.window = SeasonWindow()
-        self.sensitivity = W.FloatSlider(value=1.0, min=0.25, max=3.0, step=0.05, description="Sensitivity:", style=style, layout=wide)
-        self.threshold = W.FloatSlider(value=0.5, min=0.5, max=0.99, step=0.01, description="Decision threshold:", style=style, layout=wide)
+        d = LEGACY_DEFAULTS
+        self.sensitivity = W.FloatSlider(value=d["sensitivity"], min=0.25, max=3.0, step=0.05, description="Sensitivity:",
+                                         style=style, layout=wide)
+        self.decrease_threshold = W.FloatSlider(value=d["decrease_threshold"], min=0.5, max=0.99, step=0.01,
+                                                description="Decrease threshold:", style=style, layout=wide)
+        self.increase_threshold = W.FloatSlider(value=d["increase_threshold"], min=0.5, max=0.99, step=0.01,
+                                                description="Increase threshold:", style=style, layout=wide)
         self.timing = W.Checkbox(value=True, description="Also map the first-detected season", style={"description_width": "initial"})
         self.relationship = W.HTML()
         # advanced
-        self.dampening = W.FloatSlider(value=0.5, min=0.1, max=1.0, step=0.05, description="Dampening:", style=style, layout=wide)
-        self.posterior = W.FloatSlider(value=1.0, min=0.5, max=1.0, step=0.05, description="Posterior leveler:", style=style, layout=wide)
+        self.dampening = W.FloatSlider(value=d["dampening"], min=0.1, max=1.0, step=0.05, description="Dampening:",
+                                       style=style, layout=wide)
+        self.posterior = W.FloatSlider(value=d["posterior_leveler"], min=0.5, max=1.0, step=0.05,
+                                       description="Posterior leveler:", style=style, layout=wide)
         self.sensors = {s: W.Checkbox(value=True, description=label) for s, label in
                         (("L8", "Landsat 8"), ("L9", "Landsat 9"), ("S2", "Sentinel-2"))}
-        self.mask_forest = W.Checkbox(value=True, description="Analyze forest only (Hansen tree cover ≥ 10%)",
+        self.mask_forest = W.Checkbox(value=d["mask_forest"], description="Analyze forest only (Hansen tree cover ≥ 10%)",
                                       style={"description_width": "initial"})
-        self.mask_water = W.Checkbox(value=True, description="Leave out water", style={"description_width": "initial"})
+        self.mask_water = W.Checkbox(value=d["mask_water"], description="Leave out water",
+                                     style={"description_width": "initial"})
         self.advanced = W.Accordion(children=[W.VBox([
-            W.HTML("<i>Normally left alone. Defaults match the demonstration notebooks.</i>"),
+            W.HTML("<i>Normally left alone. Dampening, posterior leveler and the masks start at the original BULC-D "
+                   "GUI's settings.</i>"),
             self.dampening, W.HTML("&nbsp;&nbsp;how much weight each single observation carries (1 = full)"),
             self.posterior, W.HTML("&nbsp;&nbsp;pull toward even odds after each update (1 = off)"),
             W.HTML("<b>Monitoring sensors</b> (the expectation always uses Landsat 8)"), W.HBox(list(self.sensors.values())),
@@ -207,7 +238,8 @@ class EarlyDetectionApp:
                                        "Run is disabled until this is fixed.</div>")
             return
         timing = (f"<br><b>First detected season:</b> separate runs for {', '.join(map(str, self._timing_years()))}, "
-                  "each judged against the same expectation and starting from even odds."
+                  "each judged against the same expectation and starting from the same odds (10% decrease, "
+                  "80% unchanged, 10% increase)."
                   if self.timing.value else "")
         self.relationship.value = (
             "<div style='padding:6px;border-left:4px solid #2a78d6'>"
@@ -219,13 +251,16 @@ class EarlyDetectionApp:
         (e0, e1), (start, end) = self.expectation.value, self.window.value
         return MonitoringControls(monitoring_year=monitoring_year or self.monitoring_year.value, season_start=start,
                                   season_end=end, baseline_first_year=e0, baseline_last_year=e1,
-                                  decision_threshold=round(self.threshold.value, 2), sensitivity=round(self.sensitivity.value, 2))
+                                  decision_threshold=round(self.decrease_threshold.value, 2),
+                                  increase_threshold=round(self.increase_threshold.value, 2),
+                                  sensitivity=round(self.sensitivity.value, 2))
 
     def build(self, controls, **aoi):
         """build_config() plus the advanced settings - the same shape as the notebooks' build()."""
         config = build_config(controls, **aoi)
         config.bulc_advanced_params.dampening_factor = round(self.dampening.value, 2)
         config.bulc_advanced_params.posterior_leveler = round(self.posterior.value, 2)
+        config.bulc_advanced_params.initializing_leveler = INITIALIZING_LEVELER
         for code, box in self.sensors.items():
             if code in config.evidence.target.sensors:
                 config.evidence.target.sensors[code].enabled = box.value
@@ -262,7 +297,7 @@ class EarlyDetectionApp:
         with self.out["Pixel inspector"]:
             display(Markdown("After a run, **click any pixel on the results map**, or enter a longitude and latitude and "
                              "press **Submit Pixel**, to see its observations, departure from expectation, the "
-                             "probabilities, the threshold, and when they first crossed. A click fills the boxes, so "
+                             "probabilities, the thresholds, and when they first crossed. A click fills the boxes, so "
                              "after changing parameters and rerunning, Submit Pixel inspects the same 30 m pixel again."))
         self.sens_btn = W.Button(description="Sensitivity maps (0.5 | 1.0 | 2.0)", icon="th", layout=W.Layout(width="280px"))
         self.resp_btn = W.Button(description="Response curves (4 parameters)", icon="line-chart", layout=W.Layout(width="280px"))
@@ -332,11 +367,13 @@ class EarlyDetectionApp:
         area, geom = self.area, self.area.geometry
         self.status.value = "Setting up the run (condition map)…"
         config = self.build(controls, **area.aoi)
-        condition = outputs.outcome_image(config, controls.decision_threshold).clip(geom)
+        condition = outputs.outcome_image(config, controls.decision_threshold, controls.increase_threshold).clip(geom)
         years = self._timing_years() if self.timing.value else []
         timing = None
         if years:
-            seasons = {y: outputs.detection_timing_image(self.build(self.controls(y), **area.aoi), controls.decision_threshold)
+            # First-detected season: the decrease threshold.
+            seasons = {y: outputs.detection_timing_image(self.build(self.controls(y), **area.aoi), controls.decision_threshold,
+                                                         controls.increase_threshold)
                        for y in years}
             timing = outputs.combine_season_timing(seasons).clip(geom)
         img_years = [controls.monitoring_year - 2, controls.monitoring_year - 1, controls.monitoring_year]
@@ -399,7 +436,7 @@ class EarlyDetectionApp:
                 display(Markdown(f"**First detected season**: the earliest of {', '.join(map(str, years))} that BULC-D "
                                  "finished classified as decrease (a crossing it later retracted doesn't count); the date is "
                                  "the first crossing within that season. Each season is a separate run against the same "
-                                 "expectation, starting from even odds. It shows detection timing, not a verified disturbance "
+                                 "expectation, starting from the same odds (10% decrease, 80% unchanged, 10% increase). It shows detection timing, not a verified disturbance "
                                  f"date; the first season ({years[0]}) also gathers everything already different by then. "
                                  "Turn the layer on in the Map layers panel."))
                 display(Markdown(report.detection_year_table(timing, geom, years)))
@@ -444,8 +481,9 @@ class EarlyDetectionApp:
             return
         with self.out["Parameter behavior"]:
             self.status.value = "Running the parameter response curves (about 16 BULC-D runs)…"
-            rows = compare.parameter_response(self.area, self.run_state["controls"], self.build)
-            compare.plot_parameter_response(rows, f"{self.area.name}: detected area as one parameter moves")
+            rows = compare.parameter_response(self.area, self.run_state["controls"], self.build, APP_PARAMETER_SWEEPS)
+            compare.plot_parameter_response(rows, f"{self.area.name}: detected area as one parameter moves",
+                                            APP_PARAMETER_SWEEPS)
             self.status.value = "<b>Done.</b>"
 
     # ------------------------------------------------------------------ pixel inspector
@@ -495,21 +533,14 @@ class EarlyDetectionApp:
                 display(Markdown("No clear observations here: outside the study area, masked (water or non-forest), "
                                  "or always cloudy. Try another pixel."))
             else:
-                thr = state["controls"].decision_threshold
-                pixel.plot_pixel_history(histories, thr, classes=pixel.CLASSES,
+                c = state["controls"]
+                pixel.plot_pixel_history(histories, c.decision_threshold, classes=pixel.CLASSES,
+                                         increase_threshold=c.increase_threshold,
                                          title=f"Pixel at {lat:.5f} N, {abs(lon):.5f} {'W' if lon < 0 else 'E'}")
                 print(f"Coordinate: {lon!r}, {lat!r} (lon, lat); sampled on the 30 m result grid")
                 for label, rows in histories.items():
-                    for cls in ("decrease", "increase"):
-                        crossed = pixel.first_crossing(rows, thr, cls)
-                        if not crossed:
-                            continue
-                        finished = rows[-1][cls] > thr
-                        print(f"{label}: {cls} first crossed the threshold on {crossed}, " +
-                              (f"finished the season as {cls} (counts as detected)" if finished
-                               else "finished below the threshold (does not count)"))
-                    if not any(pixel.first_crossing(rows, thr, c) for c in ("decrease", "increase")):
-                        print(f"{label}: never crossed the threshold")
+                    for note in pixel.crossing_notes(rows, c.decision_threshold, c.increase_threshold):
+                        print(f"{label}: {note}")
         self.status.value = "<b>Done.</b> Click another pixel to compare."
         return histories
 
@@ -521,8 +552,9 @@ class EarlyDetectionApp:
                         self.use_area_btn, self.area_info])
         step2 = W.VBox([W.HTML("<h3>2. Expectation and monitoring</h3>"), self.expectation, self.monitoring_year,
                         self.window.widget, self.relationship, self.sensitivity,
-                        W.HTML("&nbsp;&nbsp;higher flags smaller departures from normal"), self.threshold,
-                        W.HTML("&nbsp;&nbsp;how sure BULC-D must be before flagging"), self.timing, self.advanced])
+                        W.HTML("&nbsp;&nbsp;higher flags smaller departures from normal"),
+                        self.decrease_threshold, self.increase_threshold,
+                        W.HTML("&nbsp;&nbsp;how sure BULC-D must be before flagging each kind of change"), self.timing, self.advanced])
         step3 = W.VBox([W.HTML("<h3>3. Run and inspect</h3>"), self.run_btn, self.status, self.layer_panel,
                         self.results_map, self.tabs])
         display(W.VBox([step1, step2, step3]))

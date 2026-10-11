@@ -59,6 +59,12 @@ BASELINE_SENSORS = ("L8",)
 MONITORING_SENSORS = ("L8", "L9", "S2")
 
 
+def class_thresholds(threshold: float, increase_threshold: float | None = None) -> dict[str, float]:
+    """{"decrease": threshold, "increase": increase_threshold, or threshold
+    when that is None}."""
+    return {"decrease": threshold, "increase": threshold if increase_threshold is None else increase_threshold}
+
+
 @dataclass
 class MonitoringControls:
     """The small set of settings exposed by default.
@@ -75,8 +81,12 @@ class MonitoringControls:
     baseline_first_year: int = 2018
     baseline_last_year: int = 2025
     # A change class is mapped only where its final probability exceeds
-    # this. Kept >= 0.5 so at most one class can qualify.
+    # its threshold: decision_threshold for decrease, and for increase too
+    # unless increase_threshold is set (the original BULC-D GUI used 0.65
+    # for decrease and 0.75 for increase). Kept >= 0.5 so at most one class
+    # can qualify.
     decision_threshold: float = 0.5
+    increase_threshold: float | None = None
     # bulcd SensitivityConfig.z_score_numerator_factor: multiplies
     # (observed - expected) before it becomes a z-score. 1.0 = legacy
     # default; >1 treats smaller departures from the baseline as stronger
@@ -86,6 +96,8 @@ class MonitoringControls:
     def __post_init__(self) -> None:
         if not 0.5 <= self.decision_threshold < 1.0:
             raise ValueError("decision_threshold must be in [0.5, 1.0)")
+        if self.increase_threshold is not None and not 0.5 <= self.increase_threshold < 1.0:
+            raise ValueError("increase_threshold must be in [0.5, 1.0)")
         if self.baseline_last_year >= self.monitoring_year:
             raise ValueError("baseline must end before the monitoring year")
         if self.sensitivity <= 0:
@@ -96,6 +108,11 @@ class MonitoringControls:
     def _doy(self, month_day: str) -> int:
         date = datetime.date.fromisoformat(f"{self.monitoring_year}-{month_day}")
         return date.timetuple().tm_yday
+
+    @property
+    def thresholds(self) -> dict[str, float]:
+        """The threshold for each change class."""
+        return class_thresholds(self.decision_threshold, self.increase_threshold)
 
     @property
     def first_doy(self) -> int:
@@ -191,7 +208,9 @@ def config_summary(config: BULCDConfig) -> list[tuple[str, str]]:
         ("Evidence table", "legacy app's default" if adv.custom_transition_matrix == PRODUCTION_TRANSITION_MATRIX else "custom"),
         ("Dampening", f"{adv.dampening_factor}"),
         ("Posterior leveler", f"{adv.posterior_leveler}" + (" (off)" if adv.posterior_leveler == 1.0 else "")),
-        ("Starting odds", "even" if adv.initializing_leveler == 0.0 else f"initial leveler {adv.initializing_leveler}"),
+        ("Starting odds", "even" if adv.initializing_leveler == 0.0 else
+         "{0:.2f} decrease / {1:.2f} unchanged / {0:.2f} increase".format((1 - adv.initializing_leveler) / 3,
+                                                                          adv.initializing_leveler + (1 - adv.initializing_leveler) / 3)),
         ("Recency weighting", "off" if adv.recency_factor == 1.0 else f"{adv.recency_factor}"),
         ("Not analyzed", ", ".join(masks) or "nothing masked"),
     ]

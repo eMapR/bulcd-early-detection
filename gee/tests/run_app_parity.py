@@ -10,9 +10,13 @@ app's own code (src/bulcd_early_detection) on the same settings:
    gee/tests/run_parity.py); inspector rows and chart values ==
    pixel.pixel_history() at pixels 1-3; condition ==
    outputs._outcome_from_result() over a 30 m box.
-2. The GUI (asset area = the testsite, notebook-default widgets, "Run Early
+2. The GUI (asset area = the testsite, default widgets, "Run Early
    Detection"): no validation shortcuts exposed; the widgets' defaults and the
-   config they build == EarlyDetectionApp's defaults and build();
+   config they build == EarlyDetectionApp's defaults and build() (both the
+   original BULC-D GUI's settings where it had one: checked against the legacy
+   source in controls_check.js and tests/test_app_defaults.py); the condition
+   layer follows the original GUI's rule at its thresholds (decrease where
+   final P(decrease) > 0.65, increase where P(increase) > 0.75);
    first-detected-season configs == build(controls(y)); condition and
    first-detected-season layers == outputs.outcome_image() and
    combine_season_timing() over the box; inspector == pixel_history() at pixel 1
@@ -48,8 +52,10 @@ CLASSES = ("decrease", "unchanged", "increase")
 NUMERIC = ("observed", "expected", "zscore", *CLASSES)
 # Must match app_extract.js VARIANT.
 VARIANT = dict(expectation=(2019, 2023), monitoring_year=2025, start=(5, 15), end=(10, 15), sensitivity=1.5,
-               threshold=0.6, timing=True, dampening=0.7, posterior=0.9, sensors={"L8": True, "L9": True, "S2": False},
-               mask_forest=False, mask_water=True)
+               decrease_threshold=0.6, increase_threshold=0.8, timing=True, dampening=0.5, posterior=1.0,
+               sensors={"L8": True, "L9": True, "S2": False}, mask_forest=True, mask_water=True)
+# The original BULC-D GUI's thresholds (gee/tests/legacy_gui.js), the default in both apps.
+LEGACY_THRESHOLDS = {"decrease": 0.65, "increase": 0.75}
 
 sys.path.insert(0, str(BULCD_GEE / "tests"))
 from cases import legacy_reference  # noqa: E402
@@ -81,10 +87,27 @@ def expectation_history(config, lon, lat):
     return {"rows": rows, "fit": stats, "regressors": fit.regressor_names}
 
 
+def set_widgets(app, v):
+    """Sets the Python app's widgets to `v` (VARIANT's form)."""
+    app.expectation.value = v["expectation"]
+    app.monitoring_year.value = v["monitoring_year"]
+    app.window.start_month.value, app.window.start_day.value = v["start"]
+    app.window.end_month.value, app.window.end_day.value = v["end"]
+    app.sensitivity.value, app.timing.value = v["sensitivity"], v["timing"]
+    app.decrease_threshold.value, app.increase_threshold.value = v["decrease_threshold"], v["increase_threshold"]
+    app.dampening.value, app.posterior.value = v["dampening"], v["posterior"]
+    for k, on in v["sensors"].items():
+        app.sensors[k].value = on
+    app.mask_forest.value, app.mask_water.value = v["mask_forest"], v["mask_water"]
+
+
 def python_side(pixels):
     from bulcd.engine import run_bulcd
     from bulcd_early_detection import outputs, pixel
     from bulcd_early_detection.app import EarlyDetectionApp
+
+    def build(app, controls):
+        return app.build(controls, aoi_asset=TESTSITE)
 
     pool = ThreadPoolExecutor(8)
     out = {"reference": {}, "notebook": {}, "variant": {}}
@@ -97,22 +120,25 @@ def python_side(pixels):
 
     app = EarlyDetectionApp()
     c = app.controls()
-    config = app.build(c, aoi_asset=TESTSITE)
+    config = build(app, c)
     years = app._timing_years() if app.timing.value else []
     geom = ee.FeatureCollection(TESTSITE).geometry()
     nb = out["notebook"]
     nb["widgets"] = dict(expectation=list(app.expectation.value), monitoring_year=app.monitoring_year.value,
                          window=list(app.window.value), sensitivity=app.sensitivity.value,
-                         threshold=app.threshold.value, timing=app.timing.value, dampening=app.dampening.value,
+                         decrease_threshold=app.decrease_threshold.value,
+                         increase_threshold=app.increase_threshold.value, timing=app.timing.value, dampening=app.dampening.value,
                          posterior=app.posterior.value, sensors={k: b.value for k, b in app.sensors.items()},
                          mask_forest=app.mask_forest.value, mask_water=app.mask_water.value,
                          allow_large=app.allow_large.value)
     nb["config"] = dataclasses.asdict(config)
     nb["timing_years"] = years
-    nb["timing_configs"] = [dataclasses.asdict(app.build(app.controls(y), aoi_asset=TESTSITE)) for y in years]
-    nb["outcome_box"] = pool.submit(region, outputs.outcome_image(config, c.decision_threshold).clip(geom)
+    nb["timing_configs"] = [dataclasses.asdict(build(app, app.controls(y))) for y in years]
+    nb["outcome_box"] = pool.submit(region, outputs.outcome_image(config, c.decision_threshold, c.increase_threshold)
+                                    .clip(geom)
                                     .select("outcome"))
-    seasons = {y: outputs.detection_timing_image(app.build(app.controls(y), aoi_asset=TESTSITE), c.decision_threshold)
+    seasons = {y: outputs.detection_timing_image(build(app, app.controls(y)), c.decision_threshold,
+                                                 c.increase_threshold)
                for y in years}
     nb["timing_box"] = pool.submit(region, outputs.combine_season_timing(seasons).clip(geom)
                                    .select(["first_decrease_year", "first_decrease_doy"]))
@@ -120,19 +146,10 @@ def python_side(pixels):
     nb["expectation"] = {k: pool.submit(expectation_history, config, *pixels[k])
                          for k in (list(pixels)[0], list(pixels)[2])}
 
-    v = VARIANT
-    app.expectation.value = v["expectation"]
-    app.monitoring_year.value = v["monitoring_year"]
-    app.window.start_month.value, app.window.start_day.value = v["start"]
-    app.window.end_month.value, app.window.end_day.value = v["end"]
-    app.sensitivity.value, app.threshold.value, app.timing.value = v["sensitivity"], v["threshold"], v["timing"]
-    app.dampening.value, app.posterior.value = v["dampening"], v["posterior"]
-    for k, on in v["sensors"].items():
-        app.sensors[k].value = on
-    app.mask_forest.value, app.mask_water.value = v["mask_forest"], v["mask_water"]
-    out["variant"]["config"] = dataclasses.asdict(app.build(app.controls(), aoi_asset=TESTSITE))
+    set_widgets(app, VARIANT)
+    out["variant"]["config"] = dataclasses.asdict(build(app, app.controls()))
     out["variant"]["timing_years"] = app._timing_years()
-    out["variant"]["timing_configs"] = [dataclasses.asdict(app.build(app.controls(y), aoi_asset=TESTSITE))
+    out["variant"]["timing_configs"] = [dataclasses.asdict(build(app, app.controls(y)))
                                         for y in app._timing_years()]
 
     def resolve(x):
@@ -162,7 +179,7 @@ def num_close(a, b):
     return (a is None and b is None) or (a is not None and b is not None and abs(a - b) <= TOL)
 
 
-def compare_pixels(name, js_pixels, py_rows, threshold):
+def compare_pixels(name, js_pixels, py_rows, thresholds):
     failures = []
     for label, rows in py_rows.items():
         j = js_pixels[label]
@@ -173,7 +190,7 @@ def compare_pixels(name, js_pixels, py_rows, threshold):
             if jr["date"] != str(pr["date"]) or jr["supports"] != pr["supports"] or \
                     not all(num_close(jr[k], pr[k]) for k in NUMERIC):
                 bad.append(f"{jr['date']}: JS {jr} vs Python {pr}")
-        expected_chart = [[r[c] for c in CLASSES] + [threshold] for r in j["rows"]]
+        expected_chart = [[r[c] for c in CLASSES] + list(thresholds) for r in j["rows"]]
         if j["prob_table"] != expected_chart or j["fit_table_rows"] != len(j["rows"]):
             bad.append("chart tables do not hold the inspector rows")
         if "boxes" in j and j["boxes"] != [repr(j["lon"]), repr(j["lat"])]:
@@ -216,12 +233,37 @@ def compare_expectation(name, js_pixels, py_exp):
     return failures
 
 
+def keyed(reg):
+    h = reg[0]
+    bands = [b for b in h if b not in ("id", "longitude", "latitude", "time")]
+    x, y = h.index("longitude"), h.index("latitude")
+    return {(round(r[x], 7), round(r[y], 7), b): r[h.index(b)] for r in reg[1:] for b in bands}
+
+
+def check_decision_rule(outcome_region, final_region, thresholds):
+    """The condition layer against the original GUI's rule, recomputed here
+    from the run's final probabilities: decrease where P(decrease) >
+    thresholds["decrease"], increase where P(increase) > thresholds["increase"]
+    (strict, as its .gt()), else unchanged."""
+    from bulcd_early_detection.outputs import DECREASE, INCREASE, UNCHANGED
+    out, fin = keyed(outcome_region), keyed(final_region)
+    bad, n, between = [], 0, 0
+    for (x, y, _), code in out.items():
+        dec, inc = fin.get((x, y, "decrease")), fin.get((x, y, "increase"))
+        if code is None or code > INCREASE or dec is None:
+            continue
+        n += 1
+        want = DECREASE if dec > thresholds["decrease"] else INCREASE if inc > thresholds["increase"] else UNCHANGED
+        between += thresholds["decrease"] < inc <= thresholds["increase"]
+        if code != want:
+            bad.append(f"condition at {x}, {y}: {code} but P(dec) {dec}, P(inc) {inc} -> {want}")
+    print(f"  condition follows the decrease > {thresholds['decrease']} / increase > {thresholds['increase']} rule: "
+          f"{'yes' if not bad else 'NO'} ({n} analyzed pixels; {between} with "
+          f"{thresholds['decrease']} < P(increase) <= {thresholds['increase']}, unchanged under this rule)")
+    return bad[:5] + ([] if n else ["no analyzed pixels to check the decision rule on"])
+
+
 def compare_box(name, js_region, py_region):
-    def keyed(reg):
-        h = reg[0]
-        bands = [b for b in h if b not in ("id", "longitude", "latitude", "time")]
-        x, y = h.index("longitude"), h.index("latitude")
-        return {(round(r[x], 7), round(r[y], 7), b): r[h.index(b)] for r in reg[1:] for b in bands}
     jb, pb = keyed(js_region), keyed(py_region)
     diff = [k for k in set(jb) | set(pb) if not num_close(jb.get(k), pb.get(k))]
     by_band = {}
@@ -255,10 +297,10 @@ def main():
     f = subset_mismatches(js["reference"]["config"], py["reference"]["config"])
     print(f"  config == legacy_reference(): {'yes' if not f else 'NO'}")
     failures += f
-    failures += compare_pixels("reference", js["reference"]["pixels"], py["reference"]["rows"], 0.5)
+    failures += compare_pixels("reference", js["reference"]["pixels"], py["reference"]["rows"], [0.5])
     failures += compare_box("reference condition", js["reference"]["outcome_box"], py["reference"]["outcome_box"])
 
-    print("2. GUI: asset area, notebook defaults, Run Early Detection")
+    print("2. GUI: asset area, default settings, Run Early Detection")
     visible = " | ".join(js["gui_labels"] + js["gui_buttons"] + js["gui_area_sources"])
     f = [f"GUI exposes validation/testing text: {m!r}" for m in
          ("legacy", "reference case", "reference pixel", "validation", "testsite", "Pixel 1", "Pixel 2", "Pixel 3",
@@ -275,14 +317,19 @@ def main():
         "expectation": ([c["expectation_first"], c["expectation_last"]], w["expectation"]),
         "monitoring_year": (c["monitoring_year"], w["monitoring_year"]),
         "season": ([c["season_start"], c["season_end"]], w["window"]),
-        "sensitivity": (c["sensitivity"], w["sensitivity"]), "threshold": (c["decision_threshold"], w["threshold"]),
+        "sensitivity": (c["sensitivity"], w["sensitivity"]),
+        "decrease_threshold": (c["decrease_threshold"], w["decrease_threshold"]),
+        "increase_threshold": (c["increase_threshold"], w["increase_threshold"]),
         "timing": (c["timing"], w["timing"]), "dampening": (c["dampening"], w["dampening"]),
         "posterior": (c["posterior_leveler"], w["posterior"]), "sensors": (c["sensors"], w["sensors"]),
         "mask_forest": (c["mask_forest"], w["mask_forest"]), "mask_water": (c["mask_water"], w["mask_water"]),
         "allow_large": (c["allow_large"], w["allow_large"]),
     }
-    f = [f"widget default {k}: JS {a!r} vs notebook {b!r}" for k, (a, b) in widget_pairs.items() if a != b]
-    print(f"  widget defaults == notebook: {'yes' if not f else 'NO'}")
+    f = [f"widget default {k}: JS {a!r} vs Python app {b!r}" for k, (a, b) in widget_pairs.items() if a != b]
+    print(f"  widget defaults == Python app's: {'yes' if not f else 'NO'}")
+    t = (c["decrease_threshold"], c["increase_threshold"])
+    if t != (LEGACY_THRESHOLDS["decrease"], LEGACY_THRESHOLDS["increase"]):
+        f.append(f"default thresholds {t} != the original GUI's {LEGACY_THRESHOLDS}")
     failures += f
     f = subset_mismatches(js["notebook"]["config"], py["notebook"]["config"])
     if js["notebook"]["timing_years"] != py["notebook"]["timing_years"]:
@@ -303,8 +350,10 @@ def main():
     if [n for n in shown if n not in ("Study area", "Selected pixel")] != ["Condition 2026"]:
         failures.append(f"layers shown at start: {shown}")
     failures += compare_box("notebook condition", js["notebook"]["outcome_box"], py["notebook"]["outcome_box"])
+    failures += check_decision_rule(js["notebook"]["outcome_box"], js["notebook"]["final_box"], LEGACY_THRESHOLDS)
     failures += compare_box("notebook first detected season", js["notebook"]["timing_box"], py["notebook"]["timing_box"])
-    failures += compare_pixels("notebook", js["notebook"]["pixels"], py["notebook"]["rows"], 0.5)
+    failures += compare_pixels("notebook", js["notebook"]["pixels"], py["notebook"]["rows"],
+                               [LEGACY_THRESHOLDS["decrease"], LEGACY_THRESHOLDS["increase"]])
     failures += compare_expectation("notebook", js["notebook"]["pixels"], py["notebook"]["expectation"])
 
     print("3. Non-default settings (configs only)")

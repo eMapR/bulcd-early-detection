@@ -157,18 +157,29 @@ function firstCrossing(rows, threshold, cls) {
   return null;
 }
 
-// The same per-season sentences the Python inspector prints.
-function crossingNotes(rows, threshold) {
+// {decrease: threshold, increase: increaseThreshold, or threshold when that is
+// not given} (config.py class_thresholds()).
+function classThresholds(threshold, increaseThreshold) {
+  return {decrease: threshold, increase: increaseThreshold == null ? threshold : increaseThreshold};
+}
+
+// The same per-season sentences the Python inspector prints
+// (pixel.py crossing_notes()): each change class against its own threshold.
+function crossingNotes(rows, threshold, increaseThreshold) {
+  var t = classThresholds(threshold, increaseThreshold);
   var notes = [];
   ['decrease', 'increase'].forEach(function (cls) {
-    var crossed = firstCrossing(rows, threshold, cls);
+    var crossed = firstCrossing(rows, t[cls], cls);
     if (!crossed) return;
-    var finished = rows[rows.length - 1][cls] > threshold;
-    notes.push(cls + ' first crossed the threshold on ' + crossed + ', ' +
+    var finished = rows[rows.length - 1][cls] > t[cls];
+    notes.push(cls + ' first crossed its threshold (' + t[cls] + ') on ' + crossed + ', ' +
                (finished ? 'finished the season as ' + cls + ' (counts as detected)'
-                         : 'finished below the threshold (does not count)'));
+                         : 'finished below its threshold (does not count)'));
   });
-  if (!notes.length) notes.push('never crossed the threshold');
+  if (!notes.length) {
+    notes.push('never crossed a threshold (' + (t.decrease === t.increase ? t.decrease
+      : 'decrease ' + t.decrease + ', increase ' + t.increase) + ')');
+  }
   return notes;
 }
 
@@ -224,18 +235,29 @@ function timelineTable(expRows, rows, band) {
   return {cols: cols, rows: out};
 }
 
+// The threshold lines on "Probability Through Time": one shared line, or the
+// decrease and increase thresholds when they differ ([{label, value, cls}]).
+function thresholdLines(threshold, increaseThreshold) {
+  var t = classThresholds(threshold, increaseThreshold);
+  if (t.decrease === t.increase) return [{label: 'decision threshold (' + t.decrease + ')', value: t.decrease}];
+  return ['decrease', 'increase'].map(function (cls) {
+    return {label: cls + ' threshold (' + t[cls] + ')', value: t[cls], cls: cls};
+  });
+}
+
 // "Probability Through Time": P(decrease/unchanged/increase) at each
-// observation's own date, plus the decision threshold.
-function probabilityTable(rows, threshold) {
+// observation's own date, plus the threshold line(s).
+function probabilityTable(rows, threshold, increaseThreshold) {
+  var lines = thresholdLines(threshold, increaseThreshold);
   var cols = [{label: 'Date', type: 'date'}];
   CLASSES.forEach(function (c) { cols.push({label: 'P(' + c + ')', type: 'number'}); });
-  cols.push({label: 'decision threshold (' + threshold + ')', type: 'number'});
+  lines.forEach(function (l) { cols.push({label: l.label, type: 'number'}); });
   return {
     cols: cols,
     rows: rows.map(function (r) {
       var c = [cell(chartDate(r.date))];
       CLASSES.forEach(function (k) { c.push(cell(r[k])); });
-      c.push(cell(threshold));
+      lines.forEach(function (l) { c.push(cell(l.value)); });
       return {c: c};
     })
   };
@@ -273,11 +295,14 @@ function timelineChart(expRows, rows, band) {
                            vAxis: {title: band.toUpperCase()}, series: series}));
 }
 
-function probabilityChart(rows, threshold) {
+function probabilityChart(rows, threshold, increaseThreshold) {
   var series = {};
   CLASSES.forEach(function (c, i) { series[i] = {color: CLASS_COLORS[c], lineWidth: 2, pointSize: 3}; });
-  series[3] = {color: EXPECTED_COLOR, lineWidth: 1, pointSize: 0, lineDashStyle: [3, 3]};
-  return ui.Chart(probabilityTable(rows, threshold), 'LineChart',
+  thresholdLines(threshold, increaseThreshold).forEach(function (l, i) {
+    series[3 + i] = {color: l.cls ? CLASS_COLORS[l.cls] : EXPECTED_COLOR, lineWidth: 1, pointSize: 0,
+                     lineDashStyle: [3, 3]};
+  });
+  return ui.Chart(probabilityTable(rows, threshold, increaseThreshold), 'LineChart',
                   options({title: 'Probability Through Time',
                            vAxis: {title: 'Probability', viewWindow: {min: 0, max: 1}}, series: series}));
 }
@@ -295,6 +320,7 @@ exports.timelineTable = timelineTable;
 exports.timelineChart = timelineChart;
 exports.hasObservations = hasObservations;
 exports.firstCrossing = firstCrossing;
+exports.classThresholds = classThresholds;
 exports.crossingNotes = crossingNotes;
 exports.targetFitTable = targetFitTable;
 exports.probabilityTable = probabilityTable;

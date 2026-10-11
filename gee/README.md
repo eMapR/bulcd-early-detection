@@ -31,14 +31,31 @@ inspect its NBR/fit and probability history.
    the latest shape is used), or an Earth Engine FeatureCollection asset. Same size rule
    as the notebook: over 100 km² warns, over 1,000 km² is blocked unless allowed under
    Advanced settings.
-2. **Settings,** with the notebook's defaults and limits: expectation years
-   (2018–2023), monitoring year (2026), season start/end (Jun 1–Sep 30), sensitivity
-   (1.0), decision threshold (0.5), first-detected season (on); advanced: dampening
-   (0.5), posterior leveler (1.0), monitoring sensors (L8, L9, S2; the expectation is
-   always Landsat 8), forest-only and water masks (on), allow large areas. A
-   description states the periods in words and blocks invalid settings. Fixed, as in
-   the notebook: the legacy evidence table, cloud 70, day step 4, even starting odds,
-   NBR, average level + one annual cycle.
+2. **Settings,** with the notebook's limits. A description states the periods in
+   words and blocks invalid settings. Defaults (`config.js` `APP_DEFAULTS`; the Python
+   app's `LEGACY_DEFAULTS` are the same):
+   - **From the original BULC-D GUI's defaults** (read from its source; checked in
+     `tests/controls_check.js` against `tests/legacy_gui.js`, and for the Python app in
+     `tests/test_app_defaults.py`): sensitivity 1.0, decrease threshold 0.65 and
+     increase threshold 0.75 (its drop/gain sliders), dampening 0.7 (`transitionLeveler`), posterior leveler 0.9, starting odds 0.10
+     decrease / 0.80 unchanged / 0.10 increase (`initializingLeveler` 0.7; fixed, not a
+     control), forest-only mask off, water mask on. Also fixed as in the original: the
+     evidence table, bin cuts, z-score denominator 0.05, NBR, average level + one
+     annual cycle.
+   - **Early Detection choices** (the original GUI had no default; the user typed or
+     ticked them): expectation years 2018–2023, monitoring year 2026, season Jun 1–Sep
+     30, monitoring sensors L8, L9, S2 (the expectation is always Landsat 8; the
+     original GUI used one sensor selection for both periods), cloud cover 70.
+   - **Different from the original:** day step 4 (the original slider starts at 3; it
+     was set to 4 for the same-pixel comparison).
+
+   The two thresholds, as in the original GUI: the condition layer is decrease where
+   the final P(decrease) is above the decrease threshold and increase where P(increase)
+   is above the increase threshold (strictly above, like its `.gt()`), else unchanged.
+   The first-detected season uses the decrease threshold. The inspector's probability
+   chart draws both thresholds, and its notes give each class's crossing against its
+   own threshold.
+   - Also: first-detected season (on), allow large areas (off).
 3. **Run Early Detection** recomputes for the chosen area. Layers, bottom to top, in
    the map's Layers control: true color for the monitoring year and the two before;
    the NBR composite (R/G/B = those years, one stretch, water masked); first detected
@@ -94,10 +111,13 @@ compares with the Python app's code on the same settings:
    app's modules: config equals BULC-D_rebuild's `legacy_reference()`; inspector rows
    and chart values equal `pixel.pixel_history()` at pixels 1–3; condition equals
    `outputs._outcome_from_result()` over a 30 m box.
-2. **The GUI** (asset area = the testsite, notebook-default widgets, Run): no
-   validation shortcuts are exposed (checked buttons, area sources and labels); widget
-   defaults equal the notebook's; the config and each first-detected-season config
-   equal `EarlyDetectionApp.build()`; condition and first-detected-season layers equal
+2. **The GUI** (asset area = the testsite, default widgets, Run): no validation
+   shortcuts are exposed (checked buttons, area sources and labels); widget defaults
+   equal the Python app's (both the original GUI's where it had one); the config and
+   each first-detected-season config equal `EarlyDetectionApp.build()`; the condition
+   layer follows the original GUI's rule at 0.65/0.75, recomputed from the run's final
+   probabilities (the check reports how many pixels have 0.65 < P(increase) <= 0.75,
+   which one shared threshold would have mapped as increase); condition and first-detected-season layers equal
    `outputs.outcome_image()` and `combine_season_timing()` over the box; the inspector
    equals `pixel_history()` at pixel 1 (map click) and pixel 3 (typed lon/lat + Submit
    Pixel); the inspector's expectation period (observations used in the fit, fitted
@@ -115,8 +135,12 @@ cd gee/tests && python run_app_parity.py      # ~20 min
 ```
 
 `tests/controls_check.js` is a quick offline check of the settings panel (no
-Earth Engine). It covers three things:
+Earth Engine). It covers four things:
 
+- The defaults equal the original BULC-D GUI's settings where it had one
+  (`tests/legacy_gui.js`, with the source line for each), through the widgets and the
+  config they build; the inspector's crossing notes and threshold lines apply 0.65 to
+  decrease and 0.75 to increase, strictly.
 - The day list follows the month: Mar 31 switched to April becomes Apr 30, and February has 28 days.
 - Dec 31 is valid.
 - The expectation years are inclusive, with one season per year.

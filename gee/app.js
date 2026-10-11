@@ -38,8 +38,9 @@ function setMessage(label, text, isError) {
 // so reruns at the same pixel can be told apart.
 function runLabel(c) {
   return 'Monitoring ' + c.monitoring_year + ' (' + c.season_start + ' to ' + c.season_end + '), expectation ' +
-         c.expectation_first + '-' + c.expectation_last + '; sensitivity ' + c.sensitivity + ', threshold ' +
-         c.decision_threshold + ', dampening ' + c.dampening + ', posterior ' + c.posterior_leveler + '; sensors ' +
+         c.expectation_first + '-' + c.expectation_last + '; sensitivity ' + c.sensitivity + ', thresholds ' +
+         c.decrease_threshold + ' decrease / ' + c.increase_threshold + ' increase, dampening ' + c.dampening +
+         ', posterior ' + c.posterior_leveler + '; sensors ' +
          Object.keys(c.sensors).filter(function (k) { return c.sensors[k]; }).join('+') +
          (c.mask_forest ? '; forest only' : '') + (c.mask_water ? '; water masked' : '');
 }
@@ -215,18 +216,20 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
   function runControls(c, area) {
     var config = appConfig.buildConfig(c, area.aoi);
     var full = bulcd.withDefaults(config);
-    var threshold = c.decision_threshold;
+    var thresholds = {decrease: c.decrease_threshold, increase: c.increase_threshold};
     var geom = area.geometry, token = state.runToken;
     var result = bulcd.runBulcd(full);
-    var outcome = outputs.outcomeImage(bulcd, result, full, threshold).clip(geom);
+    var outcome = outputs.outcomeImage(bulcd, result, full, thresholds.decrease, thresholds.increase).clip(geom);
 
     var years = c.timing ? appConfig.timingYears(c) : [];
     var timing = null;
     if (years.length) {
       var seasons = {};
+      // First-detected season: the decrease threshold.
       years.forEach(function (y) {
         seasons[y] = outputs.detectionTimingImage(bulcd, appConfig.buildConfig(appConfig.withMonitoringYear(c, y),
-                                                                             area.aoi), threshold);
+                                                                             area.aoi), thresholds.decrease,
+                                                  thresholds.increase);
       });
       timing = outputs.combineSeasonTiming(seasons).clip(geom);
     }
@@ -279,7 +282,7 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
         legend.add(legendRow(outputs.YEAR_COLORS[i], 'Decrease first detected in ' + y));
       });
     }
-    setRun({result: result, config: full, threshold: threshold, label: runLabel(c), outcome: outcome,
+    setRun({result: result, config: full, thresholds: thresholds, label: runLabel(c), outcome: outcome,
             timing: timing});
   }
 
@@ -333,8 +336,8 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
         results.add(ui.Label(line, SMALL));
       });
       results.add(inspector.targetFitChart(rows, run.config.reduction.band));
-      results.add(inspector.probabilityChart(rows, run.threshold));
-      inspector.crossingNotes(rows, run.threshold).forEach(function (note) {
+      results.add(inspector.probabilityChart(rows, run.thresholds.decrease, run.thresholds.increase));
+      inspector.crossingNotes(rows, run.thresholds.decrease, run.thresholds.increase).forEach(function (note) {
         results.add(ui.Label('Monitoring season: ' + note, SMALL));
       });
     });
