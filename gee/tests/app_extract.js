@@ -23,6 +23,7 @@ const aoi = require('../aoi.js');
 const controlsUi = require('../controls.js');
 const app = require('../app.js');
 const { makeUi } = require('./ui_stub');
+const { tablesClose } = require('./table_close');
 const { TESTSITE, REFERENCE_CASE, REFERENCE_PIXELS, THRESHOLD } = require('./reference_case');
 
 // Same box as BULC-D_rebuild gee/tests/cases.py BOX.
@@ -84,8 +85,8 @@ async function selectPixels(handle, created, map, pixels, how, threshold) {
     out[p.label].expectation = {
       rows: expRows, fit: exp.fit, regressors: exp.regressors,
       summary: inspector.expectationSummary(exp, expRows, run.config),
-      timeline_matches: !!timeline && JSON.stringify(timeline.table) ===
-        JSON.stringify(inspector.timelineTable(expRows, rows, run.config.reduction.band)),
+      timeline_matches: !!timeline &&
+        tablesClose(timeline.table, inspector.timelineTable(expRows, rows, run.config.reduction.band)),
       timeline_rows: timeline ? timeline.table.rows.length : 0,
     };
     out[p.label].how = how[p.label] || 'click';

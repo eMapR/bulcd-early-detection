@@ -124,3 +124,22 @@ Earth Engine). It covers three things:
 ```sh
 node gee/tests/controls_check.js
 ```
+
+`tests/inspector_state_check.js` is a regression test for the inspector's coordinate
+handling (live Earth Engine, ~5 min). It drives the app through this sequence:
+
+1. A map click at coordinate A, then inspect.
+2. Change the sensitivity.
+3. Run Early Detection again.
+4. Submit Pixel.
+
+It checks that the coordinate boxes, every inspector query and the marker stay
+exactly at A, and that the rerun keeps the click/Submit handlers and drawing-tool
+state. It also checks that each inspection's charts equal a fresh computation at A
+under that run's settings. Chart tables here and in the parity test are compared to 1e-6
+(`tests/table_close.js`): Earth Engine can return the same computed value with a
+different last digit from one evaluation to the next.
+
+```sh
+cd gee/tests && node inspector_state_check.js
+```

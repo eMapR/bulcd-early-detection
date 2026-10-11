@@ -18,7 +18,7 @@ function activeList(initial) {
 function widget(kind, args) {
   // Only a plain object literal is an options argument (not an array of widgets, not a widget).
   const opts = args[0] && Object.getPrototypeOf(args[0]) === Object.prototype && !('state' in args[0]) ? args[0] : {};
-  const state = { kind, args, value: undefined, children: [], handlers: {}, layers: activeList() };
+  const state = { kind, args, value: undefined, children: [], handlers: {}, layers: activeList(), views: [] };
   if ('value' in opts) state.value = opts.value;
   if (opts.onChange) state.handlers.change = opts.onChange;
   if (opts.onClick) state.handlers.click = opts.onClick;
@@ -45,6 +45,9 @@ function widget(kind, args) {
     onChange(fn) { state.handlers.change = fn; return proxy; },
     layers() { return state.layers; },
     drawingTools() { return tools; },
+    // Map view changes, recorded so tests can see when the app moves the map.
+    centerObject(...a) { state.views.push(['centerObject', ...a]); return proxy; },
+    setCenter(...a) { state.views.push(['setCenter', ...a]); return proxy; },
   };
   const proxy = new Proxy(target, {
     get(t, prop) {
@@ -57,7 +60,7 @@ function widget(kind, args) {
 }
 
 function makeUi() {
-  const created = { charts: [], maps: [], labels: [], buttons: [], selects: [] };
+  const created = { charts: [], maps: [], labels: [], buttons: [], selects: [], sliders: [] };
   const make = (kind) => (...args) => {
     const w = widget(kind, args);
     if (kind === 'Chart') created.charts.push({ table: args[0], type: args[1], options: args[2] });
@@ -65,6 +68,7 @@ function makeUi() {
     if (kind === 'Label') created.labels.push(w);
     if (kind === 'Button') created.buttons.push(w);
     if (kind === 'Select') created.selects.push(w);
+    if (kind === 'Slider') created.sliders.push(w);
     return w;
   };
   const ui = {};
