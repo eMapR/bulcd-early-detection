@@ -58,11 +58,48 @@ CLOUD_COVER_THRESHOLD = 70
 BASELINE_SENSORS = ("L8",)
 MONITORING_SENSORS = ("L8", "L9", "S2")
 
+# Expectation fit order N = a constant plus the first N annual harmonics
+# (1, 2 and 3 cycles per year): the legacy modalityDictionary's unimodal,
+# bimodal and trimodal flags, which add their terms cumulatively. Order 1
+# (constant + unimodal) is the original BULC-D GUI's default.
+FIT_ORDERS = (1, 2, 3)
+_ORDER_FLAGS = ("unimodal", "bimodal", "trimodal")
+# Shortest seasonal window (days) at which an order-2/3 fit stays well
+# conditioned. Within a shorter window the harmonics are nearly collinear and
+# the fit can chase noise (docs/findings.md, 2026-10-13). gee/config.js holds
+# the same values.
+MIN_WINDOW_DAYS = {2: 183, 3: 245}
+
 
 def class_thresholds(threshold: float, increase_threshold: float | None = None) -> dict[str, float]:
     """{"decrease": threshold, "increase": increase_threshold, or threshold
     when that is None}."""
     return {"decrease": threshold, "increase": threshold if increase_threshold is None else increase_threshold}
+
+
+def modality_for_order(order: int) -> ModalityConfig:
+    """bulcd ModalityConfig for expectation fit order 1, 2 or 3."""
+    if order not in FIT_ORDERS:
+        raise ValueError(f"fit_order must be one of {FIT_ORDERS}")
+    return ModalityConfig(constant=True, **{flag: i < order for i, flag in enumerate(_ORDER_FLAGS)})
+
+
+def order_of_modality(modality: ModalityConfig) -> int | None:
+    """The fit order a ModalityConfig corresponds to, or None if it isn't one
+    of modality_for_order()'s (e.g. linear, or bimodal without unimodal)."""
+    return next((n for n in FIT_ORDERS if modality == modality_for_order(n)), None)
+
+
+def fit_order_warning(order: int, window_days: int) -> str | None:
+    """Warning for a higher-order fit over a short seasonal window, or None.
+    Same text as gee/config.js fitOrderWarning()."""
+    need = MIN_WINDOW_DAYS.get(order)
+    if need is None or window_days >= need:
+        return None
+    return (f"Expectation fit order {order} with a {window_days}-day season may be unstable: within a window "
+            f"shorter than about {need} days the harmonics are hard to tell apart, so the fitted curve can follow "
+            "noise, especially with few expectation years or clear observations. Check the fit in the pixel "
+            "inspector.")
 
 
 @dataclass
@@ -92,6 +129,9 @@ class MonitoringControls:
     # default; >1 treats smaller departures from the baseline as stronger
     # evidence of change. Not yet tested away from 1.0.
     sensitivity: float = 1.0
+    # Expectation fit order (FIT_ORDERS): 1 = the original GUI's constant +
+    # one annual cycle; 2 and 3 add the second and third annual harmonics.
+    fit_order: int = 1
 
     def __post_init__(self) -> None:
         if not 0.5 <= self.decision_threshold < 1.0:
@@ -104,6 +144,8 @@ class MonitoringControls:
             raise ValueError("sensitivity must be positive")
         if self.first_doy > self.last_doy:
             raise ValueError("season_start must be before season_end")
+        if self.fit_order not in FIT_ORDERS:
+            raise ValueError(f"fit_order must be one of {FIT_ORDERS}")
 
     def _doy(self, month_day: str) -> int:
         date = datetime.date.fromisoformat(f"{self.monitoring_year}-{month_day}")
@@ -121,6 +163,15 @@ class MonitoringControls:
     @property
     def last_doy(self) -> int:
         return self._doy(self.season_end)
+
+    @property
+    def window_days(self) -> int:
+        """Length of the seasonal window in days, both ends included."""
+        return self.last_doy - self.first_doy + 1
+
+    @property
+    def fit_order_warning(self) -> str | None:
+        return fit_order_warning(self.fit_order, self.window_days)
 
     @property
     def monitoring_start(self) -> datetime.date:
@@ -167,7 +218,7 @@ def build_config(
             ),
         ),
         reduction=ReductionConfig(band="nbr"),
-        modality=ModalityConfig(constant=True, unimodal=True),
+        modality=modality_for_order(controls.fit_order),
         sensitivity=SensitivityConfig(z_score_numerator_factor=controls.sensitivity),
         bulc_advanced_params=BULCAdvancedParams(
             custom_transition_matrix=PRODUCTION_TRANSITION_MATRIX, recency_factor=1.0
@@ -196,8 +247,12 @@ def config_summary(config: BULCDConfig) -> list[tuple[str, str]]:
         window = ", ".join(f"{_doy_label(a)} – {_doy_label(b)}" for a, b in doys)
         return f"{yr}, {window} ({', '.join(_SENSOR_NAMES.get(n, n) for n in on)})"
 
-    modality = [f.name for f in dataclasses.fields(config.modality) if getattr(config.modality, f.name)]
-    model = {("constant", "unimodal"): "average level + one annual cycle"}.get(tuple(modality), ", ".join(modality))
+    order = order_of_modality(config.modality)
+    if order is None:
+        model = ", ".join(f.name for f in dataclasses.fields(config.modality) if getattr(config.modality, f.name))
+    else:
+        model = (f"expectation fit order {order}: average level + "
+                 + ("one annual cycle", "cycles of 1 and 2 per year", "cycles of 1, 2 and 3 per year")[order - 1])
     masks = [m for m, on in (("water", config.study_area.mask_water), ("non-forest land", config.study_area.mask_non_forest)) if on]
     return [
         ("Baseline (expectation)", period(ev.expectation)),

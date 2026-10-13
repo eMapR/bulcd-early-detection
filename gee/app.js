@@ -40,7 +40,7 @@ function runLabel(c) {
   return 'Monitoring ' + c.monitoring_year + ' (' + c.season_start + ' to ' + c.season_end + '), expectation ' +
          c.expectation_first + '-' + c.expectation_last + '; sensitivity ' + c.sensitivity + ', thresholds ' +
          c.decrease_threshold + ' decrease / ' + c.increase_threshold + ' increase, dampening ' + c.dampening +
-         ', posterior ' + c.posterior_leveler + '; sensors ' +
+         ', posterior ' + c.posterior_leveler + ', expectation fit order ' + c.fit_order + '; sensors ' +
          Object.keys(c.sensors).filter(function (k) { return c.sensors[k]; }).join('+') +
          (c.mask_forest ? '; forest only' : '') + (c.mask_water ? '; water masked' : '');
 }

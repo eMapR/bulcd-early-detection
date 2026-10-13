@@ -24,7 +24,7 @@ import ipywidgets as W
 from IPython.display import Markdown, display
 
 from . import compare, drawing, outputs, pixel, render, report
-from .config import MonitoringControls, build_config
+from .config import FIT_ORDERS, MonitoringControls, build_config
 
 # Earth Engine requests have no deadline by default, so one stalled request can
 # freeze the whole app; fail it after this long instead (ms).
@@ -36,7 +36,10 @@ MAX_TIMING_SEASONS = 3
 # The expectation years, monitoring year, season and sensors had no default
 # there (the user entered them); theirs below are Early Detection choices.
 LEGACY_DEFAULTS = {"sensitivity": 1.0, "decrease_threshold": 0.65, "increase_threshold": 0.75, "dampening": 0.7,
-                   "posterior_leveler": 0.9, "mask_forest": False, "mask_water": True}
+                   "posterior_leveler": 0.9, "mask_forest": False, "mask_water": True, "fit_order": 1}
+# Expectation fit order choices (config.FIT_ORDERS); gee/config.js FIT_ORDER_LABELS holds the same labels.
+FIT_ORDER_LABELS = {1: "1: one annual cycle (original BULC-D)", 2: "2: adds 2 cycles per year",
+                    3: "3: adds 2 and 3 cycles per year"}
 # The Parameter behavior tab's response curves, "default" marked at the values above.
 APP_PARAMETER_SWEEPS = [
     ("Sensitivity", "scales every departure from normal", [0.5, 0.75, 1.0, 1.5, 2.0],
@@ -190,6 +193,8 @@ class EarlyDetectionApp:
                                        style=style, layout=wide)
         self.posterior = W.FloatSlider(value=d["posterior_leveler"], min=0.5, max=1.0, step=0.05,
                                        description="Posterior leveler:", style=style, layout=wide)
+        self.fit_order = W.Dropdown(options=[(FIT_ORDER_LABELS[n], n) for n in FIT_ORDERS], value=d["fit_order"],
+                                    description="Expectation fit order:", style=style, layout=W.Layout(width="480px"))
         self.sensors = {s: W.Checkbox(value=True, description=label) for s, label in
                         (("L8", "Landsat 8"), ("L9", "Landsat 9"), ("S2", "Sentinel-2"))}
         self.mask_forest = W.Checkbox(value=d["mask_forest"], description="Analyze forest only (Hansen tree cover ≥ 10%)",
@@ -197,8 +202,10 @@ class EarlyDetectionApp:
         self.mask_water = W.Checkbox(value=d["mask_water"], description="Leave out water",
                                      style={"description_width": "initial"})
         self.advanced = W.Accordion(children=[W.VBox([
-            W.HTML("<i>Normally left alone. Dampening, posterior leveler and the masks start at the original BULC-D "
-                   "GUI's settings.</i>"),
+            W.HTML("<i>Normally left alone. Dampening, posterior leveler, the expectation fit order and the masks "
+                   "start at the original BULC-D GUI's settings.</i>"),
+            self.fit_order, W.HTML("&nbsp;&nbsp;shape of the expected seasonal curve; higher orders follow sharper "
+                                   "seasonal transitions but need a long season to fit reliably"),
             self.dampening, W.HTML("&nbsp;&nbsp;how much weight each single observation carries (1 = full)"),
             self.posterior, W.HTML("&nbsp;&nbsp;pull toward even odds after each update (1 = off)"),
             W.HTML("<b>Monitoring sensors</b> (the expectation always uses Landsat 8)"), W.HBox(list(self.sensors.values())),
@@ -206,7 +213,7 @@ class EarlyDetectionApp:
         ])])
         self.advanced.set_title(0, "Advanced settings")
         self.advanced.selected_index = None
-        for w in (self.expectation, self.monitoring_year, self.window, self.timing):
+        for w in (self.expectation, self.monitoring_year, self.window, self.timing, self.fit_order):
             w.observe(lambda _: self._describe(), "value")
         self._describe()
         self.run_btn = W.Button(description="Run Early Detection", button_style="primary", icon="play", disabled=True,
@@ -241,11 +248,14 @@ class EarlyDetectionApp:
                   "each judged against the same expectation and starting from the same odds (10% decrease, "
                   "80% unchanged, 10% increase)."
                   if self.timing.value else "")
+        warning = MonitoringControls(monitoring_year=m, season_start=start, season_end=end, baseline_first_year=e0,
+                                     baseline_last_year=e1, fit_order=self.fit_order.value).fit_order_warning
+        warning = f"<br><b style='color:#b45f06'>Warning:</b> {warning}" if warning else ""
         self.relationship.value = (
             "<div style='padding:6px;border-left:4px solid #2a78d6'>"
             f"<b>Expectation ({e0}–{e1}, {fmt(start)}–{fmt(end)} each year)</b> defines what is <i>normal</i> for each pixel.<br>"
             f"<b>Monitoring ({fmt(start)}–{fmt(end)}, {m})</b> is what gets evaluated against that normal."
-            f"{timing}</div>")
+            f"{timing}{warning}</div>")
 
     def controls(self, monitoring_year: int | None = None) -> MonitoringControls:
         (e0, e1), (start, end) = self.expectation.value, self.window.value
@@ -253,7 +263,7 @@ class EarlyDetectionApp:
                                   season_end=end, baseline_first_year=e0, baseline_last_year=e1,
                                   decision_threshold=round(self.decrease_threshold.value, 2),
                                   increase_threshold=round(self.increase_threshold.value, 2),
-                                  sensitivity=round(self.sensitivity.value, 2))
+                                  sensitivity=round(self.sensitivity.value, 2), fit_order=self.fit_order.value)
 
     def build(self, controls, **aoi):
         """build_config() plus the advanced settings - the same shape as the notebooks' build()."""
@@ -538,6 +548,9 @@ class EarlyDetectionApp:
                                          increase_threshold=c.increase_threshold,
                                          title=f"Pixel at {lat:.5f} N, {abs(lon):.5f} {'W' if lon < 0 else 'E'}")
                 print(f"Coordinate: {lon!r}, {lat!r} (lon, lat); sampled on the 30 m result grid")
+                print(f"Expectation fit order {c.fit_order}: {FIT_ORDER_LABELS[c.fit_order].split(': ', 1)[1]}")
+                if c.fit_order_warning:
+                    print(f"Warning: {c.fit_order_warning}")
                 for label, rows in histories.items():
                     for note in pixel.crossing_notes(rows, c.decision_threshold, c.increase_threshold):
                         print(f"{label}: {note}")

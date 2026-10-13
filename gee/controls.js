@@ -68,6 +68,10 @@ function makeControls(appConfig, onChange) {
   var relationship = ui.Label('', {fontSize: '12px', whiteSpace: 'pre-wrap', margin: '6px 8px',
                                    padding: '4px 6px', border: '1px solid #2a78d6'});
 
+  var fitOrder = ui.Select({items: appConfig.FIT_ORDERS.map(function (n) {
+                               return {label: appConfig.FIT_ORDER_LABELS[n], value: String(n)};
+                             }),
+                             value: String(d.fit_order), onChange: changed, style: {width: '260px'}});
   var dampening = slider(r.dampening, d.dampening, changed);
   var posterior = slider(r.posterior_leveler, d.posterior_leveler, changed);
   var sensors = {};
@@ -81,8 +85,11 @@ function makeControls(appConfig, onChange) {
                                 onChange: changed});
 
   var advanced = ui.Panel([
-    ui.Label('Normally left alone. Dampening, posterior leveler and the masks start at the original BULC-D ' +
-             'GUI\'s settings.', HINT),
+    ui.Label('Normally left alone. Dampening, posterior leveler, the expectation fit order and the masks start ' +
+             'at the original BULC-D GUI\'s settings.', HINT),
+    ui.Label('Expectation fit order', LABEL), fitOrder,
+    ui.Label('shape of the expected seasonal curve; higher orders follow sharper seasonal transitions but need ' +
+             'a long season to fit reliably', HINT),
     ui.Label('Dampening', LABEL), dampening,
     ui.Label('how much weight each single observation carries (1 = full)', HINT),
     ui.Label('Posterior leveler', LABEL), posterior,
@@ -119,7 +126,8 @@ function makeControls(appConfig, onChange) {
       season_start: start.get(), season_end: end.get(),
       sensitivity: sensitivity.getValue(), decrease_threshold: decreaseThreshold.getValue(),
       increase_threshold: increaseThreshold.getValue(), timing: timing.getValue(),
-      dampening: dampening.getValue(), posterior_leveler: posterior.getValue(), sensors: s,
+      dampening: dampening.getValue(), posterior_leveler: posterior.getValue(),
+      fit_order: Number(fitOrder.getValue()), sensors: s,
       mask_forest: maskForest.getValue(), mask_water: maskWater.getValue(), allow_large: allowLarge.getValue()
     };
   }
@@ -132,12 +140,13 @@ function makeControls(appConfig, onChange) {
       relationship.style().set({color: '#b00', border: '1px solid #b00'});
     } else {
       relationship.setValue(appConfig.describeControls(c).join('\n'));
-      relationship.style().set({color: '#222', border: '1px solid #2a78d6'});
+      relationship.style().set({color: '#222',
+                                border: '1px solid ' + (appConfig.fitOrderWarning(c) ? '#b45f06' : '#2a78d6')});
     }
   }
 
   describe();
-  return {panel: panel, read: read};
+  return {panel: panel, read: read, fitOrder: fitOrder};
 }
 
 exports.makeControls = makeControls;

@@ -43,6 +43,18 @@ var MAX_TIMING_SEASONS = 3;
 // not a control.
 var INITIALIZING_LEVELER = 0.7;
 
+// Expectation fit order N = a constant plus the first N annual harmonics (1, 2
+// and 3 cycles per year): the legacy modalityDictionary's unimodal, bimodal and
+// trimodal flags, which add their terms cumulatively. Order 1 (constant +
+// unimodal) is the original BULC-D GUI's default. config.py FIT_ORDERS and
+// app.py FIT_ORDER_LABELS hold the same values.
+var FIT_ORDERS = [1, 2, 3];
+var FIT_ORDER_LABELS = {1: '1: one annual cycle (original BULC-D)', 2: '2: adds 2 cycles per year',
+                        3: '3: adds 2 and 3 cycles per year'};
+// Shortest seasonal window (days) at which an order-2/3 fit stays well
+// conditioned (config.py MIN_WINDOW_DAYS; docs/findings.md, 2026-10-13).
+var MIN_WINDOW_DAYS = {2: 183, 3: 245};
+
 // The settings the app opens with.
 //   Original BULC-D GUI defaults: sensitivity (ZScoreNumeratorFactor 1),
 //   separate decrease/increase thresholds (its drop 0.65 / gain 0.75 sliders),
@@ -64,6 +76,7 @@ var APP_DEFAULTS = {
   timing: true,                                     // also map the first-detected season
   dampening: 0.7,                                   // original GUI
   posterior_leveler: 0.9,                           // original GUI
+  fit_order: 1,                                     // original GUI (constant + unimodal)
   sensors: {L8: true, L9: true, S2: true},          // monitoring sensors; Early Detection choice
   mask_forest: false,                               // original GUI: no forest mask
   mask_water: true,                                 // original GUI: water masked
@@ -102,6 +115,33 @@ function monthDayLabel(monthDay) {
   return MONTH_NAMES[Number(p[0]) - 1] + ' ' + Number(p[1]);
 }
 
+// bulcd modality for expectation fit order 1, 2 or 3 (config.py modality_for_order()).
+// Only the flags that are on; bulcd.js defaults the rest to false, so order 1
+// stays exactly the original {constant: true, unimodal: true}.
+function modalityForOrder(order) {
+  if (FIT_ORDERS.indexOf(order) < 0) throw new Error('fit_order must be one of ' + FIT_ORDERS.join(', '));
+  var out = {constant: true, unimodal: true};
+  if (order >= 2) out.bimodal = true;
+  if (order >= 3) out.trimodal = true;
+  return out;
+}
+
+// Days in the seasonal window, both ends included (MonitoringControls.window_days).
+function windowDays(c) {
+  return dayOfYear(c.monitoring_year, c.season_end) - dayOfYear(c.monitoring_year, c.season_start) + 1;
+}
+
+// Warning for a higher-order fit over a short seasonal window, or null. Same
+// text as config.py fit_order_warning().
+function fitOrderWarning(c) {
+  var need = MIN_WINDOW_DAYS[c.fit_order], days = windowDays(c);
+  if (need === undefined || days >= need) return null;
+  return 'Expectation fit order ' + c.fit_order + ' with a ' + days + '-day season may be unstable: within a ' +
+         'window shorter than about ' + need + ' days the harmonics are hard to tell apart, so the fitted curve ' +
+         'can follow noise, especially with few expectation years or clear observations. Check the fit in the ' +
+         'pixel inspector.';
+}
+
 // The settings problem that blocks a run, or null (app.py _describe() and
 // MonitoringControls.__post_init__).
 function validateControls(c) {
@@ -120,6 +160,7 @@ function validateControls(c) {
   if (!(c.decrease_threshold >= 0.5 && c.decrease_threshold < 1.0)) return 'The decrease threshold must be in [0.5, 1).';
   if (!(c.increase_threshold >= 0.5 && c.increase_threshold < 1.0)) return 'The increase threshold must be in [0.5, 1).';
   if (!(c.sensitivity > 0)) return 'Sensitivity must be positive.';
+  if (FIT_ORDERS.indexOf(c.fit_order) < 0) return 'The expectation fit order must be 1, 2 or 3.';
   if (!MONITORING_SENSORS.some(function (s) { return c.sensors[s]; })) return 'Select at least one monitoring sensor.';
   return null;
 }
@@ -159,6 +200,8 @@ function describeControls(c) {
     lines.push('First detected season: separate runs for ' + years.join(', ') + ', each judged against the same ' +
                'expectation and starting from the same odds (10% decrease, 80% unchanged, 10% increase).');
   }
+  var warning = fitOrderWarning(c);
+  if (warning) lines.push('Warning: ' + warning);
   return lines;
 }
 
@@ -189,7 +232,7 @@ function buildConfig(c, aoi) {
     evidence: {expectation: {sensors: sensors(BASELINE_SENSORS, c.expectation_first, c.expectation_last)},
                target: {sensors: target}},
     reduction: {band: 'nbr'},
-    modality: {constant: true, unimodal: true},
+    modality: modalityForOrder(c.fit_order),
     sensitivity: {z_score_numerator_factor: round2(c.sensitivity)},
     bulc_advanced_params: {custom_transition_matrix: PRODUCTION_TRANSITION_MATRIX, recency_factor: 1.0,
                            dampening_factor: round2(c.dampening), posterior_leveler: round2(c.posterior_leveler),
@@ -207,6 +250,12 @@ function withMonitoringYear(c, year) {
 
 exports.PRODUCTION_TRANSITION_MATRIX = PRODUCTION_TRANSITION_MATRIX;
 exports.INITIALIZING_LEVELER = INITIALIZING_LEVELER;
+exports.FIT_ORDERS = FIT_ORDERS;
+exports.FIT_ORDER_LABELS = FIT_ORDER_LABELS;
+exports.MIN_WINDOW_DAYS = MIN_WINDOW_DAYS;
+exports.modalityForOrder = modalityForOrder;
+exports.windowDays = windowDays;
+exports.fitOrderWarning = fitOrderWarning;
 exports.APP_DEFAULTS = APP_DEFAULTS;
 exports.RANGES = RANGES;
 exports.MONITORING_SENSORS = MONITORING_SENSORS;

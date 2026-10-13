@@ -134,12 +134,34 @@ function expectationSummary(tables, rows, config) {
   var span = first === last ? String(first) : first + '-' + last;
   var lines = ['Expectation fit at this pixel: ' + used.length + ' clear observations (of ' + rows.length +
                ' ' + config.evidence.day_step_size + '-day bins) in ' + span + '.'];
-  var shape = 'Fitted mean ' + band + ' ' + round(fit.constant, 3);
-  if (regressors.indexOf('cos') >= 0 && fit.cos != null && fit.sin != null) {
-    shape += ', seasonal amplitude ' + round(Math.sqrt(fit.cos * fit.cos + fit.sin * fit.sin), 3);
+  // Harmonic k = the cos/sin pair at k cycles per year ('cos'/'sin', 'cos2'/'sin2', 'cos3'/'sin3').
+  var harmonics = [1, 2, 3].filter(function (k) { return regressors.indexOf(k === 1 ? 'cos' : 'cos' + k) >= 0; });
+  var amplitude = function (k) {
+    var c = fit[k === 1 ? 'cos' : 'cos' + k], s = fit[k === 1 ? 'sin' : 'sin' + k];
+    return c == null || s == null ? null : Math.sqrt(c * c + s * s);
+  };
+  // With more than one harmonic the constant is not a mean the curve stays near:
+  // over a short window the terms can be large and offsetting (docs/findings.md, 2026-10-13).
+  var shape = (harmonics.length > 1 ? 'Constant term ' : 'Fitted mean ' + band + ' ') + round(fit.constant, 3);
+  if (harmonics.length === 1 && harmonics[0] === 1) {
+    shape += ', seasonal amplitude ' + round(amplitude(1), 3);
+  } else if (harmonics.length) {
+    shape += ', harmonic amplitudes ' + harmonics.map(function (k) {
+      return round(amplitude(k), 3) + ' (' + k + ' cycle' + (k === 1 ? '' : 's') + '/yr)';
+    }).join(', ');
   }
   if (regressors.indexOf('t') >= 0) shape += ', within-year trend ' + round(fit.t, 3);
   lines.push(shape + '; residual SD ' + round(fit.residual_stddev, 3) + '; R2 ' + round(fit.r2, 2) + '.');
+  // The fitted curve's actual range over the season. With more than one
+  // harmonic the terms add with different phases, so the curve's swing is not
+  // the sum of their amplitudes.
+  var fitted = rows.map(function (r) { return r.expected; }).filter(function (v) { return v !== null; });
+  if (fitted.length) {
+    lines.push('Expectation fit order ' + harmonics.length + '. Over the season the fitted curve runs from ' +
+               round(Math.min.apply(null, fitted), 3) + ' to ' + round(Math.max.apply(null, fitted), 3) + ' ' +
+               band + (harmonics.length > 1 ? '; the harmonics combine with different phases, so this range, ' +
+               'not the sum of their amplitudes, is the seasonal swing.' : '.'));
+  }
   lines.push('Model terms: ' + regressors.join(' + ') + '. The same curve is used for every year. Monitoring ' +
              'z-scores are (observed - fitted) x sensitivity / max(residual SD, ' +
              config.sensitivity.z_score_denominator_factor + ').');
