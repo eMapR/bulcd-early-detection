@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-10-11
+Last updated: 2026-10-13
 
 Concise current-state/handoff doc. Detailed lessons, experimental
 results, and their explanations live in `docs/findings.md` — read it for
@@ -235,6 +235,22 @@ Two-repo split:
   matched exactly except the early probabilities, explained by even vs 10/80/10 starting odds. The
   demonstration notebooks (`config.py` defaults, `compare.PARAMETER_SWEEPS`) are unchanged. Checked by
   `gee/tests/controls_check.js`, `tests/test_app_defaults.py` and `gee/tests/run_app_parity.py`.
+
+- **2026-10-13: expectation fit order (1/2/3) in both interactive apps** (Advanced settings; default 1 = the
+  original GUI's constant + unimodal, so the order-1 config is unchanged). Order N maps to the legacy cumulative
+  modality flags (`unimodal`, `bimodal`, `trimodal`), which bulcd and bulcd.js already run, so neither engine
+  changed. The order reaches every output: condition, first-detected season (`controls(y)` / `withMonitoringYear`),
+  sensitivity variants and the inspector.
+  - The run label, settings summary and GEE fit summary name the order. With more than one harmonic, the summary
+    gives per-harmonic amplitudes and the curve's actual range.
+  - A non-blocking warning appears below 183 days of season at order 2, or 245 days at order 3.
+  - Tests: `controls_check.js`, `test_app_defaults.py` (JS ↔ Python mapping and warning text), and
+    `run_app_parity.py` section 4 (orders 2 and 3 run through the GUI against Python).
+  - Known and documented, not changed: legacy's order-3 frequency is 2.9985 cycles/yr; bulcd uses exactly 3.
+  - **Pine Mountain pixel (Robert):** orders 2 and 3 do *not* remove the spring false decrease (snowmelt step,
+    16 clear 2023 bins). Order 2 even crosses earlier (Feb 25 vs Apr 17). The fall fire and the final class are
+    identical at every order; the first-detected date is what's wrong.
+  - Minimum-observations mask: deferred (user decision). Details: `docs/findings.md`, 2026-10-13.
 
 ## Reproducibility notes
 

@@ -1297,3 +1297,69 @@ increase.
 - The time axis barely matters here, because the 2018–2023 baseline is Landsat-only.
 - Cloudier parks (Apostle Islands in June, North Cascades) were not measured. Their v1 assets are pre-0011 and
   `outputs.load_precomputed()` now warns when loading any `_v1` run.
+
+## 2026-10-13 — Expectation fit order (1/2/3): legacy representation, conditioning, and the Pine Mountain pixel
+
+**What the order is.** Neither the legacy code nor bulcd has an "order" parameter. The legacy
+`modalityDictionary` (`502.7-1h5-HarmonicFunctions`, `afn_determineHarmonicIndependentsViaModalityDictionary`)
+adds terms cumulatively: `constant`, `linear` (`t`), `unimodal` (`cos`/`sin`), `bimodal` (`cos2`/`sin2`),
+`trimodal` (`cos3`/`sin3`). The original GUI exposed these flags as a modality widget, default
+`constant + unimodal` (`guiBULCD.rtf` ~5940). bulcd (`ModalityConfig`, `_select_modality_regressors`) and
+`bulcd.js` (`selectModalityRegressors`) reproduce this, so both apps map order N to `constant + unimodal`
+plus `bimodal` (N ≥ 2) and `trimodal` (N = 3), with no engine change. Order 1 is byte-identical to the
+previous config.
+
+**Known difference at order 3 (not changed).** Legacy computes each pair's frequency as `2 / period`, with
+periods 2 (unimodal), 1 (bimodal) and **0.667** (trimodal). That gives 1, 2 and **2.9985** cycles per year.
+bulcd and bulcd.js use exactly 1, 2 and 3 (`_add_harmonic_terms`: `2πt × 3`). Orders 1 and 2 are therefore
+legacy-exact. Order 3 differs by a phase of at most 2π × 0.0015 × t ≈ 0.009 rad at the end of the year:
+tiny, but not the legacy GUI's exact numbers. Changing it belongs in BULC-D_rebuild. Leave it unless order 3
+must reproduce legacy GUI exports.
+
+**Conditioning: the window length matters more than the number of years.** The time axis is fracDOY, so
+expectation years overlay on the same within-year positions. More years add observations but never widen the
+range of days the fit covers. Condition numbers of the design matrix (4-day bins, all clear, window centred
+in the year):
+
+| window (days) | order 1 | order 2 | order 3 |
+|---|---|---|---|
+| 122 (Jun 1–Sep 30, app default) | 11 | 132 | 1,685 |
+| 150 | 7 | 52 | 423 |
+| 183 | 5 | 22 | 114 |
+| 245 | 2.5 | 5.5 | 14 |
+| 365 | 1.4 | 1.4 | 1.4 |
+
+Over a short window the 2nd and 3rd harmonics are nearly collinear with the 1st. Both apps therefore warn
+(without blocking the run) below **183 days for order 2** and **245 days for order 3** (`config.py
+MIN_WINDOW_DAYS`, `gee/config.js`). A higher order also shrinks the residual SD, which is the z-score
+denominator, so it makes z-scores larger. That is not automatically "more accurate". The app parity test shows the
+conditioning problem directly. At the default Jun 1–Sep 30 window (2018–2023, testsite pixel 1), the order-3
+coefficients are large and offsetting: constant 5.12, first-harmonic amplitude 6.8. The fitted curve inside
+the window is still 0.74–0.87 NBR. So with more than one harmonic, the GEE fit summary calls the constant a
+"constant term", not a mean, and reports the curve's range over the season.
+
+**Pine Mountain pixel (Robert, fall 2024 fire): a higher order does not remove the spring false
+detection.** `experiments/pine_mountain_fit_order.py`; outputs in `experiments/output/pine_mountain_fit_order/`.
+Pixel (−120.959384, 43.694992); expectation 2023, monitoring 2024, Feb 1–Nov 15 (289 days, so no warning);
+app defaults otherwise.
+
+| order | resid. SD | R² | spring P(decrease) > 0.65 | fall crossing | final P (dec/unch/inc) |
+|---|---|---|---|---|---|
+| 1 | 0.133 | 0.71 | Apr 17 – Jun 4 | Sep 24 | 0.914 / 0.043 / 0.043 |
+| 2 | 0.106 | 0.78 | from Feb 25, again through May 7 | Sep 24 | same |
+| 3 | 0.083 | 0.83 | from Mar 24 through May 7 | Sep 24 | same |
+
+- The 2023 expectation has only 16 clear bins of 73. The snow-to-bare transition is a step: NBR goes from
+  0.87 in early March to 0.05 by mid-April, with no observations in between. No 1–3 harmonic curve can
+  follow that step.
+- Order 2 overshoots in February (fit about 0.9, while the 2024 snow observations are 0.6–0.7), which
+  produces an *earlier* false crossing. Order 3 adds a spurious late-March peak and a June dip below zero.
+- All three orders shorten the spring false detection somewhat (it ends May 7 instead of Jun 4), but none
+  removes it.
+- The fire evidence and the season-end result are identical at every order. The condition map is "decrease"
+  at all orders, and the Sep 24 crossing is the same.
+- The harm is to the **date**. The first-detected-season layer dates a detection by the run's first
+  crossing (`outputs.detection_timing_image`), so here it reports Apr 17, Feb 25 or Mar 24 (orders 1, 2,
+  3), not Sep 24.
+- More promising (none implemented or tested): a window that starts after snowmelt, more expectation
+  years, or a snow mask. The mask is not the minimum-observations mask, which was deferred.

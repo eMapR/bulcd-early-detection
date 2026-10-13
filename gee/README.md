@@ -39,9 +39,20 @@ inspect its NBR/fit and probability history.
      `tests/test_app_defaults.py`): sensitivity 1.0, decrease threshold 0.65 and
      increase threshold 0.75 (its drop/gain sliders), dampening 0.7 (`transitionLeveler`), posterior leveler 0.9, starting odds 0.10
      decrease / 0.80 unchanged / 0.10 increase (`initializingLeveler` 0.7; fixed, not a
-     control), forest-only mask off, water mask on. Also fixed as in the original: the
-     evidence table, bin cuts, z-score denominator 0.05, NBR, average level + one
-     annual cycle.
+     control), forest-only mask off, water mask on, expectation fit order 1 (its
+     modality: constant + unimodal). Also fixed as in the original: the evidence table,
+     bin cuts, z-score denominator 0.05, NBR.
+   - **Expectation fit order** (Advanced settings; 1, 2 or 3): order N fits a constant
+     plus the first N annual harmonics (1, 2 and 3 cycles per year). These are the
+     original GUI's cumulative modality flags `unimodal`, `bimodal` and `trimodal`, run
+     unchanged by bulcd. Every output uses it: condition, first-detected season, and the
+     inspector's expectation fit and probabilities. The settings description warns
+     (without blocking the run) when the season is shorter than 183 days at order 2, or
+     245 days at order 3, because the fit can be unstable there. The inspector's run
+     line and fit summary name the order. With more than one harmonic, the summary gives
+     each harmonic's amplitude and the fitted curve's actual range over the season.
+     Order 3 uses exactly 3 cycles per year, where legacy used 2.9985. That is a tiny
+     known difference (`docs/findings.md`, 2026-10-13).
    - **Early Detection choices** (the original GUI had no default; the user typed or
      ticked them): expectation years 2018–2023, monitoring year 2026, season Jun 1–Sep
      30, monitoring sensors L8, L9, S2 (the expectation is always Landsat 8; the
@@ -123,15 +134,24 @@ compares with the Python app's code on the same settings:
    Pixel); the inspector's expectation period (observations used in the fit, fitted
    curve, coefficients, residual SD, R2) equals Python bulcd's expectation fit at
    those pixels; layer list in the notebook's order, only condition shown.
-3. **Non-default settings:** configs equal `EarlyDetectionApp.build()` with the same
+3. **Non-default settings** (including fit order 2): configs equal `EarlyDetectionApp.build()` with the same
    widget values.
+4. **Expectation fit orders 2 and 3**, each chosen in Advanced settings and run through
+   the GUI. Order 1 is the default run in 2, which is also checked to be order 1. For
+   each order:
+   - configs and modality flags equal `build()`;
+   - condition and first-detected-season layers equal Python over the box;
+   - inspector rows and the expectation fit (regressors, coefficients, residual SD, R2)
+     equal Python at pixel 1;
+   - the run label and the fit summary name the order, and the short-season warning
+     shows for the default 122-day season.
 
 The true-color and NBR layers are reference imagery outside BULC-D and aren't
 compared. It uses BULC-D_rebuild's Node environment and Earth Engine token helper
 (setup in `../BULC-D_rebuild/gee/README.md`). From the `bulcd` env:
 
 ```sh
-cd gee/tests && python run_app_parity.py      # ~20 min
+cd gee/tests && python run_app_parity.py      # ~35 min
 ```
 
 `tests/controls_check.js` is a quick offline check of the settings panel (no
