@@ -80,6 +80,16 @@ assert.match(status(), /Warning: Expectation fit order 3 with a 122-day season m
 controls.fitOrder.setValue('1');
 assert.doesNotMatch(status(), /Warning/);
 
+// Detection timing: confirmed (only seasons that end as decrease) by default, raw as the option.
+// Not part of the bulcd config.
+assert.strictEqual(d.timing_confirmed, true);
+assert.match(status(), /A season counts only if it ends as decrease \(confirmed\)/);
+controls.timingConfirmed.setValue(false);
+assert.strictEqual(controls.read().timing_confirmed, false);
+assert.match(status(), /Any threshold crossing counts, even one BULC-D later retracts \(raw\)/);
+assert.deepStrictEqual(appConfig.buildConfig(controls.read(), AOI), cfg);
+controls.timingConfirmed.setValue(true);
+
 // The inspector applies each class's own threshold, strictly (> as legacy .gt()).
 const inspector = require('../inspector.js');
 const rows = [

@@ -4,16 +4,21 @@
 //      chart tables at reference pixels 1-3.
 //   2. app.js main() with a stub `ui`, driven through its own widgets: asset area
 //      (the testsite), default settings, "Run Early Detection";
-//      condition (with the final probabilities, to check the decision rule) and
-//      first-detected-season layers over the box; the inspector at
-//      pixel 1 by map click and at pixel 3 by typed lon/lat + Submit Pixel,
-//      including the expectation period (observations used in the fit, the fitted
-//      curve, the fit's coefficients/residual SD/R2) and the timeline chart.
+//      condition (with the final probabilities, to check the decision rule),
+//      first-detected-season, last-detection and detection-episode layers over
+//      the box; the inspector at pixel 1 by map click and at pixel 3 by typed
+//      lon/lat + Submit Pixel, including the expectation period (observations
+//      used in the fit, the fitted curve, the fit's coefficients/residual
+//      SD/R2) and the timeline chart.
+//   2b. The same GUI run with detection timing set to raw (Advanced settings):
+//      first-detected-season and episode layers over the box.
 //   3. The configs a non-default settings combination produces (no computation).
 //   4. Expectation fit orders 2 and 3, each chosen in the GUI's Advanced settings
-//      and run (order 1 is the default run in 2): configs, condition and
-//      first-detected-season layers over the box, and the inspector (rows,
-//      expectation fit, summary) at pixel 1.
+//      and run (order 1 is the default run in 2): configs, condition,
+//      first-detected-season and episode layers over the box, and the inspector
+//      (rows, expectation fit, summary) at pixel 1.
+//   5. Robert's Pine Mountain pixel (docs/findings.md 2026-10-13): detection
+//      timing image (first/last detection, episodes) and inspector rows there.
 // usage: node app_extract.js <out.json>
 const fs = require('fs');
 const path = require('path');
@@ -42,6 +47,19 @@ const VARIANT = {
 };
 // Must match run_app_parity.py FIT_ORDERS_RUN.
 const FIT_ORDERS_RUN = [2, 3];
+// Must match run_app_parity.py PINE_MOUNTAIN.
+const PM = { lon: -120.95938356858395, lat: 43.69499215695442, half: 0.01 };
+const PM_CONTROLS = Object.assign({}, appConfig.APP_DEFAULTS, {
+  expectation_first: 2023, expectation_last: 2023, monitoring_year: 2024, season_start: '02-01', season_end: '11-15',
+});
+const TIMING_BOX_BANDS = ['first_decrease_year', 'first_decrease_doy'];
+
+async function runGui(handle, what) {
+  const prev = handle.state.run;
+  handle.runButton.state.handlers.click();
+  await waitFor(() => handle.state.run && handle.state.run !== prev, what);
+  return handle.state.run;
+}
 
 function waitFor(predicate, what, ms = 900000) {
   const start = Date.now();
@@ -152,9 +170,18 @@ async function main(out) {
   data.notebook.layers = map.state.layers.items.map((l) => ({ name: l.name, shown: l.shown, opacity: l.opacity }));
   data.notebook.outcome_box = await boxRegion(run.outcome.select('outcome'));
   data.notebook.final_box = await boxRegion(run.result.final_probabilities.select(['decrease', 'increase']));
-  data.notebook.timing_box = await boxRegion(run.timing.select(['first_decrease_year', 'first_decrease_doy']));
+  data.notebook.timing_box = await boxRegion(run.timing.select(TIMING_BOX_BANDS));
+  data.notebook.episodes_box = await boxRegion(run.episodes);
   data.notebook.pixels = await selectPixels(handle, created, map, [REFERENCE_PIXELS[0], REFERENCE_PIXELS[2]],
                                             { [REFERENCE_PIXELS[2].label]: 'submit' }, run.thresholds);
+
+  // 2b. Detection timing raw (Advanced settings), Run.
+  handle.controls.timingConfirmed.setValue(false);
+  const raw = await runGui(handle, 'the raw-timing run');
+  data.raw = { label: raw.label, controls: handle.controls.read(),
+               timing_box: await boxRegion(raw.timing.select(TIMING_BOX_BANDS)),
+               episodes_box: await boxRegion(raw.episodes) };
+  handle.controls.timingConfirmed.setValue(true);
 
   // 3. Non-default settings: configs only.
   data.variant.config = bulcd.withDefaults(appConfig.buildConfig(VARIANT, area.aoi));
@@ -167,19 +194,38 @@ async function main(out) {
   for (const order of FIT_ORDERS_RUN) {
     handle.controls.fitOrder.setValue(String(order));
     const c = handle.controls.read();
-    const prev = handle.state.run;
-    handle.runButton.state.handlers.click();
-    await waitFor(() => handle.state.run && handle.state.run !== prev, 'the fit order ' + order + ' run');
-    const r = handle.state.run;
+    const r = await runGui(handle, 'the fit order ' + order + ' run');
     const o = data.orders[order] = { controls: c, label: r.label, config: r.config,
                                      description: appConfig.describeControls(c) };
     o.timing_configs = appConfig.timingYears(c).map((y) =>
       bulcd.withDefaults(appConfig.buildConfig(appConfig.withMonitoringYear(c, y), area.aoi)));
     o.outcome_box = await boxRegion(r.outcome.select('outcome'));
-    o.timing_box = await boxRegion(r.timing.select(['first_decrease_year', 'first_decrease_doy']));
+    o.timing_box = await boxRegion(r.timing.select(TIMING_BOX_BANDS));
+    o.episodes_box = await boxRegion(r.episodes);
     o.pixels = await selectPixels(handle, created, map, [REFERENCE_PIXELS[0]], {}, r.thresholds);
   }
   handle.controls.fitOrder.setValue('1');
+
+  // 5. Pine Mountain pixel: the detection timing image and the inspector rows there.
+  const ring = [[PM.lon - PM.half, PM.lat - PM.half], [PM.lon + PM.half, PM.lat - PM.half],
+                [PM.lon + PM.half, PM.lat + PM.half], [PM.lon - PM.half, PM.lat + PM.half],
+                [PM.lon - PM.half, PM.lat - PM.half]];
+  const pmConfig = bulcd.withDefaults(appConfig.buildConfig(PM_CONTROLS, { aoi_coordinates: ring }));
+  const pmCrs = inspector.utmCrsFor(PM.lon, PM.lat);
+  const pmImage = outputs.detectionTimingImage(bulcd, pmConfig, PM_CONTROLS.decrease_threshold,
+                                               PM_CONTROLS.increase_threshold, true);
+  const pmResult = bulcd.runBulcd(pmConfig);
+  const pmRows = inspector.historyRows(
+    await evaluate(inspector.historyQuery(pmResult, pmConfig, PM.lon, PM.lat)), pmConfig);
+  data.pine_mountain = {
+    config: pmConfig,
+    image: await evaluate(pmImage.reduceRegion({ reducer: ee.Reducer.first(), geometry: ee.Geometry.Point([PM.lon, PM.lat]),
+                                                 scale: 30, crs: pmCrs })),
+    combined: await evaluate(outputs.combineEpisodeMetrics({ 2024: pmImage }).reduceRegion({
+      reducer: ee.Reducer.first(), geometry: ee.Geometry.Point([PM.lon, PM.lat]), scale: 30, crs: pmCrs })),
+    episodes: inspector.detectionEpisodes(pmRows, PM_CONTROLS.decrease_threshold),
+    notes: inspector.episodeNotes(pmRows, PM_CONTROLS.decrease_threshold),
+  };
 
   fs.writeFileSync(out, JSON.stringify(data));
 }

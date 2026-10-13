@@ -24,6 +24,12 @@ app's own code (src/bulcd_early_detection) on the same settings:
    expectation period (bins, observations, fitted curve, coefficients, residual
    SD, R2) == Python bulcd's expectation fit at those pixels, and its timeline
    chart holds those rows; layer list in the notebook's order.
+   Detection timing: the last-detection and detection-episode layers ==
+   combine_episode_metrics() over the box; the first-detected-season bands are
+   identical with and without the episode bands (existing behavior
+   preserved); within each pixel first <= last detection and one episode
+   means last == first. 2b: the same with detection timing set to raw in the
+   GUI == the confirmed=False combinations.
 3. A non-default settings combination (including expectation fit order 2):
    configs == EarlyDetectionApp.build() with the same widget values (no
    computation).
@@ -34,8 +40,12 @@ app's own code (src/bulcd_early_detection) on the same settings:
    outcome_image() / combine_season_timing() over the box; inspector rows and
    expectation fit == Python at pixel 1; the run label and expectation summary
    name the order.
+5. Robert's Pine Mountain pixel (docs/findings.md, 2026-10-13): the JS and
+   Python detection timing images, both inspectors' episodes and the
+   documented values agree - first detection Apr 17 (doy 108), last detection
+   Sep 24 (doy 268), 2 episodes.
 
-Run from the bulcd env: cd gee/tests && python run_app_parity.py   (~35 min)
+Run from the bulcd env: cd gee/tests && python run_app_parity.py   (~45 min)
 Node and bulcd.js come from ../../BULC-D_rebuild/gee (BULCD_GEE overrides).
 """
 
@@ -64,6 +74,10 @@ VARIANT = dict(expectation=(2019, 2023), monitoring_year=2025, start=(5, 15), en
                fit_order=2, sensors={"L8": True, "L9": True, "S2": False}, mask_forest=True, mask_water=True)
 # Must match app_extract.js FIT_ORDERS_RUN; order 1 is the default run.
 FIT_ORDERS_RUN = (2, 3)
+# Must match app_extract.js PM / PM_CONTROLS.
+PINE_MOUNTAIN = dict(lon=-120.95938356858395, lat=43.69499215695442, half=0.01, expectation=(2023, 2023),
+                     monitoring_year=2024, start=(2, 1), end=(11, 15))
+TIMING_BOX_BANDS = ["first_decrease_year", "first_decrease_doy"]
 REGRESSORS = {1: ["constant", "cos", "sin"], 2: ["constant", "cos", "sin", "cos2", "sin2"],
               3: ["constant", "cos", "sin", "cos2", "sin2", "cos3", "sin3"]}
 # The original BULC-D GUI's thresholds (gee/tests/legacy_gui.js), the default in both apps.
@@ -142,6 +156,7 @@ def python_side(pixels):
                          decrease_threshold=app.decrease_threshold.value,
                          increase_threshold=app.increase_threshold.value, timing=app.timing.value, dampening=app.dampening.value,
                          posterior=app.posterior.value, fit_order=app.fit_order.value,
+                         timing_confirmed=app.timing_confirmed.value,
                          sensors={k: b.value for k, b in app.sensors.items()},
                          mask_forest=app.mask_forest.value, mask_water=app.mask_water.value,
                          allow_large=app.allow_large.value)
@@ -152,10 +167,19 @@ def python_side(pixels):
                                     .clip(geom)
                                     .select("outcome"))
     seasons = {y: outputs.detection_timing_image(build(app, app.controls(y)), c.decision_threshold,
-                                                 c.increase_threshold)
+                                                 c.increase_threshold, episodes=True)
                for y in years}
-    nb["timing_box"] = pool.submit(region, outputs.combine_season_timing(seasons).clip(geom)
-                                   .select(["first_decrease_year", "first_decrease_doy"]))
+    plain = {y: outputs.detection_timing_image(build(app, app.controls(y)), c.decision_threshold,
+                                               c.increase_threshold)
+             for y in years}
+    nb["timing_box"] = pool.submit(region, outputs.combine_season_timing(seasons).clip(geom).select(TIMING_BOX_BANDS))
+    nb["timing_box_plain"] = pool.submit(region, outputs.combine_season_timing(plain).clip(geom).select(TIMING_BOX_BANDS))
+    nb["episodes_box"] = pool.submit(region, outputs.combine_episode_metrics(seasons).clip(geom))
+    out["raw"] = {
+        "timing_box": pool.submit(region, outputs.combine_season_timing(seasons, confirmed=False).clip(geom)
+                                  .select(TIMING_BOX_BANDS)),
+        "episodes_box": pool.submit(region, outputs.combine_episode_metrics(seasons, confirmed=False).clip(geom)),
+    }
     nb["rows"] = {k: pool.submit(pixel.pixel_history, config, *pixels[k]) for k in (list(pixels)[0], list(pixels)[2])}
     nb["expectation"] = {k: pool.submit(expectation_history, config, *pixels[k])
                          for k in (list(pixels)[0], list(pixels)[2])}
@@ -174,17 +198,36 @@ def python_side(pixels):
         config = build(app_o, c)
         years = app_o._timing_years()
         seasons = {y: outputs.detection_timing_image(build(app_o, app_o.controls(y)), c.decision_threshold,
-                                                     c.increase_threshold) for y in years}
+                                                     c.increase_threshold, episodes=True) for y in years}
         out.setdefault("orders", {})[order] = {
             "config": dataclasses.asdict(config), "timing_years": years,
             "timing_configs": [dataclasses.asdict(build(app_o, app_o.controls(y))) for y in years],
             "outcome_box": pool.submit(region, outputs.outcome_image(config, c.decision_threshold, c.increase_threshold)
                                        .clip(geom).select("outcome")),
-            "timing_box": pool.submit(region, outputs.combine_season_timing(seasons).clip(geom)
-                                      .select(["first_decrease_year", "first_decrease_doy"])),
+            "timing_box": pool.submit(region, outputs.combine_season_timing(seasons).clip(geom).select(TIMING_BOX_BANDS)),
+            "episodes_box": pool.submit(region, outputs.combine_episode_metrics(seasons).clip(geom)),
             "rows": {first: pool.submit(pixel.pixel_history, config, *pixels[first])},
             "expectation": {first: pool.submit(expectation_history, config, *pixels[first])},
         }
+
+    pm = PINE_MOUNTAIN
+    app_pm = EarlyDetectionApp()
+    app_pm.expectation.value, app_pm.monitoring_year.value = pm["expectation"], pm["monitoring_year"]
+    app_pm.window.start_month.value, app_pm.window.start_day.value = pm["start"]
+    app_pm.window.end_month.value, app_pm.window.end_day.value = pm["end"]
+    lon, lat, h = pm["lon"], pm["lat"], pm["half"]
+    ring = [[lon - h, lat - h], [lon + h, lat - h], [lon + h, lat + h], [lon - h, lat + h], [lon - h, lat - h]]
+    c_pm = app_pm.controls()
+    cfg_pm = app_pm.build(c_pm, aoi_coordinates=ring)
+    pt, crs = ee.Geometry.Point([lon, lat]), pixel.utm_crs_for(lon, lat)
+    img = outputs.detection_timing_image(cfg_pm, c_pm.decision_threshold, c_pm.increase_threshold, episodes=True)
+    out["pine_mountain"] = {
+        "config": dataclasses.asdict(cfg_pm), "threshold": c_pm.decision_threshold,
+        "image": pool.submit(lambda: img.reduceRegion(ee.Reducer.first(), pt, 30, crs).getInfo()),
+        "combined": pool.submit(lambda: outputs.combine_episode_metrics({2024: img}).reduceRegion(
+            ee.Reducer.first(), pt, 30, crs).getInfo()),
+        "rows": pool.submit(pixel.pixel_history, cfg_pm, lon, lat),
+    }
 
     def resolve(x):
         if isinstance(x, dict):
@@ -297,6 +340,26 @@ def check_decision_rule(outcome_region, final_region, thresholds):
     return bad[:5] + ([] if n else ["no analyzed pixels to check the decision rule on"])
 
 
+def check_episodes(timing_region, episodes_region, name):
+    """Within each pixel: episodes >= 1 wherever there is a first detection,
+    last detection not before the first, and one episode means last == first."""
+    t, e = keyed(timing_region), keyed(episodes_region)
+    bad, n, multi = [], 0, 0
+    for (x, y, b), year in t.items():
+        if b != "first_decrease_year" or year is None:
+            continue
+        n += 1
+        first = year * 1000 + t[(x, y, "first_decrease_doy")]
+        last = (e.get((x, y, "last_decrease_year")) or 0) * 1000 + (e.get((x, y, "last_decrease_doy")) or 0)
+        count = e.get((x, y, "decrease_episodes")) or 0
+        multi += count > 1
+        if count < 1 or last < first or (count == 1 and last != first):
+            bad.append(f"{name} episodes at {x}, {y}: first {first}, last {last}, count {count}")
+    print(f"  {name}: first <= last detection, one episode => last == first: {'yes' if not bad else 'NO'} "
+          f"({n} detected pixels, {multi} with more than one episode)")
+    return bad[:5]
+
+
 def compare_box(name, js_region, py_region):
     jb, pb = keyed(js_region), keyed(py_region)
     diff = [k for k in set(jb) | set(pb) if not num_close(jb.get(k), pb.get(k))]
@@ -311,6 +374,7 @@ def compare_box(name, js_region, py_region):
 
 
 def main():
+    from bulcd_early_detection import pixel
     ee.Initialize(project="bulcd-python-rebuild")
     ref = json.loads(subprocess.check_output(
         [NODE, "-e", "console.log(JSON.stringify(require('./reference_case.js').REFERENCE_PIXELS))"], cwd=HERE))
@@ -356,6 +420,7 @@ def main():
         "increase_threshold": (c["increase_threshold"], w["increase_threshold"]),
         "timing": (c["timing"], w["timing"]), "dampening": (c["dampening"], w["dampening"]),
         "posterior": (c["posterior_leveler"], w["posterior"]), "fit_order": (c["fit_order"], w["fit_order"]),
+        "timing_confirmed": (c["timing_confirmed"], w["timing_confirmed"]),
         "sensors": (c["sensors"], w["sensors"]),
         "mask_forest": (c["mask_forest"], w["mask_forest"]), "mask_water": (c["mask_water"], w["mask_water"]),
         "allow_large": (c["allow_large"], w["allow_large"]),
@@ -374,12 +439,19 @@ def main():
     print(f"  config and first-detected-season configs ({py['notebook']['timing_years']}) == build(): "
           f"{'yes' if not f else 'NO'}")
     failures += f
+    failures += compare_box("notebook last detection / episodes", js["notebook"]["episodes_box"],
+                            py["notebook"]["episodes_box"])
+    f = compare_box("first detected season with vs without the episode bands (Python)",
+                    py["notebook"]["timing_box"], py["notebook"]["timing_box_plain"])
+    f += check_episodes(js["notebook"]["timing_box"], js["notebook"]["episodes_box"], "notebook")
+    failures += f
     names = [l["name"] for l in js["notebook"]["layers"] if l["name"] not in ("Study area", "Selected pixel")]
     print(f"  layers (bottom to top): {names}")
     shown = [l["name"] for l in js["notebook"]["layers"] if l.get("shown") is not False]
     years = [2024, 2025, 2026]
     expected = [f"True color {y}" for y in years] + [f"NBR composite R={years[0]} G={years[1]} B={years[2]}",
-                                                     "First detected season (decrease)", "Condition 2026"]
+                                                     "First detected season (decrease)", "Last detection (decrease)",
+                                                     "Detection episodes (decrease)", "Condition 2026"]
     if names != expected:
         failures.append(f"layer list {names} != notebook order {expected}")
     if [n for n in shown if n not in ("Study area", "Selected pixel")] != ["Condition 2026"]:
@@ -397,6 +469,17 @@ def main():
           for p in js["notebook"]["pixels"].values() if p["expectation"]["regressors"] != REGRESSORS[1]]
     print(f"  default run is expectation fit order 1 ({' + '.join(REGRESSORS[1])}): {'yes' if not f else 'NO'}")
     failures += f
+
+    print("2b. GUI: detection timing raw (Advanced settings), Run")
+    f = [] if js["raw"]["controls"]["timing_confirmed"] is False and "detection timing raw" in js["raw"]["label"] else \
+        [f"raw run not raw: {js['raw']['label']!r}"]
+    failures += f
+    failures += compare_box("raw first detected season", js["raw"]["timing_box"], py["raw"]["timing_box"])
+    failures += compare_box("raw last detection / episodes", js["raw"]["episodes_box"], py["raw"]["episodes_box"])
+    failures += check_episodes(js["raw"]["timing_box"], js["raw"]["episodes_box"], "raw")
+    conf, raw = keyed(js["notebook"]["timing_box"]), keyed(js["raw"]["timing_box"])
+    more = sum(1 for k, v in raw.items() if k[2] == "first_decrease_year" and v is not None and conf.get(k) is None)
+    print(f"  raw adds {more} pixels with a (later retracted) detection to the confirmed layer's")
 
     print("3. Non-default settings (configs only)")
     f = subset_mismatches(js["variant"]["config"], py["variant"]["config"])
@@ -435,9 +518,32 @@ def main():
         failures += f
         failures += compare_box(f"order {order} condition", jo["outcome_box"], po["outcome_box"])
         failures += compare_box(f"order {order} first detected season", jo["timing_box"], po["timing_box"])
+        failures += compare_box(f"order {order} last detection / episodes", jo["episodes_box"], po["episodes_box"])
+        failures += check_episodes(jo["timing_box"], jo["episodes_box"], f"order {order}")
         failures += compare_pixels(f"order {order}", jo["pixels"], po["rows"],
                                    [LEGACY_THRESHOLDS["decrease"], LEGACY_THRESHOLDS["increase"]])
         failures += compare_expectation(f"order {order}", jo["pixels"], po["expectation"])
+
+    print("5. Pine Mountain pixel (docs/findings.md, 2026-10-13)")
+    jp, pp = js["pine_mountain"], py["pine_mountain"]
+    f = subset_mismatches(jp["config"], pp["config"], "Pine Mountain config")
+    want = {"first_decrease_year": 2024, "first_decrease_doy": 108, "last_decrease_year": 2024,
+            "last_decrease_doy": 268, "decrease_episodes": 2, "outcome": 0}
+    for name, got in (("JS image", jp["image"]), ("Python image", pp["image"])):
+        f += [f"{name} {k}: {got.get(k)} != {v}" for k, v in want.items() if got.get(k) != v]
+    for name, got in (("JS combined", jp["combined"]), ("Python combined", pp["combined"])):
+        f += [f"{name} {k}: {got.get(k)} != {want[k]}" for k in want if k in got and got[k] != want[k]]
+    py_eps = [{"start": str(e["start"]), "end": None if e["end"] is None else str(e["end"])}
+              for e in pixel.detection_episodes(pp["rows"], pp["threshold"])]
+    doc = [{"start": "2024-04-17", "end": "2024-06-08"}, {"start": "2024-09-24", "end": None}]
+    if jp["episodes"] != doc or py_eps != doc:
+        f.append(f"inspector episodes JS {jp['episodes']} / Python {py_eps} != {doc}")
+    if jp["notes"] != pixel.episode_notes(pp["rows"], pp["threshold"]):
+        f.append(f"episode notes differ: JS {jp['notes']} vs Python {pixel.episode_notes(pp['rows'], pp['threshold'])}")
+    print(f"  image (JS and Python): first {jp['image'].get('first_decrease_doy')}, last "
+          f"{jp['image'].get('last_decrease_doy')}, episodes {jp['image'].get('decrease_episodes')}; inspector: "
+          f"{jp['notes'][0] if jp['notes'] else '-'} - {'match' if not f else 'MISMATCH'}")
+    failures += f
 
     if failures:
         print("\nAPP PARITY FAILED")

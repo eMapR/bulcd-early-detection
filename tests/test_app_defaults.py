@@ -172,3 +172,20 @@ def test_python_and_gee_fit_order_mapping_and_warning_match():
         py = dataclasses.asdict(build_config(c, aoi_asset="x").modality)
         assert {k: v for k, v in py.items() if v} == modality, (order, start, end)
         assert c.fit_order_warning == warning, (order, start, end)
+
+
+def test_detection_timing_defaults_to_confirmed(app):
+    """Confirmed (only seasons that end as decrease) is the default in both apps; raw is the option."""
+    assert app.timing_confirmed.value is True
+    assert "A season counts only if it ends as decrease (confirmed)." in app.relationship.value
+    app.timing_confirmed.value = False
+    try:
+        assert "Any threshold crossing counts, even one BULC-D later retracts (raw)." in app.relationship.value
+    finally:
+        app.timing_confirmed.value = True
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node not on PATH")
+    out = subprocess.check_output([node, "-e", "console.log(require('../config.js').APP_DEFAULTS.timing_confirmed)"],
+                                  cwd=GEE_TESTS, text=True).strip()
+    assert out == "true"
