@@ -55,6 +55,31 @@ assert.strictEqual(d.decrease_threshold, LEGACY_DEFAULTS.decrease_threshold);
 assert.strictEqual(d.increase_threshold, LEGACY_DEFAULTS.increase_threshold);
 assert.match(appConfig.validateControls(Object.assign({}, d, { increase_threshold: 1.0 })), /increase threshold/);
 
+// Expectation fit order: a select in Advanced settings, default 1 = the original GUI's
+// constant + unimodal (the modality check above); 2 and 3 add bimodal and trimodal.
+assert.strictEqual(d.fit_order, 1);
+assert.deepStrictEqual(controls.fitOrder.items().items.map((i) => i.value), ['1', '2', '3']);
+const withOrder = (o, extra) => Object.assign({}, d, { fit_order: o }, extra || {});
+assert.deepStrictEqual(appConfig.buildConfig(withOrder(2), AOI).modality, { constant: true, unimodal: true, bimodal: true });
+assert.deepStrictEqual(appConfig.buildConfig(withOrder(3), AOI).modality,
+                       { constant: true, unimodal: true, bimodal: true, trimodal: true });
+const regs = (o) => bulcd.withDefaults(appConfig.buildConfig(withOrder(o), AOI)).modality;
+assert.deepStrictEqual(regs(1), { constant: true, linear: false, unimodal: true, bimodal: false, trimodal: false });
+assert.match(appConfig.validateControls(withOrder(4)), /fit order/);
+// Warning (not blocking) below 183 days for order 2 and 245 days for order 3.
+assert.strictEqual(appConfig.fitOrderWarning(withOrder(1)), null);
+assert.match(appConfig.fitOrderWarning(withOrder(2)), /order 2 with a 122-day season/);
+assert.strictEqual(appConfig.fitOrderWarning(withOrder(2, { season_end: '11-30' })), null);            // 183 days
+assert.match(appConfig.fitOrderWarning(withOrder(2, { season_end: '11-29' })), /182-day/);
+assert.strictEqual(appConfig.fitOrderWarning(withOrder(3, { season_start: '03-01', season_end: '10-31' })), null);  // 245
+assert.match(appConfig.fitOrderWarning(withOrder(3, { season_start: '03-01', season_end: '10-30' })), /244-day/);
+assert.strictEqual(appConfig.validateControls(withOrder(3)), null);
+controls.fitOrder.setValue('3');
+assert.strictEqual(controls.read().fit_order, 3);
+assert.match(status(), /Warning: Expectation fit order 3 with a 122-day season may be unstable/);
+controls.fitOrder.setValue('1');
+assert.doesNotMatch(status(), /Warning/);
+
 // The inspector applies each class's own threshold, strictly (> as legacy .gt()).
 const inspector = require('../inspector.js');
 const rows = [
@@ -107,5 +132,5 @@ console.log('defaults vs original BULC-D GUI: sensitivity ' + d.sensitivity + ',
             ' decrease / ' + d.increase_threshold + ' increase, dampening ' + d.dampening +
             ', posterior ' + d.posterior_leveler + ', starting odds ' + [start.decrease, start.unchanged,
             start.increase].map((x) => x.toFixed(2)).join('/') + ', forest mask ' + d.mask_forest + ', water mask ' +
-            d.mask_water + ' - ok');
+            d.mask_water + ', expectation fit order ' + d.fit_order + ' - ok');
 console.log('controls check: OK');

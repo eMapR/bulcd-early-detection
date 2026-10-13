@@ -10,6 +10,10 @@
 //      including the expectation period (observations used in the fit, the fitted
 //      curve, the fit's coefficients/residual SD/R2) and the timeline chart.
 //   3. The configs a non-default settings combination produces (no computation).
+//   4. Expectation fit orders 2 and 3, each chosen in the GUI's Advanced settings
+//      and run (order 1 is the default run in 2): configs, condition and
+//      first-detected-season layers over the box, and the inspector (rows,
+//      expectation fit, summary) at pixel 1.
 // usage: node app_extract.js <out.json>
 const fs = require('fs');
 const path = require('path');
@@ -33,9 +37,11 @@ const BOX = [-123.5725, 44.8300, -123.5400, 44.8500];
 const VARIANT = {
   expectation_first: 2019, expectation_last: 2023, monitoring_year: 2025, season_start: '05-15',
   season_end: '10-15', sensitivity: 1.5, decrease_threshold: 0.6, increase_threshold: 0.8, timing: true,
-  dampening: 0.5, posterior_leveler: 1.0, sensors: { L8: true, L9: true, S2: false }, mask_forest: true,
-  mask_water: true, allow_large: false,
+  dampening: 0.5, posterior_leveler: 1.0, fit_order: 2, sensors: { L8: true, L9: true, S2: false },
+  mask_forest: true, mask_water: true, allow_large: false,
 };
+// Must match run_app_parity.py FIT_ORDERS_RUN.
+const FIT_ORDERS_RUN = [2, 3];
 
 function waitFor(predicate, what, ms = 900000) {
   const start = Date.now();
@@ -155,6 +161,25 @@ async function main(out) {
   data.variant.timing_years = appConfig.timingYears(VARIANT);
   data.variant.timing_configs = data.variant.timing_years.map((y) =>
     bulcd.withDefaults(appConfig.buildConfig(appConfig.withMonitoringYear(VARIANT, y), area.aoi)));
+
+  // 4. Expectation fit orders 2 and 3: chosen in Advanced settings, then Run.
+  data.orders = {};
+  for (const order of FIT_ORDERS_RUN) {
+    handle.controls.fitOrder.setValue(String(order));
+    const c = handle.controls.read();
+    const prev = handle.state.run;
+    handle.runButton.state.handlers.click();
+    await waitFor(() => handle.state.run && handle.state.run !== prev, 'the fit order ' + order + ' run');
+    const r = handle.state.run;
+    const o = data.orders[order] = { controls: c, label: r.label, config: r.config,
+                                     description: appConfig.describeControls(c) };
+    o.timing_configs = appConfig.timingYears(c).map((y) =>
+      bulcd.withDefaults(appConfig.buildConfig(appConfig.withMonitoringYear(c, y), area.aoi)));
+    o.outcome_box = await boxRegion(r.outcome.select('outcome'));
+    o.timing_box = await boxRegion(r.timing.select(['first_decrease_year', 'first_decrease_doy']));
+    o.pixels = await selectPixels(handle, created, map, [REFERENCE_PIXELS[0]], {}, r.thresholds);
+  }
+  handle.controls.fitOrder.setValue('1');
 
   fs.writeFileSync(out, JSON.stringify(data));
 }

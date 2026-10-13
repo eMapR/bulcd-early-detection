@@ -24,10 +24,18 @@ app's own code (src/bulcd_early_detection) on the same settings:
    expectation period (bins, observations, fitted curve, coefficients, residual
    SD, R2) == Python bulcd's expectation fit at those pixels, and its timeline
    chart holds those rows; layer list in the notebook's order.
-3. A non-default settings combination: configs == EarlyDetectionApp.build()
-   with the same widget values (no computation).
+3. A non-default settings combination (including expectation fit order 2):
+   configs == EarlyDetectionApp.build() with the same widget values (no
+   computation).
+4. Expectation fit orders 2 and 3, each chosen in the GUI's Advanced settings
+   and run (order 1 = the default run in 2): config and first-detected-season
+   configs == build() with the same fit order (and the modality flags/regressors
+   that order means); condition and first-detected-season layers ==
+   outcome_image() / combine_season_timing() over the box; inspector rows and
+   expectation fit == Python at pixel 1; the run label and expectation summary
+   name the order.
 
-Run from the bulcd env: cd gee/tests && python run_app_parity.py   (~20 min)
+Run from the bulcd env: cd gee/tests && python run_app_parity.py   (~35 min)
 Node and bulcd.js come from ../../BULC-D_rebuild/gee (BULCD_GEE overrides).
 """
 
@@ -53,7 +61,11 @@ NUMERIC = ("observed", "expected", "zscore", *CLASSES)
 # Must match app_extract.js VARIANT.
 VARIANT = dict(expectation=(2019, 2023), monitoring_year=2025, start=(5, 15), end=(10, 15), sensitivity=1.5,
                decrease_threshold=0.6, increase_threshold=0.8, timing=True, dampening=0.5, posterior=1.0,
-               sensors={"L8": True, "L9": True, "S2": False}, mask_forest=True, mask_water=True)
+               fit_order=2, sensors={"L8": True, "L9": True, "S2": False}, mask_forest=True, mask_water=True)
+# Must match app_extract.js FIT_ORDERS_RUN; order 1 is the default run.
+FIT_ORDERS_RUN = (2, 3)
+REGRESSORS = {1: ["constant", "cos", "sin"], 2: ["constant", "cos", "sin", "cos2", "sin2"],
+              3: ["constant", "cos", "sin", "cos2", "sin2", "cos3", "sin3"]}
 # The original BULC-D GUI's thresholds (gee/tests/legacy_gui.js), the default in both apps.
 LEGACY_THRESHOLDS = {"decrease": 0.65, "increase": 0.75}
 
@@ -96,6 +108,7 @@ def set_widgets(app, v):
     app.sensitivity.value, app.timing.value = v["sensitivity"], v["timing"]
     app.decrease_threshold.value, app.increase_threshold.value = v["decrease_threshold"], v["increase_threshold"]
     app.dampening.value, app.posterior.value = v["dampening"], v["posterior"]
+    app.fit_order.value = v["fit_order"]
     for k, on in v["sensors"].items():
         app.sensors[k].value = on
     app.mask_forest.value, app.mask_water.value = v["mask_forest"], v["mask_water"]
@@ -128,7 +141,8 @@ def python_side(pixels):
                          window=list(app.window.value), sensitivity=app.sensitivity.value,
                          decrease_threshold=app.decrease_threshold.value,
                          increase_threshold=app.increase_threshold.value, timing=app.timing.value, dampening=app.dampening.value,
-                         posterior=app.posterior.value, sensors={k: b.value for k, b in app.sensors.items()},
+                         posterior=app.posterior.value, fit_order=app.fit_order.value,
+                         sensors={k: b.value for k, b in app.sensors.items()},
                          mask_forest=app.mask_forest.value, mask_water=app.mask_water.value,
                          allow_large=app.allow_large.value)
     nb["config"] = dataclasses.asdict(config)
@@ -151,6 +165,26 @@ def python_side(pixels):
     out["variant"]["timing_years"] = app._timing_years()
     out["variant"]["timing_configs"] = [dataclasses.asdict(build(app, app.controls(y)))
                                         for y in app._timing_years()]
+
+    first = list(pixels)[0]
+    for order in FIT_ORDERS_RUN:
+        app_o = EarlyDetectionApp()
+        app_o.fit_order.value = order
+        c = app_o.controls()
+        config = build(app_o, c)
+        years = app_o._timing_years()
+        seasons = {y: outputs.detection_timing_image(build(app_o, app_o.controls(y)), c.decision_threshold,
+                                                     c.increase_threshold) for y in years}
+        out.setdefault("orders", {})[order] = {
+            "config": dataclasses.asdict(config), "timing_years": years,
+            "timing_configs": [dataclasses.asdict(build(app_o, app_o.controls(y))) for y in years],
+            "outcome_box": pool.submit(region, outputs.outcome_image(config, c.decision_threshold, c.increase_threshold)
+                                       .clip(geom).select("outcome")),
+            "timing_box": pool.submit(region, outputs.combine_season_timing(seasons).clip(geom)
+                                      .select(["first_decrease_year", "first_decrease_doy"])),
+            "rows": {first: pool.submit(pixel.pixel_history, config, *pixels[first])},
+            "expectation": {first: pool.submit(expectation_history, config, *pixels[first])},
+        }
 
     def resolve(x):
         if isinstance(x, dict):
@@ -321,7 +355,8 @@ def main():
         "decrease_threshold": (c["decrease_threshold"], w["decrease_threshold"]),
         "increase_threshold": (c["increase_threshold"], w["increase_threshold"]),
         "timing": (c["timing"], w["timing"]), "dampening": (c["dampening"], w["dampening"]),
-        "posterior": (c["posterior_leveler"], w["posterior"]), "sensors": (c["sensors"], w["sensors"]),
+        "posterior": (c["posterior_leveler"], w["posterior"]), "fit_order": (c["fit_order"], w["fit_order"]),
+        "sensors": (c["sensors"], w["sensors"]),
         "mask_forest": (c["mask_forest"], w["mask_forest"]), "mask_water": (c["mask_water"], w["mask_water"]),
         "allow_large": (c["allow_large"], w["allow_large"]),
     }
@@ -355,6 +390,13 @@ def main():
     failures += compare_pixels("notebook", js["notebook"]["pixels"], py["notebook"]["rows"],
                                [LEGACY_THRESHOLDS["decrease"], LEGACY_THRESHOLDS["increase"]])
     failures += compare_expectation("notebook", js["notebook"]["pixels"], py["notebook"]["expectation"])
+    # The default run is expectation fit order 1 (the original GUI's constant + unimodal).
+    f = [] if c["fit_order"] == 1 and "expectation fit order 1" in js["notebook"]["label"] else \
+        [f"default run is not fit order 1: {c['fit_order']}, {js['notebook']['label']!r}"]
+    f += [f"default inspector regressors {p['expectation']['regressors']} != {REGRESSORS[1]}"
+          for p in js["notebook"]["pixels"].values() if p["expectation"]["regressors"] != REGRESSORS[1]]
+    print(f"  default run is expectation fit order 1 ({' + '.join(REGRESSORS[1])}): {'yes' if not f else 'NO'}")
+    failures += f
 
     print("3. Non-default settings (configs only)")
     f = subset_mismatches(js["variant"]["config"], py["variant"]["config"])
@@ -365,6 +407,37 @@ def main():
     print(f"  config and first-detected-season configs ({py['variant']['timing_years']}) == build(): "
           f"{'yes' if not f else 'NO'}")
     failures += f
+
+    print("4. Expectation fit orders (chosen in Advanced settings, Run; order 1 is the default run in 2)")
+    for order in FIT_ORDERS_RUN:
+        jo, po = js["orders"][str(order)], py["orders"][order]
+        f = [] if jo["controls"]["fit_order"] == order else [f"GUI read fit_order {jo['controls']['fit_order']}"]
+        f += subset_mismatches(jo["config"], po["config"], f"order {order} config")
+        flags = {k for k, v in po["config"]["modality"].items() if v}
+        want = {"constant", "unimodal", "bimodal", "trimodal"} - ({"bimodal", "trimodal"} if order == 1 else
+                                                                   {"trimodal"} if order == 2 else set())
+        if flags != want:
+            f.append(f"order {order} modality flags {sorted(flags)} != {sorted(want)}")
+        for y, a, b in zip(po["timing_years"], jo["timing_configs"], po["timing_configs"]):
+            f += subset_mismatches(a, b, f"order {order} timing config {y}")
+        if f"expectation fit order {order}" not in jo["label"]:
+            f.append(f"run label does not name fit order {order}: {jo['label']!r}")
+        summary = jo["pixels"][list(po["rows"])[0]]["expectation"]["summary"]
+        if not any(line.startswith(f"Expectation fit order {order}.") for line in summary):
+            f.append(f"inspector summary does not name fit order {order}")
+        if js["orders"][str(order)]["pixels"][list(po["rows"])[0]]["expectation"]["regressors"] != REGRESSORS[order]:
+            f.append(f"order {order} inspector regressors != {REGRESSORS[order]}")
+        warned = any(line.startswith("Warning: Expectation fit order") for line in jo["description"])
+        print(f"  order {order}: config, modality {sorted(flags)} and first-detected-season configs == build(): "
+              f"{'yes' if not f else 'NO'}; short-season warning shown: {'yes' if warned else 'no'}")
+        if not warned:
+            f.append(f"order {order} with the default 122-day season shows no warning")
+        failures += f
+        failures += compare_box(f"order {order} condition", jo["outcome_box"], po["outcome_box"])
+        failures += compare_box(f"order {order} first detected season", jo["timing_box"], po["timing_box"])
+        failures += compare_pixels(f"order {order}", jo["pixels"], po["rows"],
+                                   [LEGACY_THRESHOLDS["decrease"], LEGACY_THRESHOLDS["increase"]])
+        failures += compare_expectation(f"order {order}", jo["pixels"], po["expectation"])
 
     if failures:
         print("\nAPP PARITY FAILED")
