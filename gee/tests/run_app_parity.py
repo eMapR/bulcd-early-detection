@@ -25,10 +25,10 @@ app's own code (src/bulcd_early_detection) on the same settings:
    SD, R2) == Python bulcd's expectation fit at those pixels, and its timeline
    chart holds those rows; layer list in the notebook's order.
    Detection timing: the last-detection and detection-episode layers ==
-   combine_episode_metrics() over the box; the first-detected-season bands are
-   identical with and without the episode bands (existing behavior
-   preserved); within each pixel first <= last detection and one episode
-   means last == first. 2b: the same with detection timing set to raw in the
+   combine_episode_metrics() over the box; the pixels with a first detection
+   are exactly those with episodes, first <= last detection, and one episode
+   means last == first. (layer_size_check.js checks the first-detected-season
+   layer itself is built exactly as before the episode layers.) 2b: the same with detection timing set to raw in the
    GUI == the confirmed=False combinations.
 3. A non-default settings combination (including expectation fit order 2):
    configs == EarlyDetectionApp.build() with the same widget values (no
@@ -167,18 +167,18 @@ def python_side(pixels):
                                     .clip(geom)
                                     .select("outcome"))
     seasons = {y: outputs.detection_timing_image(build(app, app.controls(y)), c.decision_threshold,
-                                                 c.increase_threshold, episodes=True)
+                                                 c.increase_threshold)
                for y in years}
-    plain = {y: outputs.detection_timing_image(build(app, app.controls(y)), c.decision_threshold,
-                                               c.increase_threshold)
-             for y in years}
+
+    def codes(a, confirmed=True):
+        return {y: outputs.detection_episode_image(build(a, a.controls(y)), c.decision_threshold, c.increase_threshold,
+                                                   confirmed=confirmed) for y in a._timing_years()}
     nb["timing_box"] = pool.submit(region, outputs.combine_season_timing(seasons).clip(geom).select(TIMING_BOX_BANDS))
-    nb["timing_box_plain"] = pool.submit(region, outputs.combine_season_timing(plain).clip(geom).select(TIMING_BOX_BANDS))
-    nb["episodes_box"] = pool.submit(region, outputs.combine_episode_metrics(seasons).clip(geom))
+    nb["episodes_box"] = pool.submit(region, outputs.combine_episode_metrics(codes(app)).clip(geom))
     out["raw"] = {
         "timing_box": pool.submit(region, outputs.combine_season_timing(seasons, confirmed=False).clip(geom)
                                   .select(TIMING_BOX_BANDS)),
-        "episodes_box": pool.submit(region, outputs.combine_episode_metrics(seasons, confirmed=False).clip(geom)),
+        "episodes_box": pool.submit(region, outputs.combine_episode_metrics(codes(app, False)).clip(geom)),
     }
     nb["rows"] = {k: pool.submit(pixel.pixel_history, config, *pixels[k]) for k in (list(pixels)[0], list(pixels)[2])}
     nb["expectation"] = {k: pool.submit(expectation_history, config, *pixels[k])
@@ -198,14 +198,14 @@ def python_side(pixels):
         config = build(app_o, c)
         years = app_o._timing_years()
         seasons = {y: outputs.detection_timing_image(build(app_o, app_o.controls(y)), c.decision_threshold,
-                                                     c.increase_threshold, episodes=True) for y in years}
+                                                     c.increase_threshold) for y in years}
         out.setdefault("orders", {})[order] = {
             "config": dataclasses.asdict(config), "timing_years": years,
             "timing_configs": [dataclasses.asdict(build(app_o, app_o.controls(y))) for y in years],
             "outcome_box": pool.submit(region, outputs.outcome_image(config, c.decision_threshold, c.increase_threshold)
                                        .clip(geom).select("outcome")),
             "timing_box": pool.submit(region, outputs.combine_season_timing(seasons).clip(geom).select(TIMING_BOX_BANDS)),
-            "episodes_box": pool.submit(region, outputs.combine_episode_metrics(seasons).clip(geom)),
+            "episodes_box": pool.submit(region, outputs.combine_episode_metrics(codes(app_o)).clip(geom)),
             "rows": {first: pool.submit(pixel.pixel_history, config, *pixels[first])},
             "expectation": {first: pool.submit(expectation_history, config, *pixels[first])},
         }
@@ -220,12 +220,14 @@ def python_side(pixels):
     c_pm = app_pm.controls()
     cfg_pm = app_pm.build(c_pm, aoi_coordinates=ring)
     pt, crs = ee.Geometry.Point([lon, lat]), pixel.utm_crs_for(lon, lat)
-    img = outputs.detection_timing_image(cfg_pm, c_pm.decision_threshold, c_pm.increase_threshold, episodes=True)
+    img = outputs.detection_timing_image(cfg_pm, c_pm.decision_threshold, c_pm.increase_threshold).addBands(
+        outputs.combine_episode_metrics({2024: outputs.detection_episode_image(
+            cfg_pm, c_pm.decision_threshold, c_pm.increase_threshold)}))
+    bands = outputs.decrease_episode_bands(run_bulcd(cfg_pm).probability_stack, c_pm.decision_threshold)
     out["pine_mountain"] = {
         "config": dataclasses.asdict(cfg_pm), "threshold": c_pm.decision_threshold,
         "image": pool.submit(lambda: img.reduceRegion(ee.Reducer.first(), pt, 30, crs).getInfo()),
-        "combined": pool.submit(lambda: outputs.combine_episode_metrics({2024: img}).reduceRegion(
-            ee.Reducer.first(), pt, 30, crs).getInfo()),
+        "combined": pool.submit(lambda: bands.reduceRegion(ee.Reducer.first(), pt, 30, crs).getInfo()),
         "rows": pool.submit(pixel.pixel_history, cfg_pm, lon, lat),
     }
 
@@ -341,10 +343,13 @@ def check_decision_rule(outcome_region, final_region, thresholds):
 
 
 def check_episodes(timing_region, episodes_region, name):
-    """Within each pixel: episodes >= 1 wherever there is a first detection,
-    last detection not before the first, and one episode means last == first."""
+    """The pixels with a first detection are exactly those with episodes; within
+    each, last detection is not before the first, and one episode means last == first."""
     t, e = keyed(timing_region), keyed(episodes_region)
     bad, n, multi = [], 0, 0
+    for (x, y, b), count in e.items():
+        if b == "decrease_episodes" and count is not None and t.get((x, y, "first_decrease_year")) is None:
+            bad.append(f"{name} episodes at {x}, {y} ({count}) but no first detection")
     for (x, y, b), year in t.items():
         if b != "first_decrease_year" or year is None:
             continue
@@ -441,10 +446,7 @@ def main():
     failures += f
     failures += compare_box("notebook last detection / episodes", js["notebook"]["episodes_box"],
                             py["notebook"]["episodes_box"])
-    f = compare_box("first detected season with vs without the episode bands (Python)",
-                    py["notebook"]["timing_box"], py["notebook"]["timing_box_plain"])
-    f += check_episodes(js["notebook"]["timing_box"], js["notebook"]["episodes_box"], "notebook")
-    failures += f
+    failures += check_episodes(js["notebook"]["timing_box"], js["notebook"]["episodes_box"], "notebook")
     names = [l["name"] for l in js["notebook"]["layers"] if l["name"] not in ("Study area", "Selected pixel")]
     print(f"  layers (bottom to top): {names}")
     shown = [l["name"] for l in js["notebook"]["layers"] if l.get("shown") is not False]
@@ -531,7 +533,7 @@ def main():
             "last_decrease_doy": 268, "decrease_episodes": 2, "outcome": 0}
     for name, got in (("JS image", jp["image"]), ("Python image", pp["image"])):
         f += [f"{name} {k}: {got.get(k)} != {v}" for k, v in want.items() if got.get(k) != v]
-    for name, got in (("JS combined", jp["combined"]), ("Python combined", pp["combined"])):
+    for name, got in (("JS episode bands", jp["combined"]), ("Python episode bands", pp["combined"])):
         f += [f"{name} {k}: {got.get(k)} != {want[k]}" for k in want if k in got and got[k] != want[k]]
     py_eps = [{"start": str(e["start"]), "end": None if e["end"] is None else str(e["end"])}
               for e in pixel.detection_episodes(pp["rows"], pp["threshold"])]

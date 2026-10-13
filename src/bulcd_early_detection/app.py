@@ -396,10 +396,13 @@ class EarlyDetectionApp:
         if years:
             # First-detected season, last detection and detection episodes: the decrease threshold.
             seasons = {y: outputs.detection_timing_image(self.build(self.controls(y), **area.aoi), controls.decision_threshold,
-                                                         controls.increase_threshold, episodes=True)
+                                                         controls.increase_threshold)
                        for y in years}
             timing = outputs.combine_season_timing(seasons, confirmed=confirmed).clip(geom)
-            episodes = outputs.combine_episode_metrics(seasons, confirmed=confirmed).clip(geom)
+            codes = {y: outputs.detection_episode_image(self.build(self.controls(y), **area.aoi), controls.decision_threshold,
+                                                        controls.increase_threshold, confirmed=confirmed)
+                     for y in years}
+            episodes = outputs.combine_episode_metrics(codes).clip(geom)
         img_years = [controls.monitoring_year - 2, controls.monitoring_year - 1, controls.monitoring_year]
         window = (controls.season_start, controls.season_end)
         self.run_state = {"controls": controls, "config": config, "condition": condition, "timing": timing,

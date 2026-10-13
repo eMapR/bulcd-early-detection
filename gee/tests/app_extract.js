@@ -213,7 +213,9 @@ async function main(out) {
   const pmConfig = bulcd.withDefaults(appConfig.buildConfig(PM_CONTROLS, { aoi_coordinates: ring }));
   const pmCrs = inspector.utmCrsFor(PM.lon, PM.lat);
   const pmImage = outputs.detectionTimingImage(bulcd, pmConfig, PM_CONTROLS.decrease_threshold,
-                                               PM_CONTROLS.increase_threshold, true);
+                                               PM_CONTROLS.increase_threshold).addBands(
+    outputs.combineEpisodeMetrics({ 2024: outputs.detectionEpisodeImage(bulcd, pmConfig, PM_CONTROLS.decrease_threshold,
+                                                                        PM_CONTROLS.increase_threshold) }));
   const pmResult = bulcd.runBulcd(pmConfig);
   const pmRows = inspector.historyRows(
     await evaluate(inspector.historyQuery(pmResult, pmConfig, PM.lon, PM.lat)), pmConfig);
@@ -221,7 +223,8 @@ async function main(out) {
     config: pmConfig,
     image: await evaluate(pmImage.reduceRegion({ reducer: ee.Reducer.first(), geometry: ee.Geometry.Point([PM.lon, PM.lat]),
                                                  scale: 30, crs: pmCrs })),
-    combined: await evaluate(outputs.combineEpisodeMetrics({ 2024: pmImage }).reduceRegion({
+    combined: await evaluate(outputs.decreaseEpisodeBands(pmResult.probability_stack, PM_CONTROLS.decrease_threshold)
+      .reduceRegion({
       reducer: ee.Reducer.first(), geometry: ee.Geometry.Point([PM.lon, PM.lat]), scale: 30, crs: pmCrs })),
     episodes: inspector.detectionEpisodes(pmRows, PM_CONTROLS.decrease_threshold),
     notes: inspector.episodeNotes(pmRows, PM_CONTROLS.decrease_threshold),

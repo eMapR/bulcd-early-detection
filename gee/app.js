@@ -230,10 +230,17 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
       years.forEach(function (y) {
         seasons[y] = outputs.detectionTimingImage(bulcd, appConfig.buildConfig(appConfig.withMonitoringYear(c, y),
                                                                              area.aoi), thresholds.decrease,
-                                                  thresholds.increase, true);
+                                                  thresholds.increase);
       });
       timing = outputs.combineSeasonTiming(seasons, c.timing_confirmed).clip(geom);
-      episodes = outputs.combineEpisodeMetrics(seasons, c.timing_confirmed).clip(geom);
+      // Separate per-season images for the episode layers, so each layer's description stays small.
+      var codes = {};
+      years.forEach(function (y) {
+        codes[y] = outputs.detectionEpisodeImage(bulcd, appConfig.buildConfig(appConfig.withMonitoringYear(c, y),
+                                                                            area.aoi), thresholds.decrease,
+                                                 thresholds.increase, c.timing_confirmed);
+      });
+      episodes = outputs.combineEpisodeMetrics(codes).clip(geom);
     }
 
     // Layers, bottom to top (the notebook's order); only the condition layer starts on.

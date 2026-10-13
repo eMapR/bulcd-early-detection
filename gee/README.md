@@ -186,6 +186,20 @@ Earth Engine). It covers four things:
 node gee/tests/controls_check.js
 ```
 
+`tests/layer_size_check.js` checks the BULC-D map layers' descriptions (Earth Engine login, about a minute, no
+pixel computation). The Code Editor writes a layer's description out with every repeated sub-expression copied,
+and fails with "Layer error: Description length exceeds maximum" when that gets too long (`docs/findings.md`,
+2026-10-13). The check drives the app for the default settings, raw detection timing and fit order 3, and checks:
+
+- the First detected season layer is built exactly as before the episode layers;
+- the Last detection and Detection episodes descriptions, written out in full, are no longer than First
+  detected season's;
+- Earth Engine accepts every layer's map request.
+
+```sh
+cd gee/tests && node layer_size_check.js
+```
+
 `tests/inspector_state_check.js` is a regression test for the inspector's coordinate
 handling (live Earth Engine, ~5 min). It drives the app through this sequence:
 

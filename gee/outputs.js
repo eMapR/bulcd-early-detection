@@ -88,31 +88,54 @@ function outcomeVis() {
 // carry the previous probability, so they never start or end one. Bands
 // decrease_episodes, last_decrease_year/doy (start of the most recent
 // episode); 0 where there was none.
+//
+// One pass over the bins in time order, carrying (above, count, last start)
+// per pixel. The probability history is referenced once: the Code Editor
+// expands every repeated reference to it when it describes a map layer, and
+// "Description length exceeds maximum" otherwise (docs/findings.md, 2026-10-13).
 var EPISODE_BANDS = ['last_decrease_year', 'last_decrease_doy', 'decrease_episodes'];
+// episode_code = episodes * EPISODE_CODE_SCALE + start date code (year * 1000 + doy).
+var EPISODE_CODE_SCALE = 1e7;
 
 function dateCode(img) {
   var date = ee.Date(img.get('system:time_start'));
   return date.get('year').multiply(1000).add(date.getRelative('day', 'year').add(1));
 }
 
-function decreaseEpisodeBands(probabilityStack, threshold) {
-  var arr = probabilityStack.sort('system:time_start').map(function (img) {
-    return img.select('decrease').gt(threshold).toInt32().rename('above')
-      .addBands(ee.Image.constant(dateCode(img)).toInt32().rename('code'));
-  }).toArray();                                                   // [bins, (above, code)]
-  var above = arr.arraySlice(1, 0, 1);
-  var before = ee.Image(ee.Array([[0]])).arrayCat(above.arraySlice(0, 0, -1), 0);  // below at the start
-  var starts = above.gt(before);
-  var count = starts.arrayReduce(ee.Reducer.sum(), [0]).arrayGet([0, 0]);
-  var last = arr.arraySlice(1, 1, 2).multiply(starts).arrayReduce(ee.Reducer.max(), [0]).arrayGet([0, 0]);
-  return ee.Image.cat(last.divide(1000).floor().rename('last_decrease_year'),
-                      last.mod(1000).rename('last_decrease_doy'),
-                      count.rename('decrease_episodes')).toFloat();
+function episodeState(probabilityStack, threshold) {
+  var start = ee.Image.constant([0, 0, 0]).rename(['above', 'count', 'last']).toInt32();
+  return ee.Image(probabilityStack.sort('system:time_start').iterate(function (img, state) {
+    state = ee.Image(state);
+    var above = img.select('decrease').gt(threshold).toInt32();
+    var starts = above.and(state.select('above').not());
+    return ee.Image.cat(above.rename('above'), state.select('count').add(starts).rename('count'),
+                        state.select('last').where(starts, ee.Image.constant(dateCode(img)).toInt32()).rename('last'));
+  }, start));
 }
 
-// `episodes` appends EPISODE_BANDS from the same run; the first three bands
-// are the same either way.
-function detectionTimingImage(bulcd, config, threshold, increaseThreshold, episodes) {
+function decreaseEpisodeBands(probabilityStack, threshold) {
+  var state = episodeState(probabilityStack, threshold), last = state.select('last');
+  return ee.Image.cat(last.divide(1000).floor().rename('last_decrease_year'),
+                      last.mod(1000).rename('last_decrease_doy'),
+                      state.select('count').rename('decrease_episodes')).toFloat();
+}
+
+// One season's last detection and episodes as a single band, episode_code
+// (episodes * EPISODE_CODE_SCALE + start of the last episode), masked where the
+// season doesn't count: no episode, not analyzed, or with `confirmed` (the
+// default) not ending as decrease - the same rule combineSeasonTiming()
+// applies. One BULC-D run. outputs.py detection_episode_image().
+function detectionEpisodeImage(bulcd, config, threshold, increaseThreshold, confirmed) {
+  confirmed = confirmed === undefined ? true : confirmed;
+  var result = bulcd.runBulcd(config);
+  var outcome = outcomeImage(bulcd, result, config, threshold, increaseThreshold);
+  var state = episodeState(result.probability_stack, threshold);
+  var counts = confirmed ? outcome.eq(DECREASE) : outcome.lte(INCREASE);
+  return state.select('count').toDouble().multiply(EPISODE_CODE_SCALE).add(state.select('last'))
+    .updateMask(state.select('count').gt(0).and(counts)).rename('episode_code');
+}
+
+function detectionTimingImage(bulcd, config, threshold, increaseThreshold) {
   var result = bulcd.runBulcd(config);
   var outcome = outcomeImage(bulcd, result, config, threshold, increaseThreshold);
   var first = result.probability_stack.map(function (img) {
@@ -122,9 +145,7 @@ function detectionTimingImage(bulcd, config, threshold, increaseThreshold, episo
   }).min().updateMask(outcome.lte(INCREASE));
   var year = first.divide(1000).floor().rename('first_decrease_year');
   var doy = first.mod(1000).rename('first_decrease_doy');
-  var out = ee.Image.cat(year.toFloat(), doy.toFloat(), outcome.toFloat());
-  if (episodes) out = out.addBands(decreaseEpisodeBands(result.probability_stack, threshold).updateMask(first.mask()));
-  return out;
+  return ee.Image.cat(year.toFloat(), doy.toFloat(), outcome.toFloat());
 }
 
 // First monitoring season in which P(decrease) crossed the threshold, from
@@ -150,25 +171,20 @@ function combineSeasonTiming(seasons, confirmed) {
     outcome);
 }
 
-// Last detection and detection episodes for the season combineSeasonTiming()
-// (same `confirmed`) selects, from that season's own run
-// (detectionTimingImage(..., true)). outputs.py combine_episode_metrics().
-function combineEpisodeMetrics(seasons, confirmed) {
-  confirmed = confirmed === undefined ? true : confirmed;
-  var years = Object.keys(seasons).map(Number).sort(function (a, b) { return a - b; });
-  var chosen = {};
-  EPISODE_BANDS.forEach(function (b) { chosen[b] = ee.Image(0).toFloat(); });
-  years.slice().reverse().forEach(function (y) {  // earliest season written last, so it wins
-    var s = seasons[y];
-    var crossed = s.select('first_decrease_year').mask().and(s.select('first_decrease_year').unmask(0).gt(0));
-    if (confirmed) crossed = crossed.and(s.select('outcome').eq(DECREASE));
-    EPISODE_BANDS.forEach(function (b) { chosen[b] = chosen[b].where(crossed, s.select(b).unmask(0)); });
-  });
-  var found = chosen.decrease_episodes.gt(0);
-  var mask = seasons[years[years.length - 1]].select('outcome').mask();
-  return ee.Image.cat(EPISODE_BANDS.map(function (b) {
-    return chosen[b].updateMask(found).updateMask(mask).rename(b);
-  }));
+// Last detection and detection episodes from the earliest season that counts
+// ({year: detectionEpisodeImage}, all built with the same `confirmed`): the
+// same season combineSeasonTiming() selects. Each season is referenced once
+// (an ImageCollection min over season index * 1e9 + episode_code), which keeps
+// the layer description small. outputs.py combine_episode_metrics().
+function combineEpisodeMetrics(seasonCodes) {
+  var years = Object.keys(seasonCodes).map(Number).sort(function (a, b) { return a - b; });
+  var earliest = ee.ImageCollection(years.map(function (y, i) {
+    return seasonCodes[y].add(i * 1e9).rename('key');
+  })).min().mod(1e9);
+  var last = earliest.mod(EPISODE_CODE_SCALE);
+  return ee.Image.cat(last.divide(1000).floor().rename('last_decrease_year'),
+                      last.mod(1000).rename('last_decrease_doy'),
+                      earliest.divide(EPISODE_CODE_SCALE).floor().rename('decrease_episodes')).toFloat();
 }
 
 // Last-detection layer (render.py LAST_DETECTION_PALETTE): position in the
@@ -296,6 +312,8 @@ exports.detectionTimingImage = detectionTimingImage;
 exports.combineSeasonTiming = combineSeasonTiming;
 exports.EPISODE_BANDS = EPISODE_BANDS;
 exports.decreaseEpisodeBands = decreaseEpisodeBands;
+exports.detectionEpisodeImage = detectionEpisodeImage;
+exports.EPISODE_CODE_SCALE = EPISODE_CODE_SCALE;
 exports.combineEpisodeMetrics = combineEpisodeMetrics;
 exports.LAST_DETECTION_PALETTE = LAST_DETECTION_PALETTE;
 exports.lastDetectionImage = lastDetectionImage;

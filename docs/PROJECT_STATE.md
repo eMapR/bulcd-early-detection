@@ -263,14 +263,21 @@ Two-repo split:
   Detection timing is confirmed by default (only seasons that end as decrease count); raw is an option in
   Advanced settings in both apps. The existing First-detected season layer is unchanged:
   - `combine_season_timing()` itself is untouched;
-  - the episode bands are opt-in (`detection_timing_image(episodes=True)`);
-  - the parity test checks that the first-detected bands are identical with and without them.
+  - `detection_timing_image()` is untouched, and the episode layers come from separate per-season
+    `detection_episode_image()` runs;
+  - `layer_size_check.js` checks the First detected season layer's description is identical to before.
+
+  Fixed the same day: the first version made all three timing layers fail in the Code Editor ("Description length
+  exceeds maximum"; the description written out in full, every repeated BULC-D sub-expression copied). Now one pass
+  over the bins and one `min()` across seasons. Last detection 47 M, episodes 24 M, First detected season 244 M as
+  before. That 244 M layer is the next one likely to hit the limit with more seasons. Details: `docs/findings.md`.
 
   The precomputed demo assets and notebooks are unchanged.
   - **Pine Mountain:** first detection Apr 17, last detection Sep 24, 2 episodes. Last detection recovers the fire
     date that first detection misses.
   - Tests: `tests/test_detection_episodes.py` (synthetic cases, JS ↔ Python, Pine Mountain fixture),
-    `controls_check.js`, `test_app_defaults.py`, `run_app_parity.py` (episode layers, raw run, Pine Mountain).
+    `controls_check.js`, `test_app_defaults.py`, `run_app_parity.py` (episode layers, raw run, Pine Mountain),
+    `layer_size_check.js` (layer description sizes).
   - Details: `docs/findings.md`, 2026-10-13 (later).
 
 ## Reproducibility notes

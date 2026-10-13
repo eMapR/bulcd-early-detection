@@ -1410,13 +1410,16 @@ snowmelt-timing difference between 2023 and 2024 across the area. Not checked pi
   of that reset.
 
 **Where it lives.**
-- **Images:** `outputs.decrease_episode_bands()` / `outputs.js decreaseEpisodeBands()`. Each bin is
-  compared with the one before it along a per-pixel array; the same BULC-D run, no extra runs.
-- **Opt-in bands:** `detection_timing_image(..., episodes=True)` appends them. Its first three bands are
-  identical either way, which the parity test checks.
-- **Combining seasons:** `combine_episode_metrics(seasons, confirmed)` takes the bands from the season
-  `combine_season_timing()` selects with the same `confirmed`. `combine_season_timing()` itself is
-  unchanged.
+- **Images:** `outputs.decrease_episode_bands()` / `outputs.js decreaseEpisodeBands()`. One pass over
+  the bins in time order, carrying (above, count, last start) per pixel.
+- **Per season:** `detection_episode_image(config, threshold, increase_threshold, confirmed)` gives one
+  band, `episode_code` = episodes × 10⁷ + the last start's date code. It's masked where the season
+  doesn't count, by the same rule as `combine_season_timing()`.
+- **Combining seasons:** `combine_episode_metrics(codes)` takes the earliest counting season with an
+  ImageCollection `min()`, which is the season `combine_season_timing()` selects. See the next entry for
+  why it's built this way.
+- **Unchanged:** `detection_timing_image()` and `combine_season_timing()`, and so the First detected
+  season layer.
 - **Confirmed vs raw:** confirmed is the default (only seasons that end as decrease count). Raw is an
   Advanced-settings option in both apps and applies to all three timing layers. Under confirmed, the
   selected season's last episode is still open at season end, so last detection is the start of the
@@ -1425,3 +1428,52 @@ snowmelt-timing difference between 2023 and 2024 across the area. Not checked pi
   per season.
 - **Not changed:** the precomputed demo assets and notebooks still use the three original timing bands.
 
+
+## 2026-10-13 (later) — Code Editor "Layer error: Description length exceeds maximum" on the timing layers
+
+**Symptom.** In the Code Editor, First detected season, Last detection and Detection episodes all failed
+with "Description length exceeds maximum". Condition still drew. First detected season had worked before
+the episode layers were added.
+
+**Cause: the layer description written out in full.**
+- The request Earth Engine receives shares repeated sub-expressions, and it was small: 76–90 KB. Node
+  `getMap()` accepted all four layers.
+- The Code Editor's limit applies to the description with **every repeated sub-expression written out
+  again**. Measured with that expansion (testsite, default settings, 3 timing seasons):
+
+  | Layer | Expanded description |
+  |---|---|
+  | Condition | 3.5 M chars |
+  | First detected season, before the episode layers (renders) | 244 M |
+  | First detected season, with episode bands in its seasons (fails) | 427 M |
+  | Last detection, Detection episodes | over 512 M (JavaScript's string limit) |
+
+- **Why so big:** every time an expression reuses a season's BULC-D run, the whole run is written out
+  again. The probability history itself is small (0.3 M), but one season's timing image is 6 M.
+  `combine_season_timing()` reads each season several times (first-year band twice, outcome, doy), and
+  its outputs reuse the combined year image. That multiplication is where the 244 M comes from.
+- **What the first implementation added:**
+  - Its array version reused the probability history about 8 times per season.
+  - The First detected season layer grew because its seasons carried the episode bands. It only needed
+    the first-detected bands, but the unused bands are still in the description.
+  - Last detection reads two bands of a combined image built the same way.
+
+**Fix (no change to BULC-D or to the definitions).**
+1. **First detected season** is built exactly as before, from `detection_timing_image()` seasons without
+   episode bands. `layer_size_check.js` confirms its description is identical to the original.
+2. **Episode bands** use one pass over the bins (`iterate`) instead of array comparisons. The history is
+   referenced once, and the per-bin step is written out once.
+3. **Each season becomes one masked band** (`detection_episode_image()`), and seasons are combined with a
+   single `ImageCollection.min()`, so each season is written out once.
+
+**Result:**
+- Last detection 47 M, Detection episodes 24 M, First detected season 244 M as before.
+- The values are unchanged. Pine Mountain: first Apr 17, last Sep 24, 2 episodes. The 2 × 2 km box's
+  episode table is identical. The parity test passes.
+- `gee/tests/layer_size_check.js` keeps the new layers no larger than First detected season and checks
+  that Earth Engine accepts each layer's map request.
+
+**Still open.** First detected season, at 244 M, is the largest layer and is unchanged. Its expanded size
+grows with the number of seasons and the expectation length, so it is the layer most likely to hit this
+limit next. Leaving it alone was a requirement; if it does hit the limit, the same one-band, single-`min()`
+combination would shrink it.
