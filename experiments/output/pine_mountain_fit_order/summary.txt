@@ -1,0 +1,17 @@
+Order 1: constant + cos + sin
+  expectation 2023: 16 clear of 73 bins; constant 0.358, harmonic amplitudes 0.373 (1/yr); fitted curve -0.015 to 0.721; residual SD 0.133; R2 0.71
+  monitoring 2024: 54 observations; before 2024-09-01: 41 (11 favor decrease, 2 increase); from 2024-09-01: 13 (11 favor decrease)
+  max P(decrease) before 2024-09-01: 0.904; first decrease crossing (> 0.65) before 2024-09-01: 2024-04-17; first crossing overall: 2024-04-17
+  final 2024-11-19: P = 0.914 / 0.043 / 0.043 -> decrease
+
+Order 2: constant + cos + sin + cos2 + sin2
+  expectation 2023: 16 clear of 73 bins; constant 0.367, harmonic amplitudes 0.428 (1/yr), 0.115 (2/yr); fitted curve -0.007 to 0.896; residual SD 0.106; R2 0.78
+  monitoring 2024: 54 observations; before 2024-09-01: 41 (10 favor decrease, 1 increase); from 2024-09-01: 13 (11 favor decrease)
+  max P(decrease) before 2024-09-01: 0.903; first decrease crossing (> 0.65) before 2024-09-01: 2024-02-25; first crossing overall: 2024-02-25
+  final 2024-11-19: P = 0.914 / 0.043 / 0.043 -> decrease
+
+Order 3: constant + cos + sin + cos2 + sin2 + cos3 + sin3
+  expectation 2023: 16 clear of 73 bins; constant 0.298, harmonic amplitudes 0.314 (1/yr), 0.145 (2/yr), 0.131 (3/yr); fitted curve -0.072 to 0.821; residual SD 0.083; R2 0.83
+  monitoring 2024: 54 observations; before 2024-09-01: 41 (9 favor decrease, 2 increase); from 2024-09-01: 13 (11 favor decrease)
+  max P(decrease) before 2024-09-01: 0.914; first decrease crossing (> 0.65) before 2024-09-01: 2024-03-24; first crossing overall: 2024-03-24
+  final 2024-11-19: P = 0.914 / 0.043 / 0.043 -> decrease
