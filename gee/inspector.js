@@ -205,6 +205,34 @@ function crossingNotes(rows, threshold, increaseThreshold) {
   return notes;
 }
 
+// Detection episodes in one run's rows (pixel.py detection_episodes()): an
+// episode starts at a row where P(cls) > threshold after one at or below it,
+// and ends at the next row at or below it (end null = still above at the last
+// row). Rows without an observation carry the previous probability.
+function detectionEpisodes(rows, threshold, cls) {
+  cls = cls || 'decrease';
+  var episodes = [], above = false;
+  rows.forEach(function (r) {
+    var now = r[cls] !== null && r[cls] !== undefined && r[cls] > threshold;
+    if (now && !above) episodes.push({start: r.date, end: null});
+    else if (above && !now) episodes[episodes.length - 1].end = r.date;
+    above = now;
+  });
+  return episodes;
+}
+
+// The same sentence as pixel.py episode_notes().
+function episodeNotes(rows, threshold, cls) {
+  cls = cls || 'decrease';
+  var eps = detectionEpisodes(rows, threshold, cls);
+  if (!eps.length) return [];
+  var spans = eps.map(function (e) {
+    return e.start + ' to ' + (e.end ? e.end + ' (ended)' : 'season end (still above)');
+  }).join('; ');
+  return [cls + ' detection episodes above ' + threshold + ': ' + eps.length + ' (' + spans + '); first detection ' +
+          eps[0].start + ', last detection ' + eps[eps.length - 1].start];
+}
+
 // Chart x values: the bin's UTC calendar date as a local Date, so the browser
 // doesn't shift it a day.
 function chartDate(dateString) {
@@ -344,6 +372,8 @@ exports.hasObservations = hasObservations;
 exports.firstCrossing = firstCrossing;
 exports.classThresholds = classThresholds;
 exports.crossingNotes = crossingNotes;
+exports.detectionEpisodes = detectionEpisodes;
+exports.episodeNotes = episodeNotes;
 exports.targetFitTable = targetFitTable;
 exports.probabilityTable = probabilityTable;
 exports.targetFitChart = targetFitChart;

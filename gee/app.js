@@ -42,7 +42,8 @@ function runLabel(c) {
          c.decrease_threshold + ' decrease / ' + c.increase_threshold + ' increase, dampening ' + c.dampening +
          ', posterior ' + c.posterior_leveler + ', expectation fit order ' + c.fit_order + '; sensors ' +
          Object.keys(c.sensors).filter(function (k) { return c.sensors[k]; }).join('+') +
-         (c.mask_forest ? '; forest only' : '') + (c.mask_water ? '; water masked' : '');
+         (c.mask_forest ? '; forest only' : '') + (c.mask_water ? '; water masked' : '') +
+         (c.timing ? '; detection timing ' + (c.timing_confirmed ? 'confirmed' : 'raw') : '');
 }
 
 function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
@@ -222,16 +223,17 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
     var outcome = outputs.outcomeImage(bulcd, result, full, thresholds.decrease, thresholds.increase).clip(geom);
 
     var years = c.timing ? appConfig.timingYears(c) : [];
-    var timing = null;
+    var timing = null, episodes = null;
     if (years.length) {
       var seasons = {};
-      // First-detected season: the decrease threshold.
+      // First-detected season, last detection and detection episodes: the decrease threshold.
       years.forEach(function (y) {
         seasons[y] = outputs.detectionTimingImage(bulcd, appConfig.buildConfig(appConfig.withMonitoringYear(c, y),
                                                                              area.aoi), thresholds.decrease,
-                                                  thresholds.increase);
+                                                  thresholds.increase, true);
       });
-      timing = outputs.combineSeasonTiming(seasons).clip(geom);
+      timing = outputs.combineSeasonTiming(seasons, c.timing_confirmed).clip(geom);
+      episodes = outputs.combineEpisodeMetrics(seasons, c.timing_confirmed).clip(geom);
     }
 
     // Layers, bottom to top (the notebook's order); only the condition layer starts on.
@@ -246,6 +248,11 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
     if (timing) {
       addLayer(timing.select('first_decrease_year'), outputs.timingVis(years), 'First detected season (decrease)',
                false);
+      var firstDoy = appConfig.dayOfYear(c.monitoring_year, c.season_start);
+      var lastDoy = appConfig.dayOfYear(c.monitoring_year, c.season_end);
+      addLayer(outputs.lastDetectionImage(episodes, years, firstDoy, lastDoy), outputs.lastDetectionVis(years),
+               'Last detection (decrease)', false);
+      addLayer(outputs.episodesImage(episodes), outputs.episodesVis(), 'Detection episodes (decrease)', false);
     }
     addLayer(outputs.conditionLayerImage(outcome.select('outcome')), outputs.conditionVis(),
              'Condition ' + c.monitoring_year, true, 0.85);
@@ -281,9 +288,22 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
       years.forEach(function (y, i) {
         legend.add(legendRow(outputs.YEAR_COLORS[i], 'Decrease first detected in ' + y));
       });
+      legend.add(ui.Label('Last detection (layer off by default): in the same season, the start of the most ' +
+                          'recent period above the decrease threshold' +
+                          (c.timing_confirmed ? ' (it lasted to the end of the season)' : ''),
+                          {fontWeight: 'bold', fontSize: '12px', margin: '8px 8px 0', whiteSpace: 'pre-wrap'}));
+      outputs.lastDetectionLegend(years, appConfig.monthDayLabel(c.season_start), appConfig.monthDayLabel(c.season_end))
+        .forEach(function (row) { legend.add(legendRow(row[0], row[1])); });
+      legend.add(ui.Label('Detection episodes (layer off by default): separate times P(decrease) rose above the ' +
+                          'threshold in that season; no smoothing',
+                          {fontWeight: 'bold', fontSize: '12px', margin: '8px 8px 0', whiteSpace: 'pre-wrap'}));
+      outputs.EPISODE_COLORS.forEach(function (color, i) { legend.add(legendRow(color, outputs.EPISODE_LABELS[i])); });
+      legend.add(ui.Label(c.timing_confirmed ? 'Timing layers: confirmed (only seasons that end as decrease).'
+                                             : 'Timing layers: raw (any crossing counts, even one later retracted).',
+                          {fontSize: '11px', color: '#666', margin: '4px 8px'}));
     }
     setRun({result: result, config: full, thresholds: thresholds, label: runLabel(c), outcome: outcome,
-            timing: timing});
+            timing: timing, episodes: episodes});
   }
 
   runButton.onClick(function () {
@@ -338,6 +358,9 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
       results.add(inspector.targetFitChart(rows, run.config.reduction.band));
       results.add(inspector.probabilityChart(rows, run.thresholds.decrease, run.thresholds.increase));
       inspector.crossingNotes(rows, run.thresholds.decrease, run.thresholds.increase).forEach(function (note) {
+        results.add(ui.Label('Monitoring season: ' + note, SMALL));
+      });
+      inspector.episodeNotes(rows, run.thresholds.decrease).forEach(function (note) {
         results.add(ui.Label('Monitoring season: ' + note, SMALL));
       });
     });

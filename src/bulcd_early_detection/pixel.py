@@ -93,6 +93,36 @@ def first_crossing(rows: list[dict], threshold: float, cls: str = "decrease") ->
     return next((r["date"] for r in rows if r[cls] is not None and r[cls] > threshold), None)
 
 
+def detection_episodes(rows: list[dict], threshold: float, cls: str = "decrease") -> list[dict]:
+    """Detection episodes in one run's rows: an episode starts at a row where
+    P(cls) > threshold after one at or below it (the run starts below), and
+    ends at the next row at or below it ("end" None = still above at the last
+    row). Rows without an observation carry the previous probability, so they
+    never start or end one. No smoothing or minimum duration. Row form of
+    outputs.decrease_episode_bands(); gee/inspector.js detectionEpisodes()."""
+    episodes, above = [], False
+    for r in rows:
+        now = r[cls] is not None and r[cls] > threshold
+        if now and not above:
+            episodes.append({"start": r["date"], "end": None})
+        elif above and not now:
+            episodes[-1]["end"] = r["date"]
+        above = now
+    return episodes
+
+
+def episode_notes(rows: list[dict], threshold: float, cls: str = "decrease") -> list[str]:
+    """One sentence on the detection episodes (detection_episodes()): count,
+    each episode's dates, and the first and last detection."""
+    eps = detection_episodes(rows, threshold, cls)
+    if not eps:
+        return []
+    spans = "; ".join(f"{e['start']} to " + (f"{e['end']} (ended)" if e["end"] else "season end (still above)")
+                      for e in eps)
+    return [f"{cls} detection episodes above {threshold}: {len(eps)} ({spans}); first detection {eps[0]['start']}, "
+            f"last detection {eps[-1]['start']}"]
+
+
 def crossing_notes(rows: list[dict], threshold: float, increase_threshold: float | None = None) -> list[str]:
     """One sentence per change class that crossed its threshold (decrease:
     `threshold`; increase: `increase_threshold`, default `threshold`), saying
@@ -183,7 +213,11 @@ def plot_pixel_history(seasons: dict[str, list[dict]], threshold: float = 0.5, t
             crossed = first_crossing(rows, t[cls], cls)
             if crossed:
                 bot.axvline(crossed, color=CLASS_COLORS[cls], lw=1)
-            notes.append(f"{cls} first crossed {crossed:%Y-%m-%d}" if crossed else f"{cls} never > {t[cls]}")
+            eps = detection_episodes(rows, t[cls], cls)
+            if len(eps) > 1:   # last detection: start of the most recent episode
+                bot.axvline(eps[-1]["start"], color=CLASS_COLORS[cls], lw=1, ls="--")
+            notes.append((f"{cls} first crossed {crossed:%Y-%m-%d}" if crossed else f"{cls} never > {t[cls]}") +
+                         (f", last {eps[-1]['start']:%Y-%m-%d} ({len(eps)} episodes)" if len(eps) > 1 else ""))
         bot.set_title(" · ".join(notes), loc="left", fontsize=9, color="#444")
         top.set_title(label, fontsize=11)
         bot.set_ylim(0, 1.02)

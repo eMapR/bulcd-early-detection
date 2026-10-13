@@ -193,6 +193,58 @@ def detection_year_legend(years: list[int]) -> dict[str, str]:
     return legend
 
 
+# Last detection: position in the seasons (season index + fraction of the
+# season window), so dates within one season are told apart; earliest =
+# darkest. gee/outputs.js holds the same palette and helpers.
+LAST_DETECTION_PALETTE = ["#440154", "#3b528b", "#21918c", "#5ec962", "#fde725"]
+# Detection episodes: 1, 2, 3 or more.
+EPISODE_COLORS = ["#c6b3e6", "#8c6bc8", "#4b2991"]
+EPISODE_LABELS = ["1 detection episode", "2 detection episodes", "3 or more detection episodes"]
+
+
+def last_detection_image(metrics: ee.Image, years: list[int], first_doy: int, last_doy: int) -> ee.Image:
+    """outputs.combine_episode_metrics() -> layer value: (year - first season)
+    + (doy - first_doy) / season length."""
+    return (metrics.select("last_decrease_year").subtract(years[0])
+            .add(metrics.select("last_decrease_doy").subtract(first_doy).divide(last_doy - first_doy + 1))
+            .rename("last_detection"))
+
+
+def last_detection_vis(years: list[int]) -> dict:
+    return {"min": 0, "max": len(years), "palette": [c[1:] for c in LAST_DETECTION_PALETTE]}
+
+
+def palette_color(palette: list[str], f: float) -> str:
+    """Color at fraction f (0..1) along `palette`, linear in RGB."""
+    f = min(max(f, 0.0), 1.0)
+    x = f * (len(palette) - 1)
+    i = min(int(x), len(palette) - 2)
+    t = x - i
+    a, b = ([int(c[k:k + 2], 16) for k in (1, 3, 5)] for c in (palette[i], palette[i + 1]))
+    return "#" + "".join(f"{round(u + (v - u) * t):02x}" for u, v in zip(a, b))
+
+
+def last_detection_legend(years: list[int], start_label: str, end_label: str) -> dict[str, str]:
+    """Each season's start, middle and end color (label -> color)."""
+    legend = {}
+    for i, y in enumerate(years):
+        for f, label in ((0, f"{start_label} {y}"), (0.5, f"mid-season {y}"), (1, f"{end_label} {y}")):
+            legend[label] = palette_color(LAST_DETECTION_PALETTE, (i + f) / len(years))
+    return legend
+
+
+def episodes_image(metrics: ee.Image) -> ee.Image:
+    return metrics.select("decrease_episodes").min(3).rename("episodes")
+
+
+def episodes_vis() -> dict:
+    return {"min": 1, "max": 3, "palette": [c[1:] for c in EPISODE_COLORS]}
+
+
+def episodes_legend() -> dict[str, str]:
+    return dict(zip(EPISODE_LABELS, EPISODE_COLORS))
+
+
 def _not_water() -> ee.Image:
     return ee.Image("JRC/GSW1_4/GlobalSurfaceWater").select("occurrence").unmask(0).lte(50)
 

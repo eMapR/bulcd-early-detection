@@ -74,6 +74,10 @@ var APP_DEFAULTS = {
   decrease_threshold: 0.65,                         // original GUI (drop)
   increase_threshold: 0.75,                         // original GUI (gain)
   timing: true,                                     // also map the first-detected season
+  // Detection timing (first detected season, last detection, detection episodes):
+  // only seasons that end as decrease count (confirmed), else any crossing (raw).
+  // No original default (the original GUI had no such product). app.py TIMING_CONFIRMED_DEFAULT.
+  timing_confirmed: true,
   dampening: 0.7,                                   // original GUI
   posterior_leveler: 0.9,                           // original GUI
   fit_order: 1,                                     // original GUI (constant + unimodal)
@@ -198,7 +202,9 @@ function describeControls(c) {
   var years = timingYears(c);
   if (c.timing && years.length) {
     lines.push('First detected season: separate runs for ' + years.join(', ') + ', each judged against the same ' +
-               'expectation and starting from the same odds (10% decrease, 80% unchanged, 10% increase).');
+               'expectation and starting from the same odds (10% decrease, 80% unchanged, 10% increase). ' +
+               (c.timing_confirmed ? 'A season counts only if it ends as decrease (confirmed).'
+                                   : 'Any threshold crossing counts, even one BULC-D later retracts (raw).'));
   }
   var warning = fitOrderWarning(c);
   if (warning) lines.push('Warning: ' + warning);
@@ -264,6 +270,7 @@ exports.MONTH_NAMES = MONTH_NAMES;
 exports.DAYS_IN_MONTH = DAYS_IN_MONTH;
 exports.copy = copy;
 exports.dayOfYear = dayOfYear;
+exports.monthDayLabel = monthDayLabel;
 exports.validateControls = validateControls;
 exports.expectationSummary = expectationSummary;
 exports.timingYears = timingYears;

@@ -124,6 +124,15 @@ def detection_year_map(timing, area, frame, bbox, title: str, token: str, years:
     return render.show_map(png, title, bbox, legend=render.detection_year_legend(years), save_to=save_to)
 
 
+def episode_table(metrics, region) -> str:
+    """Detected decrease by number of detection episodes (outputs.combine_episode_metrics())."""
+    summ = outputs.episode_summary(metrics, region)
+    total = sum(summ.values())
+    rows = [f"| {k} | {v:.2f} | {100 * v / total:.1f}% |" if total else f"| {k} | {v:.2f} | — |" for k, v in summ.items()]
+    return ("| Detection episodes | Area (km²) | Share of detected decrease |\n"
+            "|---|---:|---:|\n" + "\n".join(rows))
+
+
 def detection_year_table(timing, region, years: list[int]) -> str:
     summ = outputs.decrease_year_summary(timing, region, years)
     analyzed = sum(summ.values())

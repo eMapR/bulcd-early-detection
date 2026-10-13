@@ -318,15 +318,56 @@ def reclassify(outputs_image: ee.Image, threshold: float, increase_threshold: fl
 
 # ---------------------------------------------------------------- detection timing
 TIMING_BANDS = ["first_decrease_year", "first_decrease_doy", "outcome"]
+# Added by detection_timing_image(episodes=True); see decrease_episode_bands().
+EPISODE_BANDS = ["last_decrease_year", "last_decrease_doy", "decrease_episodes"]
 
 
-def detection_timing_image(config: BULCDConfig, threshold: float, increase_threshold: float | None = None) -> ee.Image:
+def _date_code(img: ee.Image) -> ee.Number:
+    """year * 1000 + 1-based day of year of a bin's (end) date."""
+    date = ee.Date(img.get("system:time_start"))
+    return date.get("year").multiply(1000).add(date.getRelative("day", "year").add(1))
+
+
+def decrease_episode_bands(probability_stack: ee.ImageCollection, threshold: float) -> ee.Image:
+    """Detection episodes in one run: an episode starts at a bin where
+    P(decrease) > `threshold` (strictly, as the first-detected date) after a
+    bin at or below it, and ends at the next bin at or below it. The run
+    starts below the threshold (starting odds 0.1 decrease; thresholds >= 0.5),
+    so the first episode starts at the first crossing. Bins without a valid
+    observation carry the previous probability unchanged (bulcd), so they
+    never start or end an episode. No smoothing or minimum duration.
+
+    Bands: decrease_episodes (count), last_decrease_year/doy (start of the
+    most recent episode, bin END date as bulcd timestamps bins); all 0 where
+    there was no episode. Each bin is compared with the previous one along a
+    per-pixel array, in time order. gee/outputs.js decreaseEpisodeBands()
+    is the same computation; pixel.detection_episodes() is its row form."""
+    stack = probability_stack.sort("system:time_start").map(
+        lambda img: img.select("decrease").gt(threshold).toInt32().rename("above")
+        .addBands(ee.Image.constant(_date_code(img)).toInt32().rename("code")))
+    arr = stack.toArray()                                    # [bins, (above, code)]
+    above = arr.arraySlice(1, 0, 1)
+    before = ee.Image(ee.Array([[0]])).arrayCat(above.arraySlice(0, 0, -1), 0)  # bin before; below at the start
+    starts = above.gt(before)
+    count = starts.arrayReduce(ee.Reducer.sum(), [0]).arrayGet([0, 0])
+    last = arr.arraySlice(1, 1, 2).multiply(starts).arrayReduce(ee.Reducer.max(), [0]).arrayGet([0, 0])
+    return ee.Image.cat(last.divide(1000).floor().rename("last_decrease_year"),
+                        last.mod(1000).rename("last_decrease_doy"),
+                        count.rename("decrease_episodes")).toFloat()
+
+
+def detection_timing_image(config: BULCDConfig, threshold: float, increase_threshold: float | None = None,
+                           episodes: bool = False) -> ee.Image:
     """For a (typically multi-year) monitoring run: the year and day of year
     of the FIRST observation bin where P(decrease) exceeded `threshold` (the
     decrease threshold) (bin END date, as bulcd timestamps bins), masked
     where it never did or the pixel isn't analyzed; plus `outcome`, the state
     at the end of the run (same codes as outcome_image, with
-    `increase_threshold`). One BULC-D run feeds both."""
+    `increase_threshold`). One BULC-D run feeds both.
+
+    episodes=True appends EPISODE_BANDS from the same run
+    (decrease_episode_bands(); masked like the first-detected bands). The
+    first three bands are the same either way."""
     result = run_bulcd(config)
     outcome = _outcome_from_result(result, config, threshold, increase_threshold).select("outcome")
 
@@ -338,7 +379,10 @@ def detection_timing_image(config: BULCDConfig, threshold: float, increase_thres
     first = ee.ImageCollection(result.probability_stack.map(code)).min().updateMask(outcome.lte(INCREASE))
     year = first.divide(1000).floor().rename("first_decrease_year")
     doy = first.mod(1000).rename("first_decrease_doy")
-    return ee.Image.cat(year.toFloat(), doy.toFloat(), outcome.toFloat())
+    out = ee.Image.cat(year.toFloat(), doy.toFloat(), outcome.toFloat())
+    if episodes:
+        out = out.addBands(decrease_episode_bands(result.probability_stack, threshold).updateMask(first.mask()))
+    return out
 
 
 def decrease_year_summary(timing: ee.Image, region: ee.Geometry, years: list[int], crs: str | None = None) -> dict:
@@ -353,6 +397,19 @@ def decrease_year_summary(timing: ee.Image, region: ee.Geometry, years: list[int
         ee.Reducer.sum(), region, SCALE, crs=crs or utm_crs(region), maxPixels=1e10, tileScale=4
     ).getInfo()
     return {k: (sums.get(k) or 0.0) for k in [*map(str, years), "none"]}
+
+
+def episode_summary(metrics: ee.Image, region: ee.Geometry, crs: str | None = None) -> dict:
+    """km^2 of the selected seasons' detected decrease by number of detection
+    episodes (combine_episode_metrics()): "1", "2", "3+"."""
+    n = metrics.select("decrease_episodes").unmask(0)
+    area = ee.Image.pixelArea().divide(1e6)
+    bands = [area.updateMask(n.eq(1)).rename("e1"), area.updateMask(n.eq(2)).rename("e2"),
+             area.updateMask(n.gte(3)).rename("e3")]   # band names can't contain "+"
+    sums = ee.Image.cat(bands).reduceRegion(
+        ee.Reducer.sum(), region, SCALE, crs=crs or utm_crs(region), maxPixels=1e10, tileScale=4
+    ).getInfo()
+    return {k: (sums.get(b) or 0.0) for k, b in (("1", "e1"), ("2", "e2"), ("3+", "e3"))}
 
 
 # ---------------------------------------------------------------- temporal NBR composite
@@ -431,3 +488,29 @@ def combine_season_timing(seasons: dict[int, ee.Image], confirmed: bool = True) 
         doy.updateMask(found).updateMask(outcome.mask()).rename("first_decrease_doy"),
         outcome,
     )
+
+
+def combine_episode_metrics(seasons: dict[int, ee.Image], confirmed: bool = True) -> ee.Image:
+    """Last detection and detection episodes for the season
+    combine_season_timing() (same `confirmed`) selects - the earliest season
+    that crossed, and with confirmed=True also ended as decrease - taken from
+    that season's own run (detection_timing_image(..., episodes=True)).
+    Within one season only: each season is a separate run from the same
+    starting odds, so a change still present the next season would cross
+    again there just because of that reset.
+
+    Bands EPISODE_BANDS, masked where combine_season_timing() finds no
+    season. With confirmed=True the selected season ends as decrease, so its
+    last episode is still open at season end: last detection = the start of
+    the detection that held to the end of the season."""
+    years = sorted(seasons)
+    chosen = {b: ee.Image(0).toFloat() for b in EPISODE_BANDS}
+    for y in reversed(years):  # earliest season written last, so it wins (as combine_season_timing)
+        crossed = seasons[y].select("first_decrease_year").mask().And(seasons[y].select("first_decrease_year").unmask(0).gt(0))
+        if confirmed:
+            crossed = crossed.And(seasons[y].select("outcome").eq(DECREASE))
+        for b in EPISODE_BANDS:
+            chosen[b] = chosen[b].where(crossed, seasons[y].select(b).unmask(0))
+    found = chosen["decrease_episodes"].gt(0)
+    mask = seasons[years[-1]].select("outcome").mask()
+    return ee.Image.cat([chosen[b].updateMask(found).updateMask(mask).rename(b) for b in EPISODE_BANDS])

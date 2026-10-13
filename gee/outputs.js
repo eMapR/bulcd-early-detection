@@ -82,7 +82,37 @@ function outcomeVis() {
 // `threshold` (the decrease threshold; bin END date), masked where it never did
 // or the pixel isn't analyzed; plus `outcome`, the state at the end of the run
 // (with `increaseThreshold`). outputs.py detection_timing_image().
-function detectionTimingImage(bulcd, config, threshold, increaseThreshold) {
+// Detection episodes in one run (outputs.py decrease_episode_bands()): an
+// episode starts at a bin where P(decrease) > threshold after one at or below
+// it, and ends at the next bin at or below it; bins without an observation
+// carry the previous probability, so they never start or end one. Bands
+// decrease_episodes, last_decrease_year/doy (start of the most recent
+// episode); 0 where there was none.
+var EPISODE_BANDS = ['last_decrease_year', 'last_decrease_doy', 'decrease_episodes'];
+
+function dateCode(img) {
+  var date = ee.Date(img.get('system:time_start'));
+  return date.get('year').multiply(1000).add(date.getRelative('day', 'year').add(1));
+}
+
+function decreaseEpisodeBands(probabilityStack, threshold) {
+  var arr = probabilityStack.sort('system:time_start').map(function (img) {
+    return img.select('decrease').gt(threshold).toInt32().rename('above')
+      .addBands(ee.Image.constant(dateCode(img)).toInt32().rename('code'));
+  }).toArray();                                                   // [bins, (above, code)]
+  var above = arr.arraySlice(1, 0, 1);
+  var before = ee.Image(ee.Array([[0]])).arrayCat(above.arraySlice(0, 0, -1), 0);  // below at the start
+  var starts = above.gt(before);
+  var count = starts.arrayReduce(ee.Reducer.sum(), [0]).arrayGet([0, 0]);
+  var last = arr.arraySlice(1, 1, 2).multiply(starts).arrayReduce(ee.Reducer.max(), [0]).arrayGet([0, 0]);
+  return ee.Image.cat(last.divide(1000).floor().rename('last_decrease_year'),
+                      last.mod(1000).rename('last_decrease_doy'),
+                      count.rename('decrease_episodes')).toFloat();
+}
+
+// `episodes` appends EPISODE_BANDS from the same run; the first three bands
+// are the same either way.
+function detectionTimingImage(bulcd, config, threshold, increaseThreshold, episodes) {
   var result = bulcd.runBulcd(config);
   var outcome = outcomeImage(bulcd, result, config, threshold, increaseThreshold);
   var first = result.probability_stack.map(function (img) {
@@ -92,7 +122,9 @@ function detectionTimingImage(bulcd, config, threshold, increaseThreshold) {
   }).min().updateMask(outcome.lte(INCREASE));
   var year = first.divide(1000).floor().rename('first_decrease_year');
   var doy = first.mod(1000).rename('first_decrease_doy');
-  return ee.Image.cat(year.toFloat(), doy.toFloat(), outcome.toFloat());
+  var out = ee.Image.cat(year.toFloat(), doy.toFloat(), outcome.toFloat());
+  if (episodes) out = out.addBands(decreaseEpisodeBands(result.probability_stack, threshold).updateMask(first.mask()));
+  return out;
 }
 
 // First monitoring season in which P(decrease) crossed the threshold, from
@@ -116,6 +148,77 @@ function combineSeasonTiming(seasons, confirmed) {
     year.updateMask(found).updateMask(outcome.mask()).rename('first_decrease_year'),
     doy.updateMask(found).updateMask(outcome.mask()).rename('first_decrease_doy'),
     outcome);
+}
+
+// Last detection and detection episodes for the season combineSeasonTiming()
+// (same `confirmed`) selects, from that season's own run
+// (detectionTimingImage(..., true)). outputs.py combine_episode_metrics().
+function combineEpisodeMetrics(seasons, confirmed) {
+  confirmed = confirmed === undefined ? true : confirmed;
+  var years = Object.keys(seasons).map(Number).sort(function (a, b) { return a - b; });
+  var chosen = {};
+  EPISODE_BANDS.forEach(function (b) { chosen[b] = ee.Image(0).toFloat(); });
+  years.slice().reverse().forEach(function (y) {  // earliest season written last, so it wins
+    var s = seasons[y];
+    var crossed = s.select('first_decrease_year').mask().and(s.select('first_decrease_year').unmask(0).gt(0));
+    if (confirmed) crossed = crossed.and(s.select('outcome').eq(DECREASE));
+    EPISODE_BANDS.forEach(function (b) { chosen[b] = chosen[b].where(crossed, s.select(b).unmask(0)); });
+  });
+  var found = chosen.decrease_episodes.gt(0);
+  var mask = seasons[years[years.length - 1]].select('outcome').mask();
+  return ee.Image.cat(EPISODE_BANDS.map(function (b) {
+    return chosen[b].updateMask(found).updateMask(mask).rename(b);
+  }));
+}
+
+// Last-detection layer (render.py LAST_DETECTION_PALETTE): position in the
+// seasons, season index + fraction of the season window, so dates within one
+// season are told apart; earliest = darkest.
+var LAST_DETECTION_PALETTE = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725'];
+
+function lastDetectionImage(metrics, years, firstDoy, lastDoy) {
+  return metrics.select('last_decrease_year').subtract(years[0])
+    .add(metrics.select('last_decrease_doy').subtract(firstDoy).divide(lastDoy - firstDoy + 1))
+    .rename('last_detection');
+}
+
+function lastDetectionVis(years) {
+  return {min: 0, max: years.length, palette: LAST_DETECTION_PALETTE.map(function (c) { return c.slice(1); })};
+}
+
+// Palette color at fraction f (0..1), linear in RGB (render.py palette_color()).
+function paletteColor(palette, f) {
+  f = Math.min(Math.max(f, 0), 1);
+  var x = f * (palette.length - 1), i = Math.min(Math.floor(x), palette.length - 2), t = x - i;
+  var rgb = function (c) { return [1, 3, 5].map(function (k) { return parseInt(c.substr(k, 2), 16); }); };
+  var a = rgb(palette[i]), b = rgb(palette[i + 1]);
+  return '#' + a.map(function (v, k) {
+    var h = Math.round(v + (b[k] - v) * t).toString(16);
+    return h.length < 2 ? '0' + h : h;
+  }).join('');
+}
+
+// [[color, label]]: each season's start, middle and end (render.py last_detection_legend()).
+function lastDetectionLegend(years, startLabel, endLabel) {
+  var out = [];
+  years.forEach(function (y, i) {
+    [[0, startLabel + ' ' + y], [0.5, 'mid-season ' + y], [1, endLabel + ' ' + y]].forEach(function (p) {
+      out.push([paletteColor(LAST_DETECTION_PALETTE, (i + p[0]) / years.length), p[1]]);
+    });
+  });
+  return out;
+}
+
+// Detection-episodes layer: 1, 2, 3 or more.
+var EPISODE_COLORS = ['#c6b3e6', '#8c6bc8', '#4b2991'];
+var EPISODE_LABELS = ['1 detection episode', '2 detection episodes', '3 or more detection episodes'];
+
+function episodesImage(metrics) {
+  return metrics.select('decrease_episodes').min(3).rename('episodes');
+}
+
+function episodesVis() {
+  return {min: 1, max: 3, palette: EPISODE_COLORS.map(function (c) { return c.slice(1); })};
 }
 
 // render.py YEAR_COLORS: earliest = darkest.
@@ -191,6 +294,18 @@ exports.conditionLayerImage = conditionLayerImage;
 exports.conditionVis = conditionVis;
 exports.detectionTimingImage = detectionTimingImage;
 exports.combineSeasonTiming = combineSeasonTiming;
+exports.EPISODE_BANDS = EPISODE_BANDS;
+exports.decreaseEpisodeBands = decreaseEpisodeBands;
+exports.combineEpisodeMetrics = combineEpisodeMetrics;
+exports.LAST_DETECTION_PALETTE = LAST_DETECTION_PALETTE;
+exports.lastDetectionImage = lastDetectionImage;
+exports.lastDetectionVis = lastDetectionVis;
+exports.paletteColor = paletteColor;
+exports.lastDetectionLegend = lastDetectionLegend;
+exports.EPISODE_COLORS = EPISODE_COLORS;
+exports.EPISODE_LABELS = EPISODE_LABELS;
+exports.episodesImage = episodesImage;
+exports.episodesVis = episodesVis;
 exports.YEAR_COLORS = YEAR_COLORS;
 exports.timingVis = timingVis;
 exports.TRUE_COLOR = TRUE_COLOR;

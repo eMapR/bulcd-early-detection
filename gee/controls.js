@@ -81,6 +81,8 @@ function makeControls(appConfig, onChange) {
   var maskForest = ui.Checkbox({label: 'Analyze forest only (Hansen tree cover >= 10%)', value: d.mask_forest,
                                 onChange: changed});
   var maskWater = ui.Checkbox({label: 'Leave out water', value: d.mask_water, onChange: changed});
+  var timingConfirmed = ui.Checkbox({label: 'Detection timing: count only seasons that end as decrease (confirmed)',
+                                     value: d.timing_confirmed, onChange: changed});
   var allowLarge = ui.Checkbox({label: 'Allow areas over 1,000 km2 (slow; may time out)', value: d.allow_large,
                                 onChange: changed});
 
@@ -96,7 +98,10 @@ function makeControls(appConfig, onChange) {
     ui.Label('pull toward even odds after each update (1 = off)', HINT),
     ui.Label('Monitoring sensors (the expectation always uses Landsat 8)', LABEL),
     row(appConfig.MONITORING_SENSORS.map(function (s) { return sensors[s]; })),
-    maskForest, maskWater, allowLarge
+    maskForest, maskWater, allowLarge,
+    timingConfirmed,
+    ui.Label('for first detected season, last detection and detection episodes; unticked (raw), a crossing ' +
+             'BULC-D later retracts also counts', HINT)
   ], null, {shown: false, margin: '0 0 0 8px'});
   var showAdvanced = ui.Checkbox({label: 'Advanced settings', value: false,
                                   onChange: function (on) { advanced.style().set('shown', on); }});
@@ -126,6 +131,7 @@ function makeControls(appConfig, onChange) {
       season_start: start.get(), season_end: end.get(),
       sensitivity: sensitivity.getValue(), decrease_threshold: decreaseThreshold.getValue(),
       increase_threshold: increaseThreshold.getValue(), timing: timing.getValue(),
+      timing_confirmed: timingConfirmed.getValue(),
       dampening: dampening.getValue(), posterior_leveler: posterior.getValue(),
       fit_order: Number(fitOrder.getValue()), sensors: s,
       mask_forest: maskForest.getValue(), mask_water: maskWater.getValue(), allow_large: allowLarge.getValue()
@@ -146,7 +152,7 @@ function makeControls(appConfig, onChange) {
   }
 
   describe();
-  return {panel: panel, read: read, fitOrder: fitOrder};
+  return {panel: panel, read: read, fitOrder: fitOrder, timingConfirmed: timingConfirmed};
 }
 
 exports.makeControls = makeControls;

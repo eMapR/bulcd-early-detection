@@ -37,6 +37,11 @@ MAX_TIMING_SEASONS = 3
 # there (the user entered them); theirs below are Early Detection choices.
 LEGACY_DEFAULTS = {"sensitivity": 1.0, "decrease_threshold": 0.65, "increase_threshold": 0.75, "dampening": 0.7,
                    "posterior_leveler": 0.9, "mask_forest": False, "mask_water": True, "fit_order": 1}
+# Detection timing (first detected season, last detection, detection episodes):
+# confirmed = only a season that ends as decrease counts (the first-detected
+# season's definition since 2026-09-30); raw = any crossing counts. Not an
+# original-GUI setting (it had no such product). gee/config.js APP_DEFAULTS.timing_confirmed.
+TIMING_CONFIRMED_DEFAULT = True
 # Expectation fit order choices (config.FIT_ORDERS); gee/config.js FIT_ORDER_LABELS holds the same labels.
 FIT_ORDER_LABELS = {1: "1: one annual cycle (original BULC-D)", 2: "2: adds 2 cycles per year",
                     3: "3: adds 2 and 3 cycles per year"}
@@ -187,6 +192,9 @@ class EarlyDetectionApp:
         self.increase_threshold = W.FloatSlider(value=d["increase_threshold"], min=0.5, max=0.99, step=0.01,
                                                 description="Increase threshold:", style=style, layout=wide)
         self.timing = W.Checkbox(value=True, description="Also map the first-detected season", style={"description_width": "initial"})
+        self.timing_confirmed = W.Checkbox(value=TIMING_CONFIRMED_DEFAULT,
+                                           description="Detection timing: count only seasons that end as decrease (confirmed)",
+                                           style={"description_width": "initial"})
         self.relationship = W.HTML()
         # advanced
         self.dampening = W.FloatSlider(value=d["dampening"], min=0.1, max=1.0, step=0.05, description="Dampening:",
@@ -210,10 +218,12 @@ class EarlyDetectionApp:
             self.posterior, W.HTML("&nbsp;&nbsp;pull toward even odds after each update (1 = off)"),
             W.HTML("<b>Monitoring sensors</b> (the expectation always uses Landsat 8)"), W.HBox(list(self.sensors.values())),
             self.mask_forest, self.mask_water, self.allow_large,
+            self.timing_confirmed, W.HTML("&nbsp;&nbsp;for first detected season, last detection and detection episodes; "
+                                          "unticked (raw), a crossing BULC-D later retracts also counts"),
         ])])
         self.advanced.set_title(0, "Advanced settings")
         self.advanced.selected_index = None
-        for w in (self.expectation, self.monitoring_year, self.window, self.timing, self.fit_order):
+        for w in (self.expectation, self.monitoring_year, self.window, self.timing, self.fit_order, self.timing_confirmed):
             w.observe(lambda _: self._describe(), "value")
         self._describe()
         self.run_btn = W.Button(description="Run Early Detection", button_style="primary", icon="play", disabled=True,
@@ -246,7 +256,9 @@ class EarlyDetectionApp:
             return
         timing = (f"<br><b>First detected season:</b> separate runs for {', '.join(map(str, self._timing_years()))}, "
                   "each judged against the same expectation and starting from the same odds (10% decrease, "
-                  "80% unchanged, 10% increase)."
+                  "80% unchanged, 10% increase). " +
+                  ("A season counts only if it ends as decrease (confirmed)." if self.timing_confirmed.value else
+                   "Any threshold crossing counts, even one BULC-D later retracts (raw).")
                   if self.timing.value else "")
         warning = MonitoringControls(monitoring_year=m, season_start=start, season_end=end, baseline_first_year=e0,
                                      baseline_last_year=e1, fit_order=self.fit_order.value).fit_order_warning
@@ -379,16 +391,19 @@ class EarlyDetectionApp:
         config = self.build(controls, **area.aoi)
         condition = outputs.outcome_image(config, controls.decision_threshold, controls.increase_threshold).clip(geom)
         years = self._timing_years() if self.timing.value else []
-        timing = None
+        timing = episodes = None
+        confirmed = self.timing_confirmed.value
         if years:
-            # First-detected season: the decrease threshold.
+            # First-detected season, last detection and detection episodes: the decrease threshold.
             seasons = {y: outputs.detection_timing_image(self.build(self.controls(y), **area.aoi), controls.decision_threshold,
-                                                         controls.increase_threshold)
+                                                         controls.increase_threshold, episodes=True)
                        for y in years}
-            timing = outputs.combine_season_timing(seasons).clip(geom)
+            timing = outputs.combine_season_timing(seasons, confirmed=confirmed).clip(geom)
+            episodes = outputs.combine_episode_metrics(seasons, confirmed=confirmed).clip(geom)
         img_years = [controls.monitoring_year - 2, controls.monitoring_year - 1, controls.monitoring_year]
         window = (controls.season_start, controls.season_end)
         self.run_state = {"controls": controls, "config": config, "condition": condition, "timing": timing,
+                          "episodes": episodes, "timing_confirmed": confirmed,
                           "timing_years": years, "img_years": img_years, "window": window}
 
         # --- map layers (drawn lazily by Earth Engine as you pan/zoom); each is checked independently
@@ -418,6 +433,11 @@ class EarlyDetectionApp:
             self._add_result_layer("First detected season (decrease)", lambda: timing.select("first_decrease_year").visualize(
                 min=years[0], max=years[-1], palette=[c[1:] for c in render.YEAR_COLORS[:len(years)]]),
                 note="see Timing tab for the legend")
+            self._add_result_layer("Last detection (decrease)", lambda: render.last_detection_image(
+                episodes, years, controls.first_doy, controls.last_doy).visualize(**render.last_detection_vis(years)),
+                note="see Timing tab for the legend")
+            self._add_result_layer("Detection episodes (decrease)", lambda: render.episodes_image(episodes).visualize(
+                **render.episodes_vis()), note="see Timing tab for the legend")
         outcome = condition.select("outcome")
         self.status.value = "Preparing the condition layer…"
         self._add_result_layer(f"Condition {controls.monitoring_year}", lambda: outcome.updateMask(outcome.lte(outputs.INCREASE)).visualize(
@@ -443,14 +463,31 @@ class EarlyDetectionApp:
                                  "and the monitoring year."))
             else:
                 self.status.value = "Summarizing first-detected seasons…"
-                display(Markdown(f"**First detected season**: the earliest of {', '.join(map(str, years))} that BULC-D "
-                                 "finished classified as decrease (a crossing it later retracted doesn't count); the date is "
+                rule = ("that BULC-D finished classified as decrease (a crossing it later retracted doesn't count; "
+                        "confirmed)" if confirmed else
+                        "in which P(decrease) crossed the threshold at all, even if BULC-D later retracted it (raw)")
+                display(Markdown(f"**First detected season**: the earliest of {', '.join(map(str, years))} {rule}; the date is "
                                  "the first crossing within that season. Each season is a separate run against the same "
                                  "expectation, starting from the same odds (10% decrease, 80% unchanged, 10% increase). It shows detection timing, not a verified disturbance "
                                  f"date; the first season ({years[0]}) also gathers everything already different by then. "
                                  "Turn the layer on in the Map layers panel."))
                 display(Markdown(report.detection_year_table(timing, geom, years)))
                 display(W.HTML(render_legend(render.detection_year_legend(years))))
+                fmt = lambda doy: (datetime.date(2025, 1, 1) + datetime.timedelta(days=doy - 1)).strftime("%b %-d")
+                display(Markdown("**Last detection** (layer *Last detection (decrease)*): in that same season, the start of "
+                                 "the most recent period with P(decrease) above the threshold. " +
+                                 ("Because the season ends as decrease, that period lasted to the end of the season. "
+                                  if confirmed else "") +
+                                 "Where BULC-D first flagged a pixel and later retracted it (for example a spring snowmelt "
+                                 "false detection before a fall fire), last detection gives the later date."))
+                display(W.HTML(render_legend(render.last_detection_legend(years, fmt(controls.first_doy),
+                                                                          fmt(controls.last_doy)))))
+                display(Markdown("**Detection episodes** (layer *Detection episodes (decrease)*): in that season, how many "
+                                 "separate times P(decrease) rose above the threshold. An episode ends when it falls back to "
+                                 "or below the threshold; no smoothing or minimum length, so a probability hovering near the "
+                                 "threshold counts every crossing."))
+                display(Markdown(report.episode_table(episodes, geom)))
+                display(W.HTML(render_legend(render.episodes_legend())))
         with self.out["Imagery"]:
             self.status.value = "Drawing annual true color…"
             display(Markdown("Reference imagery, independent of BULC-D. The true-color and NBR-composite layers can also "
@@ -553,6 +590,8 @@ class EarlyDetectionApp:
                     print(f"Warning: {c.fit_order_warning}")
                 for label, rows in histories.items():
                     for note in pixel.crossing_notes(rows, c.decision_threshold, c.increase_threshold):
+                        print(f"{label}: {note}")
+                    for note in pixel.episode_notes(rows, c.decision_threshold):
                         print(f"{label}: {note}")
         self.status.value = "<b>Done.</b> Click another pixel to compare."
         return histories
