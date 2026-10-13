@@ -252,6 +252,27 @@ Two-repo split:
     identical at every order; the first-detected date is what's wrong.
   - Minimum-observations mask: deferred (user decision). Details: `docs/findings.md`, 2026-10-13.
 
+- **2026-10-13 (later): last detection and detection episodes** added to the first-detected-season product in
+  both apps (two new map layers, off by default; Python Timing tab tables and legends; inspector episode notes in
+  both apps). Definitions:
+  - **Episode:** starts at a bin where P(decrease) rises above the decrease threshold, and ends at the next bin at
+    or below it. No smoothing or minimum length.
+  - **Last detection:** the start of the most recent episode. **Detection episodes:** how many episodes there were.
+  - Both are within the season that the first-detected-season rule selects.
+
+  Detection timing is confirmed by default (only seasons that end as decrease count); raw is an option in
+  Advanced settings in both apps. The existing First-detected season layer is unchanged:
+  - `combine_season_timing()` itself is untouched;
+  - the episode bands are opt-in (`detection_timing_image(episodes=True)`);
+  - the parity test checks that the first-detected bands are identical with and without them.
+
+  The precomputed demo assets and notebooks are unchanged.
+  - **Pine Mountain:** first detection Apr 17, last detection Sep 24, 2 episodes. Last detection recovers the fire
+    date that first detection misses.
+  - Tests: `tests/test_detection_episodes.py` (synthetic cases, JS ↔ Python, Pine Mountain fixture),
+    `controls_check.js`, `test_app_defaults.py`, `run_app_parity.py` (episode layers, raw run, Pine Mountain).
+  - Details: `docs/findings.md`, 2026-10-13 (later).
+
 ## Reproducibility notes
 
 - **Earth Engine input imagery can change between runs.** Late-September 2026 Sentinel-2 scenes over

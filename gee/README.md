@@ -15,7 +15,7 @@ outputs.
 | `config.js` | Settings → bulcd config, notebook defaults and limits | `config.build_config()` + `app.EarlyDetectionApp.build()` |
 | `controls.js` | Settings panel (widgets) | `app.py _build_settings_step()` |
 | `aoi.js` | Area size check and limits | `outputs.aoi_size_report()`, `app.py _use_area()` |
-| `outputs.js` | Condition, first-detected season, true color, NBR composite | `outputs._outcome_from_result()`, `detection_timing_image()`, `combine_season_timing()`, `annual_true_color()`, `annual_nbr()`, `nbr_stretch()`; `render` colors |
+| `outputs.js` | Condition, first-detected season, last detection, detection episodes, true color, NBR composite | `outputs._outcome_from_result()`, `detection_timing_image()`, `combine_season_timing()`, `combine_episode_metrics()`, `annual_true_color()`, `annual_nbr()`, `nbr_stretch()`; `render` colors |
 | `inspector.js` | Pixel history rows, the expectation fit at the pixel, the charts | `pixel.pixel_history()`, `plot_pixel_history()` |
 | `app.js` | Code Editor UI: area, settings, run, layers, legend, inspector | `app.py` |
 
@@ -66,18 +66,24 @@ inspect its NBR/fit and probability history.
    The first-detected season uses the decrease threshold. The inspector's probability
    chart draws both thresholds, and its notes give each class's crossing against its
    own threshold.
-   - Also: first-detected season (on), allow large areas (off).
+   - Also: first-detected season (on), allow large areas (off), detection timing
+     confirmed (Advanced settings; untick for raw).
 3. **Run Early Detection** recomputes for the chosen area. Layers, bottom to top, in
    the map's Layers control: true color for the monitoring year and the two before;
    the NBR composite (R/G/B = those years, one stretch, water masked); first detected
-   season (decrease; separate runs for up to three seasons, confirmed definition);
+   season (decrease; separate runs for up to three seasons, confirmed definition by
+   default); last detection (in that same season, the start of the most recent period
+   with P(decrease) above the decrease threshold; colored by its position in the
+   seasons); detection episodes (how many separate times P(decrease) rose above the
+   threshold in that season: 1, 2, 3+; no smoothing);
    **condition** (the primary layer, on at 0.85 opacity); the study-area outline.
 4. **Pixel inspector.** Click the map or type a longitude/latitude and press **Submit
    Pixel**. "Expectation -> Monitoring" (the expectation-period observations the fit
    used, the fitted curve through both periods, and the monitoring observations) with
    a summary of the fit at the pixel, then "Target Year vs. Fit" and "Probability
    Through Time", all sampled on the 30 m result grid, probabilities at each observation's
-   own date. A run keeps the coordinate boxes, so Submit Pixel inspects the same pixel
+   own date. Its notes list the monitoring season's detection episodes,
+   with first and last detection. A run keeps the coordinate boxes, so Submit Pixel inspects the same pixel
    under new settings; the inspector names the settings of the run it shows.
 
 Not ported yet (in the notebook): saved local areas (the Code Editor can't read local
@@ -133,7 +139,14 @@ compares with the Python app's code on the same settings:
    equals `pixel_history()` at pixel 1 (map click) and pixel 3 (typed lon/lat + Submit
    Pixel); the inspector's expectation period (observations used in the fit, fitted
    curve, coefficients, residual SD, R2) equals Python bulcd's expectation fit at
-   those pixels; layer list in the notebook's order, only condition shown.
+   those pixels; layer list in the notebook's order, only condition shown. Detection
+   timing:
+   - last-detection and detection-episode layers equal `combine_episode_metrics()`;
+   - the first-detected-season bands are identical with and without the episode bands;
+   - at every pixel, first ≤ last detection, and one episode means last = first.
+
+   2b. The same run with detection timing set to **raw** in the GUI equals the
+   `confirmed=False` combinations.
 3. **Non-default settings** (including fit order 2): configs equal `EarlyDetectionApp.build()` with the same
    widget values.
 4. **Expectation fit orders 2 and 3**, each chosen in Advanced settings and run through
@@ -145,13 +158,17 @@ compares with the Python app's code on the same settings:
      equal Python at pixel 1;
    - the run label and the fit summary name the order, and the short-season warning
      shows for the default 122-day season.
+5. **Robert's Pine Mountain pixel** (`docs/findings.md`, 2026-10-13). These all agree with the
+   documented values (first detection Apr 17, last detection Sep 24, 2 episodes):
+   - the JS and Python detection timing images;
+   - both inspectors' episodes, with identical notes.
 
 The true-color and NBR layers are reference imagery outside BULC-D and aren't
 compared. It uses BULC-D_rebuild's Node environment and Earth Engine token helper
 (setup in `../BULC-D_rebuild/gee/README.md`). From the `bulcd` env:
 
 ```sh
-cd gee/tests && python run_app_parity.py      # ~35 min
+cd gee/tests && python run_app_parity.py      # ~45 min
 ```
 
 `tests/controls_check.js` is a quick offline check of the settings panel (no

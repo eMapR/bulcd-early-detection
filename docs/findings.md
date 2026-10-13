@@ -1363,3 +1363,65 @@ app defaults otherwise.
   3), not Sep 24.
 - More promising (none implemented or tested): a window that starts after snowmelt, more expectation
   years, or a snow mask. The mask is not the minimum-observations mask, which was deferred.
+
+## 2026-10-13 (later) — Detection timing: last detection and detection episodes (Pine Mountain)
+
+**Robert's Pine Mountain pixel** (−120.959384, 43.694992; expectation 2023, monitoring 2024, season
+Feb 1–Nov 15; app defaults: decrease threshold 0.65, expectation fit order 1):
+
+| Metric | Value |
+|---|---|
+| First detection (the existing first-detected-season date) | **Apr 17, 2024** (doy 108), the spring snowmelt false detection |
+| Last detection | **Sep 24, 2024** (doy 268), the fire |
+| Detection episodes | **2** |
+
+- **Episode 1:** Apr 17 – Jun 8. It peaked at 0.904. It ended when P(decrease) fell to 0.434, after two
+  observations that favored unchanged.
+- **Between the episodes:** P(decrease) sat at about 0.043 from late June to Sep 12, across 25 clear
+  observations.
+- **Episode 2:** from Sep 24, still open at season end (0.914).
+- **Why last detection matters here:** the season ends as decrease, so it counts under the confirmed
+  rule. Its first detection is the false spring date, and last detection gives the fire.
+- **The other orders, for comparison:**
+  - Order 3 also has 2 episodes (Mar 24 – May 11, Sep 24).
+  - Order 2 has 3 episodes (Feb 25 – Mar 8, Apr 9 – May 11, Sep 24). The extra one is the kind of
+    short episode a probability hovering near the threshold produces.
+
+**Not just this pixel.** Over the 2 × 2 km box around it (the Python app with these settings, ±0.01°),
+the Timing tab finds detected decrease split as: 1 episode 0.13 km² (3.9%), 2 episodes 3.04 km² (87.8%),
+3 or more 0.29 km² (8.3%). Two episodes, a spring one before the fire, look like the norm here. That fits a
+snowmelt-timing difference between 2023 and 2024 across the area. Not checked pixel by pixel.
+
+**Definitions (no smoothing, no minimum length, no change to BULC-D):**
+- **Episode:** starts at a bin where P(decrease) > threshold, strictly (the same `>` as the existing
+  first-detected date), after a bin at or below it. It ends at the next bin at or below the threshold.
+- **The first episode starts at the existing first-detected date.** Each run starts below the threshold
+  (starting odds 0.1, thresholds ≥ 0.5).
+- **Empty bins:** bulcd carries the probability forward unchanged in a bin with no valid observation
+  (`bulc.py`, `posterior.unmask(prior)`). At this pixel none of the 19 empty bins changed it. So empty
+  bins never start or end an episode, and every date is an observation bin's end date.
+- **Response time:** with the defaults (dampening 0.7, posterior leveler 0.9) P(decrease) stays within
+  about 0.043–0.914. From that floor an episode needs about 3 decrease observations to start. From the
+  cap it ends after about 2 unchanged ones. A decrease threshold above about 0.914 can never be crossed.
+- **Last detection** = the start of the most recent episode. **Detection episodes** = the number of
+  episode starts.
+- **Within one season only.** Each season in the first-detected-season product is a separate run from
+  the same starting odds. A change still present the next season would cross again there just because
+  of that reset.
+
+**Where it lives.**
+- **Images:** `outputs.decrease_episode_bands()` / `outputs.js decreaseEpisodeBands()`. Each bin is
+  compared with the one before it along a per-pixel array; the same BULC-D run, no extra runs.
+- **Opt-in bands:** `detection_timing_image(..., episodes=True)` appends them. Its first three bands are
+  identical either way, which the parity test checks.
+- **Combining seasons:** `combine_episode_metrics(seasons, confirmed)` takes the bands from the season
+  `combine_season_timing()` selects with the same `confirmed`. `combine_season_timing()` itself is
+  unchanged.
+- **Confirmed vs raw:** confirmed is the default (only seasons that end as decrease count). Raw is an
+  Advanced-settings option in both apps and applies to all three timing layers. Under confirmed, the
+  selected season's last episode is still open at season end, so last detection is the start of the
+  detection that held to the end of the season.
+- **Inspectors:** `pixel.detection_episodes()` / `inspector.js detectionEpisodes()` list every episode
+  per season.
+- **Not changed:** the precomputed demo assets and notebooks still use the three original timing bands.
+
