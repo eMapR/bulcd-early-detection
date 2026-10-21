@@ -47,7 +47,7 @@ var SENSOR_GAPS = {
 };
 // Expectation length (years) above which a Sentinel-2 expectation is likely to
 // exceed Earth Engine's interactive memory limit (config.py S2_EXPECTATION_MAX_YEARS).
-var S2_EXPECTATION_MAX_YEARS = 6;
+var S2_EXPECTATION_MAX_YEARS = 2;
 var MAX_TIMING_SEASONS = 3;
 
 // Starting probabilities, as in the original BULC-D GUI (initializingLeveler 0.7
@@ -192,7 +192,8 @@ function sensorWarnings(c) {
   if (exp.indexOf('S2') >= 0 && n > S2_EXPECTATION_MAX_YEARS) {
     out.push('A ' + n + '-year expectation with Sentinel-2 is likely to exceed Earth Engine\'s memory limit: in ' +
              'tests, Sentinel-2 expectations longer than ' + S2_EXPECTATION_MAX_YEARS + ' years failed ' +
-             'MEMORY_FAILURE_PLACEHOLDER. Use fewer expectation years or leave Sentinel-2 out of the expectation.');
+             'in the pixel inspector ("User memory limit exceeded"), and the detection-timing layers often failed as ' +
+             'well. Use fewer expectation years or leave Sentinel-2 out of the expectation.');
   }
   return out;
 }

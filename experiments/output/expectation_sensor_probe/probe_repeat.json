@@ -1,0 +1,521 @@
+{
+ "started": "2026-10-21T22:35:45.349Z",
+ "area": "projects/bulcd-python-rebuild/assets/testsite",
+ "zoom": 13,
+ "tiles": 6,
+ "pixel": {
+  "label": "Pixel 1 (decrease)",
+  "lon": -123.56922,
+  "lat": 44.84283
+ },
+ "availability": {
+  "L8": {
+   "2013": 12,
+   "2014": 12,
+   "2015": 14,
+   "2016": 13,
+   "2017": 13,
+   "2018": 15,
+   "2019": 14,
+   "2020": 14,
+   "2021": 11,
+   "2022": 13,
+   "2023": 14,
+   "2024": 15,
+   "2025": 15,
+   "2026": 14
+  },
+  "L9": {
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 0,
+   "2017": 0,
+   "2018": 0,
+   "2019": 0,
+   "2020": 0,
+   "2021": 0,
+   "2022": 13,
+   "2023": 13,
+   "2024": 13,
+   "2025": 16,
+   "2026": 14
+  },
+  "S2": {
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 13,
+   "2017": 24,
+   "2018": 48,
+   "2019": 48,
+   "2020": 50,
+   "2021": 49,
+   "2022": 49,
+   "2023": 48,
+   "2024": 48,
+   "2025": 59,
+   "2026": 60
+  },
+  "S2_cloud_score_plus": {
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 26,
+   "2017": 24,
+   "2018": 48,
+   "2019": 48,
+   "2020": 50,
+   "2021": 49,
+   "2022": 49,
+   "2023": 47,
+   "2024": 48,
+   "2025": 60,
+   "2026": 61
+  }
+ },
+ "runs": [
+  {
+   "name": "L8+S2 x 3 yr",
+   "sensors": [
+    "L8",
+    "S2"
+   ],
+   "years": 3,
+   "expectation": [
+    2021,
+    2023
+   ],
+   "expectation_sensors": [
+    "L8",
+    "S2"
+   ],
+   "layers": {
+    "Condition 2026": {
+     "description_chars": 3861697,
+     "s": 47.172,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 27.319,
+     "tiles": [
+      {
+       "s": 15.036,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 21.208,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 17.662,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 26.315,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 19.207,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 27.319,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 270289921,
+     "s": 200.294,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 174.209,
+     "tiles": [
+      {
+       "s": 174.209,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 78.424,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 52.877,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 76.364,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 23.43,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 21.464,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Last detection (decrease)": {
+     "description_chars": 52268911,
+     "s": 80.875,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 34.534,
+     "tiles": [
+      {
+       "s": 22.732,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 29.375,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 34.534,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 29.13,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 20.062,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 25.638,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 26134426,
+     "s": 85.857,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 36.513,
+     "tiles": [
+      {
+       "s": 26.942,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 21.691,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 36.513,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 23.365,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 27.068,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 27.187,
+       "status": 200,
+       "error": null
+      }
+     ]
+    }
+   },
+   "inspector": {
+    "s": 49.771,
+    "ok": false,
+    "error": "User memory limit exceeded."
+   }
+  },
+  {
+   "name": "L8+S2 x 2 yr",
+   "sensors": [
+    "L8",
+    "S2"
+   ],
+   "years": 2,
+   "expectation": [
+    2022,
+    2023
+   ],
+   "expectation_sensors": [
+    "L8",
+    "S2"
+   ],
+   "layers": {
+    "Condition 2026": {
+     "description_chars": 3861697,
+     "s": 22.14,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 12.969,
+     "tiles": [
+      {
+       "s": 10.411,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 10.636,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 12.582,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 11.633,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 7.936,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 12.969,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 270289921,
+     "s": 78.069,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 61.246,
+     "tiles": [
+      {
+       "s": 17.89,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 23.081,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 19.612,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 24.842,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 61.246,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 23.409,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Last detection (decrease)": {
+     "description_chars": 52268911,
+     "s": 173.074,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 132.588,
+     "tiles": [
+      {
+       "s": 24.67,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 23.922,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 26.623,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 22.847,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 21.029,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 132.588,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 26134426,
+     "s": 51.331,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 24.709,
+     "tiles": [
+      {
+       "s": 22.643,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 24.709,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 19.583,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 19.375,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 23.25,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 16.402,
+       "status": 200,
+       "error": null
+      }
+     ]
+    }
+   },
+   "inspector": {
+    "s": 42.046,
+    "ok": true,
+    "error": null
+   }
+  },
+  {
+   "name": "L8+S2 x 4 yr",
+   "sensors": [
+    "L8",
+    "S2"
+   ],
+   "years": 4,
+   "expectation": [
+    2020,
+    2023
+   ],
+   "expectation_sensors": [
+    "L8",
+    "S2"
+   ],
+   "layers": {
+    "Condition 2026": {
+     "description_chars": 3861697,
+     "s": 38.82,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 22.428,
+     "tiles": [
+      {
+       "s": 19.063,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 20.355,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 10.805,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 22.428,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 14.251,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 19.518,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 270289921,
+     "s": 56.566,
+     "ok": false,
+     "error": "getMap: User memory limit exceeded.",
+     "tiles": []
+    },
+    "Last detection (decrease)": {
+     "description_chars": 52268911,
+     "s": 27.41,
+     "ok": false,
+     "error": "getMap: User memory limit exceeded.",
+     "tiles": []
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 26134426,
+     "s": 31.459,
+     "ok": false,
+     "error": "getMap: User memory limit exceeded.",
+     "tiles": []
+    }
+   },
+   "inspector": {
+    "s": 41.331,
+    "ok": false,
+    "error": "User memory limit exceeded."
+   }
+  }
+ ],
+ "finished": "2026-10-21T22:53:22.787Z"
+}

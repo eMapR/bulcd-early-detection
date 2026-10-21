@@ -67,12 +67,21 @@ def test_availability_warnings():
 
 
 def test_memory_warning_follows_the_probe_limit():
+    # The probe (docs/findings.md, 2026-10-19): with L8+S2 and L8+L9+S2 the inspector passed at 2 years and
+    # failed at every longer length tried (3, 4, 6, 8).
+    assert S2_EXPECTATION_MAX_YEARS == 2
     n = S2_EXPECTATION_MAX_YEARS
     first = 2023 - n + 1
     ok = sensor_warnings(("L8", "S2"), ("L8", "S2"), first, 2023)
     assert not any("memory limit" in x for x in ok)
     over = sensor_warnings(("L8", "S2"), ("L8", "S2"), first - 1, 2023)
-    assert any(x.startswith(f"A {n + 1}-year expectation with Sentinel-2 is likely to exceed") for x in over)
+    assert [x for x in over if "memory limit" in x] == [
+        "A 3-year expectation with Sentinel-2 is likely to exceed Earth Engine's memory limit: in tests, Sentinel-2 "
+        "expectations longer than 2 years failed in the pixel inspector (\"User memory limit exceeded\"), and the "
+        "detection-timing layers often failed as well. Use fewer expectation years or leave Sentinel-2 out of the "
+        "expectation."]
+    # Sentinel-2 alone in the expectation warns too.
+    assert any("memory limit" in x for x in sensor_warnings(("S2",), ("S2",), 2021, 2023))
     # Landsat only: no memory warning at any length.
     assert not any("memory limit" in x for x in sensor_warnings(("L8", "L9"), ("L8", "L9"), 2016, 2025))
 

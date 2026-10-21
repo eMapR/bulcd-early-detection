@@ -1477,3 +1477,99 @@ the episode layers were added.
 grows with the number of seasons and the expectation length, so it is the layer most likely to hit this
 limit next. Leaving it alone was a requirement; if it does hit the limit, the same one-band, single-`min()`
 combination would shrink it.
+
+
+## 2026-10-19 — Expectation sensors: availability, interactive memory limits, and the Sentinel-2 warning
+
+Both apps now let the user choose the expectation sensors (L8 by default, any L8/L9/S2 combination). This
+entry is the evidence behind the availability and memory warnings that control shows. The probe began on
+the laptop and finished 2026-10-21 on the islay server.
+
+**Sensor availability** (Jun-Sep scenes over the testsite, from the probe's `availability` line):
+
+| Year | 2013 | 2014-2015 | 2016 | 2017 | 2018-2024 | 2025-2026 |
+|---|---|---|---|---|---|---|
+| Landsat 8 | 12 | 12-14 | 13 | 13 | 11-15 | 14-15 |
+| Landsat 9 | 0 | 0 | 0 | 0 | 0 to 2021; 13 from 2022 | 14-16 |
+| Sentinel-2 | 0 | 0 | 13 | 24 | 48-50 | 59-60 |
+
+- **Landsat 9** has nothing before 2022 (first scenes Oct 31, 2021). An expectation starting earlier gets a
+  sensor mix that changes partway through.
+- **Sentinel-2** has about a quarter (2016) to half (2017) of its later scene count before 2018, when only
+  Sentinel-2A was flying. The Cloud Score+ collection has the same counts within 1-2 scenes (26 in 2016).
+- `config.py SENSOR_FULL_FROM` / `_SENSOR_GAPS` and `gee/config.js` hold these limits and their warning text.
+
+**The probe** (`experiments/expectation_sensor_probe.js`; outputs and logs in
+`experiments/output/expectation_sensor_probe/`). It drives the GEE app under Node with the default settings
+(testsite, monitoring 2026, three timing seasons) and changes only the expectation: sensors L8, L8+S2 or
+L8+L9+S2; length 2, 3, 4, 6 or 8 years, all ending 2023. For each run it requests the map tiles at zoom 13
+for four layers and the pixel inspector at reference pixel 1, as the Code Editor would. Several cells were
+run twice (`probe_finish2`, `probe_repeat`, `probe_repeat_l8`) to separate repeatable failures from
+transient ones.
+
+**Results.** One entry per run, in run order; "ok" = every tile or the inspector returned. UML = "User
+memory limit exceeded" (this request's own limit); 503 = "Earth Engine memory capacity exceeded" (the
+server's capacity, transient); 500 = internal error.
+
+| Expectation | Years | Inspector | Condition | First detected season | Last detection | Detection episodes |
+|---|---|---|---|---|---|---|
+| L8 | 2 | ok | ok | ok | ok | ok |
+| L8 | 4 | ok, ok | ok, ok | ok, ok | ok, ok | 503, ok |
+| L8 | 6 | ok | ok | ok | ok | ok |
+| L8 | 8 | ok | ok | ok | ok | ok |
+| L8+S2 | 2 | ok, ok | ok, ok | ok, ok | ok, ok | 500, ok |
+| L8+S2 | 3 | **UML** | ok | ok | ok | ok |
+| L8+S2 | 4 | **UML, UML** | ok, ok | UML, UML | 503, UML | UML, UML |
+| L8+S2 | 6 | **UML** | ok | UML | UML | UML |
+| L8+S2 | 8 | **"Please try again"** | ok | ok | 503 | ok |
+| L8+L9+S2 | 2 | ok, ok, ok | 503, ok | ok, ok | 503, ok | 503, ok |
+| L8+L9+S2 | 3 | **UML** | 503 | ok | 503 | 503 |
+| L8+L9+S2 | 4 | **503, UML** | ok | UML | UML | UML |
+| L8+L9+S2 | 6 | **UML, UML** | connection reset, ok | UML, UML | 503 | UML |
+| L8+L9+S2 | 8 | **UML** | 503 | ok | ok | ok |
+
+(The first L8+L9+S2 4-year and 6-year runs stopped partway, so some of their cells have one entry.)
+
+- **Landsat 8 only:** everything works at every length. The one failure (a 503) did not repeat.
+- **With Sentinel-2, the inspector sets the limit.** It passed at 2 years in all 5 runs, with either
+  sensor set, and failed at every longer length in all 11 runs. This is the clearest boundary in the data,
+  and it is the same for L8+S2 and L8+L9+S2. The inspector is where users look at the expectation fit, so a
+  setup where it fails is not usable.
+- **Map layers are less predictable.** Condition (one BULC-D run) never hit UML. The three timing layers
+  (three seasonal runs) hit UML at 4 and 6 years with both sensor sets, repeatably at L8+S2 4 years, but
+  not at 3 or 8 years. The 8-year result is not explained; it may come from how Earth Engine plans the
+  larger computation. The 503s and the one 500 appear at short and long lengths, including Landsat-only
+  and 2-year runs, and every one that was repeated passed. They reflect server load, not this
+  computation's size.
+- **Timing:** Sentinel-2 makes the inspector two to three times slower (L8 14-19 s; with S2 32-44 s when it works)
+  and adds 10-30% to the layer descriptions (First detected season 244 M chars L8, 270 M L8+S2, 315 M
+  L8+L9+S2; all under the Code Editor's limit; see the 2026-10-13 entry).
+
+**Decision: warn whenever Sentinel-2 is in an expectation longer than 2 years.**
+- `S2_EXPECTATION_MAX_YEARS = 2` (`config.py`, `gee/config.js`; was a provisional 6). One threshold fits
+  both Sentinel-2 sets, so the warning does not depend on the other sensors. It also covers Sentinel-2
+  alone, which was not probed: an assumption that Sentinel-2's ~48 scenes a season, most of the L8+S2
+  data, drive the memory use. Not verified.
+- **Warning text** (identical in both apps; `tests/test_expectation_sensors.py` checks the text and that
+  the two apps agree): "A N-year expectation with Sentinel-2 is likely to exceed Earth Engine's memory
+  limit: in tests, Sentinel-2 expectations longer than 2 years failed in the pixel inspector ("User memory
+  limit exceeded"), and the detection-timing layers often failed as well. Use fewer expectation years or
+  leave Sentinel-2 out of the expectation."
+- It is a warning, not a block. The default expectation (2018-2023, L8 only) is unchanged; ticking
+  Sentinel-2 at that length now warns.
+- **Why memory depends on length, not area.** The 2026-09-18 entry found the expectation harmonic fit
+  (`organize_inputs()`) alone exceeds the limit for a multi-year L8+S2 expectation, independent of
+  `tileScale`. The fit's size grows with years × bins × sensors per pixel, so a smaller map view or area
+  does not help.
+
+**Interactive only.** These are limits on interactive requests (map tiles, inspector). A 6-year L8+S2
+expectation completed as a batch export at North Cascades while interactive requests failed. The regional
+plan (`docs/regional_plan.md`, step 8) tests how far batch exports go (expectation sensors × length ×
+`shardSize`).
+
+**Tests.** `tests/test_expectation_sensors.py` (the 2-year limit, the exact warning text, and Python/GEE
+agreement on configs and warnings for every sensor combination; it needs `node` on `PATH`, else that test
+skips) and `gee/tests/controls_check.js`. The live app parity test (`gee/tests/run_app_parity.py`, section 6:
+L8+S2, expectation 2022-2023, chosen in the GUI's Advanced settings) passed 2026-10-21. Configs and warnings
+match; condition, first detected season, last detection and episodes match Python with 0 differing values
+over the box; the inspector rows and expectation fit (62 bins, 43 observations) match at pixel 1.
