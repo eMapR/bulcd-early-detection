@@ -74,7 +74,10 @@ function makeControls(appConfig, onChange) {
                              value: String(d.fit_order), onChange: changed, style: {width: '260px'}});
   var dampening = slider(r.dampening, d.dampening, changed);
   var posterior = slider(r.posterior_leveler, d.posterior_leveler, changed);
-  var sensors = {};
+  var expSensors = {}, sensors = {};
+  appConfig.SENSORS.forEach(function (s) {
+    expSensors[s] = ui.Checkbox({label: appConfig.SENSOR_LABELS[s], value: d.expectation_sensors[s], onChange: changed});
+  });
   appConfig.MONITORING_SENSORS.forEach(function (s) {
     sensors[s] = ui.Checkbox({label: appConfig.SENSOR_LABELS[s], value: d.sensors[s], onChange: changed});
   });
@@ -96,7 +99,9 @@ function makeControls(appConfig, onChange) {
     ui.Label('how much weight each single observation carries (1 = full)', HINT),
     ui.Label('Posterior leveler', LABEL), posterior,
     ui.Label('pull toward even odds after each update (1 = off)', HINT),
-    ui.Label('Monitoring sensors (the expectation always uses Landsat 8)', LABEL),
+    ui.Label('Expectation sensors', LABEL),
+    row(appConfig.SENSORS.map(function (s) { return expSensors[s]; })),
+    ui.Label('Monitoring sensors', LABEL),
     row(appConfig.MONITORING_SENSORS.map(function (s) { return sensors[s]; })),
     maskForest, maskWater, allowLarge,
     timingConfirmed,
@@ -123,7 +128,8 @@ function makeControls(appConfig, onChange) {
   ]);
 
   function read() {
-    var s = {};
+    var e = {}, s = {};
+    appConfig.SENSORS.forEach(function (k) { e[k] = expSensors[k].getValue(); });
     appConfig.MONITORING_SENSORS.forEach(function (k) { s[k] = sensors[k].getValue(); });
     return {
       expectation_first: Number(expFirst.getValue()), expectation_last: Number(expLast.getValue()),
@@ -133,7 +139,7 @@ function makeControls(appConfig, onChange) {
       increase_threshold: increaseThreshold.getValue(), timing: timing.getValue(),
       timing_confirmed: timingConfirmed.getValue(),
       dampening: dampening.getValue(), posterior_leveler: posterior.getValue(),
-      fit_order: Number(fitOrder.getValue()), sensors: s,
+      fit_order: Number(fitOrder.getValue()), expectation_sensors: e, sensors: s,
       mask_forest: maskForest.getValue(), mask_water: maskWater.getValue(), allow_large: allowLarge.getValue()
     };
   }
@@ -147,12 +153,14 @@ function makeControls(appConfig, onChange) {
     } else {
       relationship.setValue(appConfig.describeControls(c).join('\n'));
       relationship.style().set({color: '#222',
-                                border: '1px solid ' + (appConfig.fitOrderWarning(c) ? '#b45f06' : '#2a78d6')});
+                                border: '1px solid ' + (appConfig.fitOrderWarning(c) || appConfig.sensorWarnings(c).length
+                                                        ? '#b45f06' : '#2a78d6')});
     }
   }
 
   describe();
-  return {panel: panel, read: read, fitOrder: fitOrder, timingConfirmed: timingConfirmed};
+  return {panel: panel, read: read, fitOrder: fitOrder, timingConfirmed: timingConfirmed, expectationFirst: expFirst,
+          expectationLast: expLast, expectationSensors: expSensors, sensors: sensors};
 }
 
 exports.makeControls = makeControls;

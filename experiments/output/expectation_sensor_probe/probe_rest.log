@@ -1,0 +1,10 @@
+availability {"L8":{"2013":12,"2014":12,"2015":14,"2016":13,"2017":13,"2018":15,"2019":14,"2020":14,"2021":11,"2022":13,"2023":14,"2024":15,"2025":15,"2026":14},"L9":{"2013":0,"2014":0,"2015":0,"2016":0,"2017":0,"2018":0,"2019":0,"2020":0,"2021":0,"2022":13,"2023":13,"2024":13,"2025":16,"2026":14},"S2":{"2013":0,"2014":0,"2015":0,"2016":13,"2017":24,"2018":48,"2019":48,"2020":50,"2021":49,"2022":49,"2023":48,"2024":48,"2025":59,"2026":60},"S2_cloud_score_plus":{"2013":0,"2014":0,"2015":0,"2016":26,"2017":24,"2018":48,"2019":48,"2020":50,"2021":49,"2022":49,"2023":47,"2024":48,"2025":60,"2026":61}}
+L8+L9+S2 x 4 yr inspector {"s":64.989,"ok":false,"error":"User memory limit exceeded."}
+L8+L9+S2 x 4 yr Condition 2026: 4.5M chars, 50 s, ok
+L8+L9+S2 x 4 yr First detected season (decrease): 315.0M chars, 45 s, FAILED getMap: User memory limit exceeded.
+L8+L9+S2 x 4 yr Last detection (decrease): 60.9M chars, 56 s, FAILED getMap: User memory limit exceeded.
+L8+L9+S2 x 4 yr Detection episodes (decrease): 30.4M chars, 60 s, FAILED getMap: User memory limit exceeded.
+L8+L9+S2 x 6 yr inspector {"s":34.529,"ok":false,"error":"User memory limit exceeded."}
+L8+L9+S2 x 6 yr Condition 2026: 4.5M chars, 144 s, FAILED getMap: Invalid JSON: Error: read ECONNRESET
+    at TLSWrap.onStreamRead (node:internal/stream_base_commons:218:20)
+L8+L9+S2 x 6 yr First detected season (decrease): 315.0M chars, 62 s, FAILED getMap: User memory limit exceeded.

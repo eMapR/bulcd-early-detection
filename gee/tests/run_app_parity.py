@@ -44,6 +44,12 @@ app's own code (src/bulcd_early_detection) on the same settings:
    Python detection timing images, both inspectors' episodes and the
    documented values agree - first detection Apr 17 (doy 108), last detection
    Sep 24 (doy 268), 2 episodes.
+6. Expectation sensors: Landsat 8 + Sentinel-2 over a short expectation
+   (2022-2023), ticked in the GUI's Advanced settings and run: config and
+   first-detected-season configs == build(); the sensor warnings identical
+   in both apps and shown in the settings description; the run label names the
+   expectation sensors; condition, first-detected-season and episode layers ==
+   Python over the box; inspector rows and expectation fit == Python at pixel 1.
 
 Run from the bulcd env: cd gee/tests && python run_app_parity.py   (~45 min)
 Node and bulcd.js come from ../../BULC-D_rebuild/gee (BULCD_GEE overrides).
@@ -71,13 +77,17 @@ NUMERIC = ("observed", "expected", "zscore", *CLASSES)
 # Must match app_extract.js VARIANT.
 VARIANT = dict(expectation=(2019, 2023), monitoring_year=2025, start=(5, 15), end=(10, 15), sensitivity=1.5,
                decrease_threshold=0.6, increase_threshold=0.8, timing=True, dampening=0.5, posterior=1.0,
-               fit_order=2, sensors={"L8": True, "L9": True, "S2": False}, mask_forest=True, mask_water=True)
+               fit_order=2, expectation_sensors={"L8": True, "L9": True, "S2": False},
+               sensors={"L8": True, "L9": True, "S2": False}, mask_forest=True, mask_water=True)
 # Must match app_extract.js FIT_ORDERS_RUN; order 1 is the default run.
 FIT_ORDERS_RUN = (2, 3)
 # Must match app_extract.js PM / PM_CONTROLS.
 PINE_MOUNTAIN = dict(lon=-120.95938356858395, lat=43.69499215695442, half=0.01, expectation=(2023, 2023),
                      monitoring_year=2024, start=(2, 1), end=(11, 15))
 TIMING_BOX_BANDS = ["first_decrease_year", "first_decrease_doy"]
+# Must match app_extract.js EXP_SENSOR_RUN: a short expectation, under the Sentinel-2
+# memory limit (docs/findings.md, 2026-10-19).
+EXPECTATION_SENSOR_RUN = dict(expectation=(2022, 2023), expectation_sensors=("L8", "S2"))
 REGRESSORS = {1: ["constant", "cos", "sin"], 2: ["constant", "cos", "sin", "cos2", "sin2"],
               3: ["constant", "cos", "sin", "cos2", "sin2", "cos3", "sin3"]}
 # The original BULC-D GUI's thresholds (gee/tests/legacy_gui.js), the default in both apps.
@@ -123,6 +133,8 @@ def set_widgets(app, v):
     app.decrease_threshold.value, app.increase_threshold.value = v["decrease_threshold"], v["increase_threshold"]
     app.dampening.value, app.posterior.value = v["dampening"], v["posterior"]
     app.fit_order.value = v["fit_order"]
+    for k, on in v["expectation_sensors"].items():
+        app.expectation_sensors[k].value = on
     for k, on in v["sensors"].items():
         app.sensors[k].value = on
     app.mask_forest.value, app.mask_water.value = v["mask_forest"], v["mask_water"]
@@ -157,6 +169,7 @@ def python_side(pixels):
                          increase_threshold=app.increase_threshold.value, timing=app.timing.value, dampening=app.dampening.value,
                          posterior=app.posterior.value, fit_order=app.fit_order.value,
                          timing_confirmed=app.timing_confirmed.value,
+                         expectation_sensors={k: b.value for k, b in app.expectation_sensors.items()},
                          sensors={k: b.value for k, b in app.sensors.items()},
                          mask_forest=app.mask_forest.value, mask_water=app.mask_water.value,
                          allow_large=app.allow_large.value)
@@ -209,6 +222,27 @@ def python_side(pixels):
             "rows": {first: pool.submit(pixel.pixel_history, config, *pixels[first])},
             "expectation": {first: pool.submit(expectation_history, config, *pixels[first])},
         }
+
+    es = EXPECTATION_SENSOR_RUN
+    app_s = EarlyDetectionApp()
+    app_s.expectation.value = es["expectation"]
+    for k, box in app_s.expectation_sensors.items():
+        box.value = k in es["expectation_sensors"]
+    c = app_s.controls()
+    config = build(app_s, c)
+    years = app_s._timing_years()
+    seasons = {y: outputs.detection_timing_image(build(app_s, app_s.controls(y)), c.decision_threshold,
+                                                 c.increase_threshold) for y in years}
+    out["expectation_sensors"] = {
+        "config": dataclasses.asdict(config), "timing_years": years, "warnings": app_s.sensor_warnings(),
+        "timing_configs": [dataclasses.asdict(build(app_s, app_s.controls(y))) for y in years],
+        "outcome_box": pool.submit(region, outputs.outcome_image(config, c.decision_threshold, c.increase_threshold)
+                                   .clip(geom).select("outcome")),
+        "timing_box": pool.submit(region, outputs.combine_season_timing(seasons).clip(geom).select(TIMING_BOX_BANDS)),
+        "episodes_box": pool.submit(region, outputs.combine_episode_metrics(codes(app_s)).clip(geom)),
+        "rows": {first: pool.submit(pixel.pixel_history, config, *pixels[first])},
+        "expectation": {first: pool.submit(expectation_history, config, *pixels[first])},
+    }
 
     pm = PINE_MOUNTAIN
     app_pm = EarlyDetectionApp()
@@ -426,6 +460,7 @@ def main():
         "timing": (c["timing"], w["timing"]), "dampening": (c["dampening"], w["dampening"]),
         "posterior": (c["posterior_leveler"], w["posterior"]), "fit_order": (c["fit_order"], w["fit_order"]),
         "timing_confirmed": (c["timing_confirmed"], w["timing_confirmed"]),
+        "expectation_sensors": (c["expectation_sensors"], w["expectation_sensors"]),
         "sensors": (c["sensors"], w["sensors"]),
         "mask_forest": (c["mask_forest"], w["mask_forest"]), "mask_water": (c["mask_water"], w["mask_water"]),
         "allow_large": (c["allow_large"], w["allow_large"]),
@@ -546,6 +581,37 @@ def main():
           f"{jp['image'].get('last_decrease_doy')}, episodes {jp['image'].get('decrease_episodes')}; inspector: "
           f"{jp['notes'][0] if jp['notes'] else '-'} - {'match' if not f else 'MISMATCH'}")
     failures += f
+
+    print("6. Expectation sensors (Advanced settings, Run): "
+          f"{'+'.join(EXPECTATION_SENSOR_RUN['expectation_sensors'])}, expectation "
+          f"{EXPECTATION_SENSOR_RUN['expectation'][0]}-{EXPECTATION_SENSOR_RUN['expectation'][1]}")
+    je, pe = js["expectation_sensors"], py["expectation_sensors"]
+    want = list(EXPECTATION_SENSOR_RUN["expectation_sensors"])
+    f = [] if [k for k, on in je["controls"]["expectation_sensors"].items() if on] == want else \
+        [f"GUI read expectation sensors {je['controls']['expectation_sensors']}"]
+    f += subset_mismatches(je["config"], pe["config"], "expectation-sensor config")
+    if list(pe["config"]["evidence"]["expectation"]["sensors"]) != want:
+        f.append(f"Python expectation sensors {list(pe['config']['evidence']['expectation']['sensors'])} != {want}")
+    for y, a, b in zip(pe["timing_years"], je["timing_configs"], pe["timing_configs"]):
+        f += subset_mismatches(a, b, f"expectation-sensor timing config {y}")
+        if list(b["evidence"]["expectation"]["sensors"]) != want:
+            f.append(f"timing config {y} expectation sensors {list(b['evidence']['expectation']['sensors'])}")
+    if je["warnings"] != pe["warnings"]:
+        f.append(f"sensor warnings differ: JS {je['warnings']} vs Python {pe['warnings']}")
+    if not all(f"Warning: {w}" in je["description"] for w in je["warnings"]):
+        f.append("the settings description does not show every sensor warning")
+    if "expectation sensors L8+S2" not in je["label"]:
+        f.append(f"run label does not name the expectation sensors: {je['label']!r}")
+    print(f"  configs and first-detected-season configs == build(); warnings ({len(je['warnings'])}) identical and "
+          f"shown: {'yes' if not f else 'NO'}")
+    failures += f
+    failures += compare_box("expectation sensors condition", je["outcome_box"], pe["outcome_box"])
+    failures += compare_box("expectation sensors first detected season", je["timing_box"], pe["timing_box"])
+    failures += compare_box("expectation sensors last detection / episodes", je["episodes_box"], pe["episodes_box"])
+    failures += check_episodes(je["timing_box"], je["episodes_box"], "expectation sensors")
+    failures += compare_pixels("expectation sensors", je["pixels"], pe["rows"],
+                               [LEGACY_THRESHOLDS["decrease"], LEGACY_THRESHOLDS["increase"]])
+    failures += compare_expectation("expectation sensors", je["pixels"], pe["expectation"])
 
     if failures:
         print("\nAPP PARITY FAILED")

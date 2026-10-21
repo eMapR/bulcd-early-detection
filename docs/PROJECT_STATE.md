@@ -1,10 +1,67 @@
 # Project State
 
-Last updated: 2026-10-13
+Last updated: 2026-10-21
 
 Concise current-state/handoff doc. Detailed lessons, experimental
 results, and their explanations live in `docs/findings.md` — read it for
 the "why," not this file.
+
+## Pick up here (2026-10-21; work moved from the laptop to the islay server)
+
+**Current project:** regional batch processing for USFS Region 6. The agreed plan, decisions and order of work
+are in `docs/regional_plan.md`. We are on **step 1, the expectation-sensor work**. It must be finished,
+committed and **reported to the user before any regional implementation starts.**
+
+**Step 1 state.** Code and tests are written and committed on `legacy-parity-0011-app` (WIP commit):
+- an expectation-sensor control in both apps (`config.py` `MonitoringControls.expectation_sensors`,
+  `sensor_warnings()`; `gee/config.js` `sensorWarnings()`, `controls.js`, `app.js`, `app.py`);
+- tests: `tests/test_expectation_sensors.py`, `gee/tests/controls_check.js`, and parity section 6 in
+  `gee/tests/run_app_parity.py` / `app_extract.js`.
+
+Offline tests pass (pytest 57 passed, `controls_check.js` OK). **Not done yet:**
+1. **Finish the probe** (`experiments/expectation_sensor_probe.js`; outputs in
+   `experiments/output/expectation_sensor_probe/`). Interactive requests (map tiles, inspector) over the
+   testsite, per expectation sensor set x length (years ending 2023):
+   - done: L8 at 2/4/6/8; L8+S2 at 2/4/6/8; L8+L9+S2 at 2/4/6/8 and 3 (`probe.log`, `probe_rest.log`,
+     `probe_finish.log`);
+   - **to run:** L8+L9+S2 x 2 (repeat), then L8+S2 x 3, 2, 4 (repeats), then L8 x 4 (repeat; transient 503):
+     ```
+     O=experiments/output/expectation_sensor_probe
+     PROBE_SENSORS=L8+L9+S2 PROBE_YEARS=2 node experiments/expectation_sensor_probe.js $O/probe_finish2.json > $O/probe_finish2.log 2>&1
+     PROBE_SENSORS=L8+S2 PROBE_YEARS=3,2,4 node experiments/expectation_sensor_probe.js $O/probe_repeat.json > $O/probe_repeat.log 2>&1
+     PROBE_SENSORS=L8 PROBE_YEARS=4 node experiments/expectation_sensor_probe.js $O/probe_repeat_l8.json > $O/probe_repeat_l8.log 2>&1
+     ```
+     About 5 min per run; run in tmux.
+   - So far:
+     - **Landsat 8 only:** fine at every length; one transient 503.
+     - **L8+S2:** the inspector fails ("User memory limit exceeded") from 4 years; passes at 2.
+     - **L8+L9+S2:** the inspector fails at every length tried (3, 4, 6, 8).
+     - **Map layers with Sentinel-2:** fail inconsistently, mixing "User memory limit exceeded" with the
+       server-wide 503 "Earth Engine memory capacity exceeded". At 8 years, layers that failed at 4-6 years
+       drew.
+     - **Condition** draws far more reliably than the timing layers.
+2. **Replace `MEMORY_FAILURE_PLACEHOLDER`** (`config.py` and `gee/config.js`, same text) and revisit
+   `S2_EXPECTATION_MAX_YEARS` (currently 6, which the data don't support). A single "longer than N years" rule
+   doesn't fit both sensor sets, so the warning probably has to depend on the sensor set, or warn whenever
+   Sentinel-2 is in the expectation. Update `tests/test_expectation_sensors.py`
+   (`test_memory_warning_follows_the_probe_limit`) to match.
+3. **Run the live parity test** (`cd gee/tests && python run_app_parity.py`, ~45 min, tmux). Section 6 is new.
+4. **Write the `docs/findings.md` entry dated 2026-10-19** (the code and tests already cite it). Cover: sensor
+   availability (`availability` line in the logs: L9 from 2022, S2 sparse before 2018), probe results, and the
+   threshold chosen.
+5. **Commit, then report the results to the user.** Then create `feature/regional-batch-processing` from
+   `legacy-parity-0011-app` (plan step 2).
+
+**Environment on a new machine** (the laptop's paths and Claude memory don't carry over):
+- **Repos:** both checked out as siblings, `bulcd-early-detection` on `legacy-parity-0011-app` and
+  `BULC-D_rebuild` on `legacy-parity-0011` (decision 0011 + `bulcd.js`; not merged to its `main`).
+- **Python:** `pip install -e ../BULC-D_rebuild && pip install -e ".[dev,notebook]"` (Python 3.11 `bulcd` env;
+  ipyleaflet is needed for test collection).
+- **Node:** for `gee/tests` and the probe; `cd ../BULC-D_rebuild/gee && npm install`, see its
+  `gee/README.md`. On the laptop it came from a separate conda env, `bulcd-gee`.
+- **Earth Engine:** credentials for project `bulcd-python-rebuild` (`earthengine authenticate`, or copy
+  `~/.config/earthengine/credentials`).
+- **GEE Code Editor deploy after committing:** `python tools/build_gee_deploy.py clarype`.
 
 ## Architecture
 

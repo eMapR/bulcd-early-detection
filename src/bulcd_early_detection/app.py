@@ -24,7 +24,7 @@ import ipywidgets as W
 from IPython.display import Markdown, display
 
 from . import compare, drawing, outputs, pixel, render, report
-from .config import FIT_ORDERS, MonitoringControls, build_config
+from .config import BASELINE_SENSORS, FIT_ORDERS, SENSORS, MonitoringControls, build_config, sensor_warnings
 
 # Earth Engine requests have no deadline by default, so one stalled request can
 # freeze the whole app; fail it after this long instead (ms).
@@ -203,8 +203,9 @@ class EarlyDetectionApp:
                                        description="Posterior leveler:", style=style, layout=wide)
         self.fit_order = W.Dropdown(options=[(FIT_ORDER_LABELS[n], n) for n in FIT_ORDERS], value=d["fit_order"],
                                     description="Expectation fit order:", style=style, layout=W.Layout(width="480px"))
-        self.sensors = {s: W.Checkbox(value=True, description=label) for s, label in
-                        (("L8", "Landsat 8"), ("L9", "Landsat 9"), ("S2", "Sentinel-2"))}
+        labels = {"L8": "Landsat 8", "L9": "Landsat 9", "S2": "Sentinel-2"}
+        self.expectation_sensors = {s: W.Checkbox(value=s in BASELINE_SENSORS, description=labels[s]) for s in SENSORS}
+        self.sensors = {s: W.Checkbox(value=True, description=labels[s]) for s in SENSORS}
         self.mask_forest = W.Checkbox(value=d["mask_forest"], description="Analyze forest only (Hansen tree cover ≥ 10%)",
                                       style={"description_width": "initial"})
         self.mask_water = W.Checkbox(value=d["mask_water"], description="Leave out water",
@@ -216,14 +217,16 @@ class EarlyDetectionApp:
                                    "seasonal transitions but need a long season to fit reliably"),
             self.dampening, W.HTML("&nbsp;&nbsp;how much weight each single observation carries (1 = full)"),
             self.posterior, W.HTML("&nbsp;&nbsp;pull toward even odds after each update (1 = off)"),
-            W.HTML("<b>Monitoring sensors</b> (the expectation always uses Landsat 8)"), W.HBox(list(self.sensors.values())),
+            W.HTML("<b>Expectation sensors</b>"), W.HBox(list(self.expectation_sensors.values())),
+            W.HTML("<b>Monitoring sensors</b>"), W.HBox(list(self.sensors.values())),
             self.mask_forest, self.mask_water, self.allow_large,
             self.timing_confirmed, W.HTML("&nbsp;&nbsp;for first detected season, last detection and detection episodes; "
                                           "unticked (raw), a crossing BULC-D later retracts also counts"),
         ])])
         self.advanced.set_title(0, "Advanced settings")
         self.advanced.selected_index = None
-        for w in (self.expectation, self.monitoring_year, self.window, self.timing, self.fit_order, self.timing_confirmed):
+        for w in (self.expectation, self.monitoring_year, self.window, self.timing, self.fit_order, self.timing_confirmed,
+                  *self.expectation_sensors.values(), *self.sensors.values()):
             w.observe(lambda _: self._describe(), "value")
         self._describe()
         self.run_btn = W.Button(description="Run Early Detection", button_style="primary", icon="play", disabled=True,
@@ -247,6 +250,10 @@ class EarlyDetectionApp:
         elif start >= end:
             problem = (f"The season must start before it ends. Now: {fmt(start)} to {fmt(end)}. "
                        "(A window can't wrap past Dec 31; each year's window runs within that calendar year.)")
+        elif not self._checked(self.expectation_sensors):
+            problem = "Select at least one expectation sensor."
+        elif not self._checked(self.sensors):
+            problem = "Select at least one monitoring sensor."
         self.settings_ok = problem is None
         if hasattr(self, "run_btn"):
             self.run_btn.disabled = not (self.settings_ok and self.area is not None)
@@ -260,14 +267,24 @@ class EarlyDetectionApp:
                   ("A season counts only if it ends as decrease (confirmed)." if self.timing_confirmed.value else
                    "Any threshold crossing counts, even one BULC-D later retracts (raw).")
                   if self.timing.value else "")
-        warning = MonitoringControls(monitoring_year=m, season_start=start, season_end=end, baseline_first_year=e0,
-                                     baseline_last_year=e1, fit_order=self.fit_order.value).fit_order_warning
-        warning = f"<br><b style='color:#b45f06'>Warning:</b> {warning}" if warning else ""
+        warnings = [MonitoringControls(monitoring_year=m, season_start=start, season_end=end, baseline_first_year=e0,
+                                       baseline_last_year=e1, fit_order=self.fit_order.value).fit_order_warning,
+                    *self.sensor_warnings()]
+        warning = "".join(f"<br><b style='color:#b45f06'>Warning:</b> {w}" for w in warnings if w)
         self.relationship.value = (
             "<div style='padding:6px;border-left:4px solid #2a78d6'>"
             f"<b>Expectation ({e0}–{e1}, {fmt(start)}–{fmt(end)} each year)</b> defines what is <i>normal</i> for each pixel.<br>"
             f"<b>Monitoring ({fmt(start)}–{fmt(end)}, {m})</b> is what gets evaluated against that normal."
             f"{timing}{warning}</div>")
+
+    @staticmethod
+    def _checked(boxes) -> tuple[str, ...]:
+        return tuple(s for s, box in boxes.items() if box.value)
+
+    def sensor_warnings(self) -> list[str]:
+        """config.sensor_warnings() for the current widgets (gee/config.js sensorWarnings())."""
+        e0, e1 = self.expectation.value
+        return sensor_warnings(self._checked(self.expectation_sensors), self._checked(self.sensors), e0, e1)
 
     def controls(self, monitoring_year: int | None = None) -> MonitoringControls:
         (e0, e1), (start, end) = self.expectation.value, self.window.value
@@ -275,7 +292,8 @@ class EarlyDetectionApp:
                                   season_end=end, baseline_first_year=e0, baseline_last_year=e1,
                                   decision_threshold=round(self.decrease_threshold.value, 2),
                                   increase_threshold=round(self.increase_threshold.value, 2),
-                                  sensitivity=round(self.sensitivity.value, 2), fit_order=self.fit_order.value)
+                                  sensitivity=round(self.sensitivity.value, 2), fit_order=self.fit_order.value,
+                                  expectation_sensors=self._checked(self.expectation_sensors))
 
     def build(self, controls, **aoi):
         """build_config() plus the advanced settings - the same shape as the notebooks' build()."""
@@ -407,7 +425,8 @@ class EarlyDetectionApp:
         window = (controls.season_start, controls.season_end)
         self.run_state = {"controls": controls, "config": config, "condition": condition, "timing": timing,
                           "episodes": episodes, "timing_confirmed": confirmed,
-                          "timing_years": years, "img_years": img_years, "window": window}
+                          "timing_years": years, "img_years": img_years, "window": window,
+                          "sensor_warnings": self.sensor_warnings()}
 
         # --- map layers (drawn lazily by Earth Engine as you pan/zoom); each is checked independently
         self._clear_results_layers()
@@ -589,8 +608,9 @@ class EarlyDetectionApp:
                                          title=f"Pixel at {lat:.5f} N, {abs(lon):.5f} {'W' if lon < 0 else 'E'}")
                 print(f"Coordinate: {lon!r}, {lat!r} (lon, lat); sampled on the 30 m result grid")
                 print(f"Expectation fit order {c.fit_order}: {FIT_ORDER_LABELS[c.fit_order].split(': ', 1)[1]}")
-                if c.fit_order_warning:
-                    print(f"Warning: {c.fit_order_warning}")
+                for w in [c.fit_order_warning, *state["sensor_warnings"]]:
+                    if w:
+                        print(f"Warning: {w}")
                 for label, rows in histories.items():
                     for note in pixel.crossing_notes(rows, c.decision_threshold, c.increase_threshold):
                         print(f"{label}: {note}")

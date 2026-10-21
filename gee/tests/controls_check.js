@@ -55,6 +55,38 @@ assert.strictEqual(d.decrease_threshold, LEGACY_DEFAULTS.decrease_threshold);
 assert.strictEqual(d.increase_threshold, LEGACY_DEFAULTS.increase_threshold);
 assert.match(appConfig.validateControls(Object.assign({}, d, { increase_threshold: 1.0 })), /increase threshold/);
 
+// Sensors for each period. Default: expectation Landsat 8 only (unchanged), monitoring all three,
+// so the default config's expectation has exactly the one L8 entry it had before.
+assert.deepStrictEqual(d.expectation_sensors, { L8: true, L9: false, S2: false });
+assert.deepStrictEqual(d.sensors, { L8: true, L9: true, S2: true });
+assert.deepStrictEqual(Object.keys(cfg.evidence.expectation.sensors), ['L8']);
+const status2 = () => created.labels.map((l) => l.state.value).join('\n');
+assert.match(status2(), /Warning: The expectation uses Landsat 8 and monitoring uses Landsat 8, Landsat 9 and Sentinel-2/);
+// Any combination, from the widgets: only the ticked sensors, in L8/L9/S2 order, same years/window/cloud cover.
+controls.expectationSensors.S2.setValue(true);
+let e = appConfig.buildConfig(controls.read(), AOI).evidence.expectation.sensors;
+assert.deepStrictEqual(Object.keys(e), ['L8', 'S2']);
+assert.deepStrictEqual(e.S2, e.L8);
+assert.deepStrictEqual([e.L8.first_year, e.L8.last_year, e.L8.first_doy, e.L8.last_doy, e.L8.cloud_cover_threshold],
+                       [2018, 2024, 152, 273, 70]);
+// The first-detected-season runs (withMonitoringYear) keep the expectation sensors.
+assert.deepStrictEqual(Object.keys(appConfig.buildConfig(appConfig.withMonitoringYear(controls.read(), 2024), AOI)
+  .evidence.expectation.sensors), ['L8', 'S2']);
+// The same sensors in both periods: no mismatch warning.
+controls.expectationSensors.L9.setValue(true);
+assert.deepStrictEqual(appConfig.sensorWarnings(controls.read()).filter((w) => /expectation uses/.test(w)), []);
+assert.doesNotMatch(status2(), /expectation uses/);
+// Landsat 9 before 2022 warns about the years it doesn't cover.
+assert.match(status2(), /Landsat 9 has no observations before 2022 .*expectation years 2018-2021; the sensor mix changes/);
+// No expectation sensor blocks the run; none for monitoring too.
+['L8', 'L9', 'S2'].forEach((k) => controls.expectationSensors[k].setValue(false));
+assert.strictEqual(appConfig.validateControls(controls.read()), 'Select at least one expectation sensor.');
+assert.match(status2(), /Select at least one expectation sensor\. Run is blocked/);
+controls.expectationSensors.L8.setValue(true);
+controls.expectationSensors.S2.setValue(false);
+assert.deepStrictEqual(controls.read().expectation_sensors, d.expectation_sensors);
+assert.deepStrictEqual(appConfig.buildConfig(controls.read(), AOI), cfg);
+
 // Expectation fit order: a select in Advanced settings, default 1 = the original GUI's
 // constant + unimodal (the modality check above); 2 and 3 add bimodal and trimodal.
 assert.strictEqual(d.fit_order, 1);
@@ -78,7 +110,7 @@ controls.fitOrder.setValue('3');
 assert.strictEqual(controls.read().fit_order, 3);
 assert.match(status(), /Warning: Expectation fit order 3 with a 122-day season may be unstable/);
 controls.fitOrder.setValue('1');
-assert.doesNotMatch(status(), /Warning/);
+assert.doesNotMatch(status(), /Warning: Expectation fit order/);
 
 // Detection timing: confirmed (only seasons that end as decrease) by default, raw as the option.
 // Not part of the bulcd config.

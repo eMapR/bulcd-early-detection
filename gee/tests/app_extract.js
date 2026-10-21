@@ -19,6 +19,10 @@
 //      (rows, expectation fit, summary) at pixel 1.
 //   5. Robert's Pine Mountain pixel (docs/findings.md 2026-10-13): detection
 //      timing image (first/last detection, episodes) and inspector rows there.
+//   6. Expectation sensors (Advanced settings): Landsat 8 + Sentinel-2 over a short
+//      expectation, run through the GUI: configs, the settings description's
+//      warnings, condition, first-detected-season and episode layers over the box,
+//      and the inspector (rows, expectation fit) at pixel 1.
 // usage: node app_extract.js <out.json>
 const fs = require('fs');
 const path = require('path');
@@ -42,7 +46,8 @@ const BOX = [-123.5725, 44.8300, -123.5400, 44.8500];
 const VARIANT = {
   expectation_first: 2019, expectation_last: 2023, monitoring_year: 2025, season_start: '05-15',
   season_end: '10-15', sensitivity: 1.5, decrease_threshold: 0.6, increase_threshold: 0.8, timing: true,
-  dampening: 0.5, posterior_leveler: 1.0, fit_order: 2, sensors: { L8: true, L9: true, S2: false },
+  dampening: 0.5, posterior_leveler: 1.0, fit_order: 2, expectation_sensors: { L8: true, L9: true, S2: false },
+  sensors: { L8: true, L9: true, S2: false },
   mask_forest: true, mask_water: true, allow_large: false,
 };
 // Must match run_app_parity.py FIT_ORDERS_RUN.
@@ -53,6 +58,8 @@ const PM_CONTROLS = Object.assign({}, appConfig.APP_DEFAULTS, {
   expectation_first: 2023, expectation_last: 2023, monitoring_year: 2024, season_start: '02-01', season_end: '11-15',
 });
 const TIMING_BOX_BANDS = ['first_decrease_year', 'first_decrease_doy'];
+// Must match run_app_parity.py EXPECTATION_SENSOR_RUN.
+const EXP_SENSOR_RUN = { expectation_first: 2022, expectation_last: 2023, expectation_sensors: ['L8', 'S2'] };
 
 async function runGui(handle, what) {
   const prev = handle.state.run;
@@ -229,6 +236,25 @@ async function main(out) {
     episodes: inspector.detectionEpisodes(pmRows, PM_CONTROLS.decrease_threshold),
     notes: inspector.episodeNotes(pmRows, PM_CONTROLS.decrease_threshold),
   };
+
+  // 6. Expectation sensors: ticked in Advanced settings, with a short expectation, then Run.
+  handle.controls.expectationFirst.setValue(String(EXP_SENSOR_RUN.expectation_first));
+  handle.controls.expectationLast.setValue(String(EXP_SENSOR_RUN.expectation_last));
+  appConfig.SENSORS.forEach((s) => handle.controls.expectationSensors[s].setValue(
+    EXP_SENSOR_RUN.expectation_sensors.indexOf(s) >= 0));
+  {
+    const c = handle.controls.read();
+    const r = await runGui(handle, 'the expectation-sensor run');
+    const o = data.expectation_sensors = { controls: c, label: r.label, config: r.config,
+                                           description: appConfig.describeControls(c),
+                                           warnings: appConfig.sensorWarnings(c) };
+    o.timing_configs = appConfig.timingYears(c).map((y) =>
+      bulcd.withDefaults(appConfig.buildConfig(appConfig.withMonitoringYear(c, y), area.aoi)));
+    o.outcome_box = await boxRegion(r.outcome.select('outcome'));
+    o.timing_box = await boxRegion(r.timing.select(TIMING_BOX_BANDS));
+    o.episodes_box = await boxRegion(r.episodes);
+    o.pixels = await selectPixels(handle, created, map, [REFERENCE_PIXELS[0]], {}, r.thresholds);
+  }
 
   fs.writeFileSync(out, JSON.stringify(data));
 }

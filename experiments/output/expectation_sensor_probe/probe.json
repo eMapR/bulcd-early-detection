@@ -1,0 +1,1460 @@
+{
+ "started": "2026-10-19T18:15:00.875Z",
+ "area": "projects/bulcd-python-rebuild/assets/testsite",
+ "zoom": 13,
+ "tiles": 6,
+ "pixel": {
+  "label": "Pixel 1 (decrease)",
+  "lon": -123.56922,
+  "lat": 44.84283
+ },
+ "availability": {
+  "L8": {
+   "2013": 12,
+   "2014": 12,
+   "2015": 14,
+   "2016": 13,
+   "2017": 13,
+   "2018": 15,
+   "2019": 14,
+   "2020": 14,
+   "2021": 11,
+   "2022": 13,
+   "2023": 14,
+   "2024": 15,
+   "2025": 15,
+   "2026": 14
+  },
+  "L9": {
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 0,
+   "2017": 0,
+   "2018": 0,
+   "2019": 0,
+   "2020": 0,
+   "2021": 0,
+   "2022": 13,
+   "2023": 13,
+   "2024": 13,
+   "2025": 16,
+   "2026": 14
+  },
+  "S2": {
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 13,
+   "2017": 24,
+   "2018": 48,
+   "2019": 48,
+   "2020": 50,
+   "2021": 49,
+   "2022": 49,
+   "2023": 48,
+   "2024": 48,
+   "2025": 59,
+   "2026": 60
+  },
+  "S2_cloud_score_plus": {
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 26,
+   "2017": 24,
+   "2018": 48,
+   "2019": 48,
+   "2020": 50,
+   "2021": 49,
+   "2022": 49,
+   "2023": 47,
+   "2024": 48,
+   "2025": 60,
+   "2026": 61
+  }
+ },
+ "runs": [
+  {
+   "name": "L8 x 2 yr",
+   "sensors": [
+    "L8"
+   ],
+   "years": 2,
+   "expectation": [
+    2022,
+    2023
+   ],
+   "expectation_sensors": [
+    "L8"
+   ],
+   "layers": {
+    "Condition 2026": {
+     "description_chars": 3485605,
+     "s": 13,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 9.234,
+     "tiles": [
+      {
+       "s": 5.018,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 7.921,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 7.486,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 9.234,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 5.504,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 7.921,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 243963481,
+     "s": 48.013,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 37.075,
+     "tiles": [
+      {
+       "s": 37.075,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 12.59,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 11.322,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 24.266,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 11.317,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 11.412,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Last detection (decrease)": {
+     "description_chars": 47191669,
+     "s": 29.351,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 22.303,
+     "tiles": [
+      {
+       "s": 20.01,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 16.142,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 22.303,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 20.009,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 17.593,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 16.141,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 23595805,
+     "s": 33.365,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 26.348,
+     "tiles": [
+      {
+       "s": 12.111,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 26.348,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 17.489,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 10.861,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 19.872,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 12.027,
+       "status": 200,
+       "error": null
+      }
+     ]
+    }
+   },
+   "inspector": {
+    "s": 14.012,
+    "ok": true,
+    "error": null
+   }
+  },
+  {
+   "name": "L8 x 4 yr",
+   "sensors": [
+    "L8"
+   ],
+   "years": 4,
+   "expectation": [
+    2020,
+    2023
+   ],
+   "expectation_sensors": [
+    "L8"
+   ],
+   "layers": {
+    "Condition 2026": {
+     "description_chars": 3485605,
+     "s": 20.532,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 15.768,
+     "tiles": [
+      {
+       "s": 6.079,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 9.75,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 8.531,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 8.68,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 15.768,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 4.438,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 243963481,
+     "s": 85.298,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 71.777,
+     "tiles": [
+      {
+       "s": 24.357,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 71.777,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 19.19,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 23.487,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 29.423,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 13.582,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Last detection (decrease)": {
+     "description_chars": 47191669,
+     "s": 32.788,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 25.073,
+     "tiles": [
+      {
+       "s": 20.694,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 20.898,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 12.844,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 17.449,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 25.073,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 23.407,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 23595805,
+     "s": 46.78,
+     "ok": false,
+     "error": "{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"Earth Engine memory capacity exceeded.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n",
+     "max_tile_s": 27.848,
+     "tiles": [
+      {
+       "s": 21.637,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 19.964,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 14.109,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 15.545,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 3.603,
+       "status": 503,
+       "error": "{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"Earth Engine memory capacity exceeded.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n"
+      },
+      {
+       "s": 27.848,
+       "status": 200,
+       "error": null
+      }
+     ]
+    }
+   },
+   "inspector": {
+    "s": 17.422,
+    "ok": true,
+    "error": null
+   }
+  },
+  {
+   "name": "L8 x 6 yr",
+   "sensors": [
+    "L8"
+   ],
+   "years": 6,
+   "expectation": [
+    2018,
+    2023
+   ],
+   "expectation_sensors": [
+    "L8"
+   ],
+   "layers": {
+    "Condition 2026": {
+     "description_chars": 3485605,
+     "s": 30.176,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 21.859,
+     "tiles": [
+      {
+       "s": 12.246,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 21.859,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 10.191,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 12.936,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 12.923,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 13.028,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 243963481,
+     "s": 54.818,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 40.372,
+     "tiles": [
+      {
+       "s": 12.794,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 20.987,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 11.611,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 23.547,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 20.179,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 40.372,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Last detection (decrease)": {
+     "description_chars": 47191669,
+     "s": 38.956,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 27.877,
+     "tiles": [
+      {
+       "s": 20.938,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 25.11,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 22.486,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 18.539,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 21.377,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 27.877,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 23595805,
+     "s": 38.526,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 26.727,
+     "tiles": [
+      {
+       "s": 19.6,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 21.096,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 26.727,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 16.363,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 18.959,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 13.318,
+       "status": 200,
+       "error": null
+      }
+     ]
+    }
+   },
+   "inspector": {
+    "s": 15.624,
+    "ok": true,
+    "error": null
+   }
+  },
+  {
+   "name": "L8 x 8 yr",
+   "sensors": [
+    "L8"
+   ],
+   "years": 8,
+   "expectation": [
+    2016,
+    2023
+   ],
+   "expectation_sensors": [
+    "L8"
+   ],
+   "layers": {
+    "Condition 2026": {
+     "description_chars": 3485605,
+     "s": 38.062,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 20.28,
+     "tiles": [
+      {
+       "s": 9.24,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 14.726,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 20.28,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 19.425,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 8.118,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 7.973,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 243963481,
+     "s": 41.552,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 29.894,
+     "tiles": [
+      {
+       "s": 21.6,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 19.407,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 29.894,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 20.16,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 22.988,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 20.47,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Last detection (decrease)": {
+     "description_chars": 47191669,
+     "s": 82.54,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 62.563,
+     "tiles": [
+      {
+       "s": 44.746,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 58.824,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 30.616,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 23.121,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 28.794,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 62.563,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 23595805,
+     "s": 73.369,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 50.33,
+     "tiles": [
+      {
+       "s": 50.33,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 15.698,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 30.767,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 32.048,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 18.747,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 16.985,
+       "status": 200,
+       "error": null
+      }
+     ]
+    }
+   },
+   "inspector": {
+    "s": 19.351,
+    "ok": true,
+    "error": null
+   }
+  },
+  {
+   "name": "L8+S2 x 2 yr",
+   "sensors": [
+    "L8",
+    "S2"
+   ],
+   "years": 2,
+   "expectation": [
+    2022,
+    2023
+   ],
+   "expectation_sensors": [
+    "L8",
+    "S2"
+   ],
+   "layers": {
+    "Condition 2026": {
+     "description_chars": 3861697,
+     "s": 47.299,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 31.709,
+     "tiles": [
+      {
+       "s": 12.413,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 7.751,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 31.709,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 7.857,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 16.756,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 8.768,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 270289921,
+     "s": 65.332,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 32.027,
+     "tiles": [
+      {
+       "s": 25.005,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 19.473,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 32.027,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 24.881,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 28.031,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 20.044,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Last detection (decrease)": {
+     "description_chars": 52268911,
+     "s": 46.002,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 26.812,
+     "tiles": [
+      {
+       "s": 13.377,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 14.404,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 21.561,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 21.023,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 22.51,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 26.812,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 26134426,
+     "s": 41.833,
+     "ok": false,
+     "error": "{\n  \"error\": {\n    \"code\": 500,\n    \"message\": \"An internal error has occurred (request: 90505a84-92e5-419b-bd92-6399cf4b7349) (computation: \\\"E34WNGTUK2SUFRFFQ6SDVKEN\\\")\",\n    \"status\": \"INTERNAL\"\n  }\n}\n",
+     "max_tile_s": 23.115,
+     "tiles": [
+      {
+       "s": 13.83,
+       "status": 500,
+       "error": "{\n  \"error\": {\n    \"code\": 500,\n    \"message\": \"An internal error has occurred (request: 90505a84-92e5-419b-bd92-6399cf4b7349) (computation: \\\"E34WNGTUK2SUFRFFQ6SDVKEN\\\")\",\n    \"status\": \"INTERNAL\"\n  }\n}\n"
+      },
+      {
+       "s": 16.543,
+       "status": 500,
+       "error": "{\n  \"error\": {\n    \"code\": 500,\n    \"message\": \"An internal error has occurred (request: a4c2ef9f-7026-4263-b932-8115aa83f6a5) (computation: \\\"JLTCC37KFG3XZ7FXGHOD26ID\\\")\",\n    \"status\": \"INTERNAL\"\n  }\n}\n"
+      },
+      {
+       "s": 17.613,
+       "status": 500,
+       "error": "{\n  \"error\": {\n    \"code\": 500,\n    \"message\": \"An internal error has occurred (request: f1e2b33d-735b-4180-8ffe-8fd4f4e5f9ba) (computation: \\\"YN4PQNFRXJYGP4MFG55R6MPO\\\")\",\n    \"status\": \"INTERNAL\"\n  }\n}\n"
+      },
+      {
+       "s": 18.326,
+       "status": 500,
+       "error": "{\n  \"error\": {\n    \"code\": 500,\n    \"message\": \"An internal error has occurred (request: d8b0dc4f-2ef2-451b-a05e-bb638eef5401) (computation: \\\"MTKFVVMMG4N4MTFQK4NL7NEL\\\")\",\n    \"status\": \"INTERNAL\"\n  }\n}\n"
+      },
+      {
+       "s": 14.24,
+       "status": 500,
+       "error": "{\n  \"error\": {\n    \"code\": 500,\n    \"message\": \"An internal error has occurred (request: fa8b35af-2121-4377-b86b-d3a7f4190293) (computation: \\\"BJLXN3U5K2TWHGEACGUMBULC\\\")\",\n    \"status\": \"INTERNAL\"\n  }\n}\n"
+      },
+      {
+       "s": 23.115,
+       "status": 200,
+       "error": null
+      }
+     ]
+    }
+   },
+   "inspector": {
+    "s": 38.924,
+    "ok": true,
+    "error": null
+   }
+  },
+  {
+   "name": "L8+S2 x 4 yr",
+   "sensors": [
+    "L8",
+    "S2"
+   ],
+   "years": 4,
+   "expectation": [
+    2020,
+    2023
+   ],
+   "expectation_sensors": [
+    "L8",
+    "S2"
+   ],
+   "layers": {
+    "Condition 2026": {
+     "description_chars": 3861697,
+     "s": 44.927,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 27.898,
+     "tiles": [
+      {
+       "s": 18.474,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 20.319,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 27.898,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 15.643,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 15.197,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 22.294,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 270289921,
+     "s": 28.371,
+     "ok": false,
+     "error": "getMap: User memory limit exceeded.",
+     "tiles": []
+    },
+    "Last detection (decrease)": {
+     "description_chars": 52268911,
+     "s": 30.36,
+     "ok": false,
+     "error": "getMap: Earth Engine memory capacity exceeded.",
+     "tiles": []
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 26134426,
+     "s": 59.326,
+     "ok": false,
+     "error": "getMap: User memory limit exceeded.",
+     "tiles": []
+    }
+   },
+   "inspector": {
+    "s": 36.653,
+    "ok": false,
+    "error": "User memory limit exceeded."
+   }
+  },
+  {
+   "name": "L8+S2 x 6 yr",
+   "sensors": [
+    "L8",
+    "S2"
+   ],
+   "years": 6,
+   "expectation": [
+    2018,
+    2023
+   ],
+   "expectation_sensors": [
+    "L8",
+    "S2"
+   ],
+   "layers": {
+    "Condition 2026": {
+     "description_chars": 3861697,
+     "s": 64.984,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 35.989,
+     "tiles": [
+      {
+       "s": 20.505,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 13.903,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 30.244,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 15.297,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 35.989,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 29.337,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 270289921,
+     "s": 38.085,
+     "ok": false,
+     "error": "getMap: User memory limit exceeded.",
+     "tiles": []
+    },
+    "Last detection (decrease)": {
+     "description_chars": 52268911,
+     "s": 34.715,
+     "ok": false,
+     "error": "getMap: User memory limit exceeded.",
+     "tiles": []
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 26134426,
+     "s": 53.968,
+     "ok": false,
+     "error": "getMap: User memory limit exceeded.",
+     "tiles": []
+    }
+   },
+   "inspector": {
+    "s": 45.194,
+    "ok": false,
+    "error": "User memory limit exceeded."
+   }
+  },
+  {
+   "name": "L8+S2 x 8 yr",
+   "sensors": [
+    "L8",
+    "S2"
+   ],
+   "years": 8,
+   "expectation": [
+    2016,
+    2023
+   ],
+   "expectation_sensors": [
+    "L8",
+    "S2"
+   ],
+   "layers": {
+    "Condition 2026": {
+     "description_chars": 3861697,
+     "s": 70.782,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 31.803,
+     "tiles": [
+      {
+       "s": 20.285,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 19.356,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 31.803,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 21.882,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 23.151,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 28.274,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 270289921,
+     "s": 107.929,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 38.741,
+     "tiles": [
+      {
+       "s": 38.741,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 36.243,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 31.938,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 29.41,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 26.394,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 35.147,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Last detection (decrease)": {
+     "description_chars": 52268911,
+     "s": 14.288,
+     "ok": false,
+     "error": "getMap: Earth Engine memory capacity exceeded.",
+     "tiles": []
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 26134426,
+     "s": 121.543,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 52.101,
+     "tiles": [
+      {
+       "s": 37.15,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 52.101,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 42.677,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 36.123,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 51.636,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 48.814,
+       "status": 200,
+       "error": null
+      }
+     ]
+    }
+   },
+   "inspector": {
+    "s": 69.283,
+    "ok": false,
+    "error": "Please try again."
+   }
+  },
+  {
+   "name": "L8+L9+S2 x 2 yr",
+   "sensors": [
+    "L8",
+    "L9",
+    "S2"
+   ],
+   "years": 2,
+   "expectation": [
+    2022,
+    2023
+   ],
+   "expectation_sensors": [
+    "L8",
+    "L9",
+    "S2"
+   ],
+   "layers": {
+    "Condition 2026": {
+     "description_chars": 4500085,
+     "s": 44.007,
+     "ok": false,
+     "error": "{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"Earth Engine memory capacity exceeded.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n",
+     "max_tile_s": 17.907,
+     "tiles": [
+      {
+       "s": 11.672,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 12.883,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 17.907,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 13.734,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 0.856,
+       "status": 503,
+       "error": "{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"Earth Engine memory capacity exceeded.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n"
+      },
+      {
+       "s": 12.178,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 314977081,
+     "s": 81.832,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 46.387,
+     "tiles": [
+      {
+       "s": 42.505,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 14.925,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 33.24,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 16.499,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 21.498,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 46.387,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Last detection (decrease)": {
+     "description_chars": 60887149,
+     "s": 97.794,
+     "ok": false,
+     "error": "{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"Earth Engine memory capacity exceeded.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n",
+     "max_tile_s": 60.085,
+     "tiles": [
+      {
+       "s": 25.053,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 24.445,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 19.942,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 29.465,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 60.085,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 11.03,
+       "status": 503,
+       "error": "{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"Earth Engine memory capacity exceeded.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n"
+      }
+     ]
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 30443545,
+     "s": 149.296,
+     "ok": false,
+     "error": "{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"Earth Engine memory capacity exceeded.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n",
+     "max_tile_s": 107.998,
+     "tiles": [
+      {
+       "s": 6.116,
+       "status": 503,
+       "error": "{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"Earth Engine memory capacity exceeded.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n"
+      },
+      {
+       "s": 84.192,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 10.003,
+       "status": 503,
+       "error": "{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"Earth Engine memory capacity exceeded.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n"
+      },
+      {
+       "s": 95.933,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 107.998,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 84.172,
+       "status": 200,
+       "error": null
+      }
+     ]
+    }
+   },
+   "inspector": {
+    "s": 42.593,
+    "ok": true,
+    "error": null
+   }
+  }
+ ]
+}

@@ -30,12 +30,24 @@ var PRODUCTION_TRANSITION_MATRIX = [
 // ---------------------------------------------------------------- notebook controls
 
 // config.py: permissive scene-level prefilter (per-pixel cloud masking does the
-// screening); expectation always Landsat 8 only (a multi-year L8+S2 fit ran out of
-// Earth Engine memory); monitoring sensors selectable.
+// screening); sensors selectable for each period, the expectation defaulting to
+// Landsat 8 only (a multi-year L8+S2 fit ran out of Earth Engine memory).
 var CLOUD_COVER_THRESHOLD = 70;
-var BASELINE_SENSORS = ['L8'];
+var SENSORS = ['L8', 'L9', 'S2'];
 var MONITORING_SENSORS = ['L8', 'L9', 'S2'];
 var SENSOR_LABELS = {L8: 'Landsat 8', L9: 'Landsat 9', S2: 'Sentinel-2'};
+// First year with a full season of data, and what is missing before it
+// (config.py SENSOR_FULL_FROM / _SENSOR_GAPS; docs/findings.md, 2026-10-19).
+var SENSOR_FULL_FROM = {L8: 2014, L9: 2022, S2: 2018};
+var SENSOR_GAPS = {
+  L8: 'no observations before 2014 (its first scenes are from April 2013)',
+  L9: 'no observations before 2022 (its first scenes are from Oct 31, 2021)',
+  S2: 'fewer observations before 2018 (one satellite until Sentinel-2B joined in mid-2017: about a quarter to ' +
+      'half as many scenes in tests)'
+};
+// Expectation length (years) above which a Sentinel-2 expectation is likely to
+// exceed Earth Engine's interactive memory limit (config.py S2_EXPECTATION_MAX_YEARS).
+var S2_EXPECTATION_MAX_YEARS = 6;
 var MAX_TIMING_SEASONS = 3;
 
 // Starting probabilities, as in the original BULC-D GUI (initializingLeveler 0.7
@@ -81,6 +93,7 @@ var APP_DEFAULTS = {
   dampening: 0.7,                                   // original GUI
   posterior_leveler: 0.9,                           // original GUI
   fit_order: 1,                                     // original GUI (constant + unimodal)
+  expectation_sensors: {L8: true, L9: false, S2: false},  // Early Detection choice (config.py BASELINE_SENSORS)
   sensors: {L8: true, L9: true, S2: true},          // monitoring sensors; Early Detection choice
   mask_forest: false,                               // original GUI: no forest mask
   mask_water: true,                                 // original GUI: water masked
@@ -146,6 +159,44 @@ function fitOrderWarning(c) {
          'pixel inspector.';
 }
 
+function checked(boxes) {
+  return SENSORS.filter(function (s) { return boxes[s]; });
+}
+
+function sensorList(codes) {
+  var names = codes.map(function (s) { return SENSOR_LABELS[s]; });
+  return names.length === 1 ? names[0] : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+}
+
+// Warnings about the sensor choice (none blocks a run). Same text as config.py
+// sensor_warnings(): the periods use different sensors; an expectation sensor
+// has no or fewer data in some expectation years; a Sentinel-2 expectation
+// long enough to likely exceed Earth Engine's interactive memory limit.
+function sensorWarnings(c) {
+  var exp = checked(c.expectation_sensors), mon = checked(c.sensors), out = [];
+  if (exp.length && mon.length && exp.join() !== mon.join()) {
+    out.push('The expectation uses ' + sensorList(exp) + ' and monitoring uses ' + sensorList(mon) + '. ' +
+             'Differences between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but ' +
+             'not in the expectation produced false decreases at stable sites that disappeared when both periods ' +
+             'used the same sensors.');
+  }
+  exp.forEach(function (s) {
+    var full = SENSOR_FULL_FROM[s];
+    if (c.expectation_first >= full) return;
+    var end = Math.min(c.expectation_last, full - 1);
+    var years = end === c.expectation_first ? 'year ' + c.expectation_first : 'years ' + c.expectation_first + '-' + end;
+    out.push(SENSOR_LABELS[s] + ' has ' + SENSOR_GAPS[s] + ', which affects expectation ' + years +
+             (exp.length > 1 ? '; the sensor mix changes partway through the expectation.' : '.'));
+  });
+  var n = c.expectation_last - c.expectation_first + 1;
+  if (exp.indexOf('S2') >= 0 && n > S2_EXPECTATION_MAX_YEARS) {
+    out.push('A ' + n + '-year expectation with Sentinel-2 is likely to exceed Earth Engine\'s memory limit: in ' +
+             'tests, Sentinel-2 expectations longer than ' + S2_EXPECTATION_MAX_YEARS + ' years failed ' +
+             'MEMORY_FAILURE_PLACEHOLDER. Use fewer expectation years or leave Sentinel-2 out of the expectation.');
+  }
+  return out;
+}
+
 // The settings problem that blocks a run, or null (app.py _describe() and
 // MonitoringControls.__post_init__).
 function validateControls(c) {
@@ -165,6 +216,7 @@ function validateControls(c) {
   if (!(c.increase_threshold >= 0.5 && c.increase_threshold < 1.0)) return 'The increase threshold must be in [0.5, 1).';
   if (!(c.sensitivity > 0)) return 'Sensitivity must be positive.';
   if (FIT_ORDERS.indexOf(c.fit_order) < 0) return 'The expectation fit order must be 1, 2 or 3.';
+  if (!SENSORS.some(function (s) { return c.expectation_sensors[s]; })) return 'Select at least one expectation sensor.';
   if (!MONITORING_SENSORS.some(function (s) { return c.sensors[s]; })) return 'Select at least one monitoring sensor.';
   return null;
 }
@@ -208,6 +260,7 @@ function describeControls(c) {
   }
   var warning = fitOrderWarning(c);
   if (warning) lines.push('Warning: ' + warning);
+  sensorWarnings(c).forEach(function (w) { lines.push('Warning: ' + w); });
   return lines;
 }
 
@@ -235,7 +288,7 @@ function buildConfig(c, aoi) {
     study_area: {aoi_coordinates: aoi.aoi_coordinates == null ? null : aoi.aoi_coordinates,
                  aoi_asset: aoi.aoi_asset == null ? null : aoi.aoi_asset,
                  mask_non_forest: !!c.mask_forest, mask_water: !!c.mask_water},
-    evidence: {expectation: {sensors: sensors(BASELINE_SENSORS, c.expectation_first, c.expectation_last)},
+    evidence: {expectation: {sensors: sensors(checked(c.expectation_sensors), c.expectation_first, c.expectation_last)},
                target: {sensors: target}},
     reduction: {band: 'nbr'},
     modality: modalityForOrder(c.fit_order),
@@ -264,7 +317,11 @@ exports.windowDays = windowDays;
 exports.fitOrderWarning = fitOrderWarning;
 exports.APP_DEFAULTS = APP_DEFAULTS;
 exports.RANGES = RANGES;
+exports.SENSORS = SENSORS;
 exports.MONITORING_SENSORS = MONITORING_SENSORS;
+exports.SENSOR_FULL_FROM = SENSOR_FULL_FROM;
+exports.S2_EXPECTATION_MAX_YEARS = S2_EXPECTATION_MAX_YEARS;
+exports.sensorWarnings = sensorWarnings;
 exports.SENSOR_LABELS = SENSOR_LABELS;
 exports.MONTH_NAMES = MONTH_NAMES;
 exports.DAYS_IN_MONTH = DAYS_IN_MONTH;

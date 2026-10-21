@@ -143,7 +143,7 @@ def test_fit_order_follows_into_every_run(app):
         assert "Warning:" in app.relationship.value and "order 3 with a 122-day season" in app.relationship.value
     finally:
         app.fit_order.value = 1
-    assert "Warning" not in app.relationship.value
+    assert "fit order" not in app.relationship.value
 
 
 def test_fit_order_warning_boundaries():

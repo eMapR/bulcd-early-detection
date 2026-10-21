@@ -52,11 +52,26 @@ PRODUCTION_TRANSITION_MATRIX = [
 # since per-pixel cloud masking is what actually screens the data.
 CLOUD_COVER_THRESHOLD = 70
 
-# Expectation (baseline) sensors: L8 only. The validated L8+S2 multi-year
-# baseline hit Earth Engine's "User memory limit exceeded" inside
-# organize_inputs()'s harmonic fit (docs/findings.md, 2026-09-18).
+# Sensors either period can use, in display order (gee/config.js SENSORS).
+SENSORS = ("L8", "L9", "S2")
+# Default expectation (baseline) sensors: L8 only, unchanged since the
+# validated L8+S2 multi-year baseline hit Earth Engine's "User memory limit
+# exceeded" inside organize_inputs()'s harmonic fit (docs/findings.md,
+# 2026-09-18). MonitoringControls.expectation_sensors selects others.
 BASELINE_SENSORS = ("L8",)
 MONITORING_SENSORS = ("L8", "L9", "S2")
+# First year with a full season of data, and what is missing before it
+# (docs/findings.md, 2026-10-19: Jun-Sep scenes over the testsite).
+SENSOR_FULL_FROM = {"L8": 2014, "L9": 2022, "S2": 2018}
+_SENSOR_GAPS = {
+    "L8": "no observations before 2014 (its first scenes are from April 2013)",
+    "L9": "no observations before 2022 (its first scenes are from Oct 31, 2021)",
+    "S2": ("fewer observations before 2018 (one satellite until Sentinel-2B joined in mid-2017: about a quarter "
+           "to half as many scenes in tests)"),
+}
+# Expectation length (years) above which a Sentinel-2 expectation is likely
+# to exceed Earth Engine's interactive memory limit (docs/findings.md, 2026-10-19).
+S2_EXPECTATION_MAX_YEARS = 6
 
 # Expectation fit order N = a constant plus the first N annual harmonics
 # (1, 2 and 3 cycles per year): the legacy modalityDictionary's unimodal,
@@ -88,6 +103,41 @@ def order_of_modality(modality: ModalityConfig) -> int | None:
     """The fit order a ModalityConfig corresponds to, or None if it isn't one
     of modality_for_order()'s (e.g. linear, or bimodal without unimodal)."""
     return next((n for n in FIT_ORDERS if modality == modality_for_order(n)), None)
+
+
+def _sensor_list(codes) -> str:
+    names = [_SENSOR_NAMES.get(c, c) for c in SENSORS if c in codes]
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+
+
+def sensor_warnings(expectation_sensors, monitoring_sensors, first_year: int, last_year: int) -> list[str]:
+    """Warnings about the sensor choice (none blocks a run). Same text as
+    gee/config.js sensorWarnings().
+      - the two periods use different sensors;
+      - an expectation sensor has no or fewer data in some expectation years;
+      - a Sentinel-2 expectation long enough to likely exceed Earth Engine's
+        interactive memory limit."""
+    exp, mon = [c for c in SENSORS if c in expectation_sensors], [c for c in SENSORS if c in monitoring_sensors]
+    out = []
+    if exp and mon and exp != mon:
+        out.append(f"The expectation uses {_sensor_list(exp)} and monitoring uses {_sensor_list(mon)}. Differences "
+                   "between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but not in "
+                   "the expectation produced false decreases at stable sites that disappeared when both periods "
+                   "used the same sensors.")
+    for c in exp:
+        full = SENSOR_FULL_FROM[c]
+        if first_year < full:
+            end = min(last_year, full - 1)
+            years = f"year {first_year}" if end == first_year else f"years {first_year}-{end}"
+            out.append(f"{_SENSOR_NAMES[c]} has {_SENSOR_GAPS[c]}, which affects expectation {years}"
+                       + ("; the sensor mix changes partway through the expectation." if len(exp) > 1 else "."))
+    n = last_year - first_year + 1
+    if "S2" in exp and n > S2_EXPECTATION_MAX_YEARS:
+        out.append(f"A {n}-year expectation with Sentinel-2 is likely to exceed Earth Engine's memory limit: in "
+                   f"tests, Sentinel-2 expectations longer than {S2_EXPECTATION_MAX_YEARS} years failed "
+                   "MEMORY_FAILURE_PLACEHOLDER. Use fewer expectation years or leave Sentinel-2 out of the "
+                   "expectation.")
+    return out
 
 
 def fit_order_warning(order: int, window_days: int) -> str | None:
@@ -132,6 +182,8 @@ class MonitoringControls:
     # Expectation fit order (FIT_ORDERS): 1 = the original GUI's constant +
     # one annual cycle; 2 and 3 add the second and third annual harmonics.
     fit_order: int = 1
+    # Expectation sensors (a subset of SENSORS); default Landsat 8 only.
+    expectation_sensors: tuple[str, ...] = BASELINE_SENSORS
 
     def __post_init__(self) -> None:
         if not 0.5 <= self.decision_threshold < 1.0:
@@ -146,6 +198,8 @@ class MonitoringControls:
             raise ValueError("season_start must be before season_end")
         if self.fit_order not in FIT_ORDERS:
             raise ValueError(f"fit_order must be one of {FIT_ORDERS}")
+        if not self.expectation_sensors or not set(self.expectation_sensors) <= set(SENSORS):
+            raise ValueError(f"expectation_sensors must be a non-empty subset of {SENSORS}")
 
     def _doy(self, month_day: str) -> int:
         date = datetime.date.fromisoformat(f"{self.monitoring_year}-{month_day}")
@@ -211,7 +265,7 @@ def build_config(
         study_area=StudyAreaConfig(aoi_coordinates=aoi_coordinates, aoi_asset=aoi_asset),
         evidence=EvidenceConfig(
             expectation=EvidencePeriodConfig(
-                sensors=sensors(BASELINE_SENSORS, controls.baseline_first_year, controls.baseline_last_year)
+                sensors=sensors([c for c in SENSORS if c in controls.expectation_sensors], controls.baseline_first_year, controls.baseline_last_year)
             ),
             target=EvidencePeriodConfig(
                 sensors=sensors(MONITORING_SENSORS, controls.monitoring_year, controls.monitoring_year)

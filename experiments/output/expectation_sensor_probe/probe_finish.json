@@ -1,0 +1,462 @@
+{
+ "started": "2026-10-21T18:08:46.291Z",
+ "area": "projects/bulcd-python-rebuild/assets/testsite",
+ "zoom": 13,
+ "tiles": 6,
+ "pixel": {
+  "label": "Pixel 1 (decrease)",
+  "lon": -123.56922,
+  "lat": 44.84283
+ },
+ "availability": {
+  "L8": {
+   "2013": 12,
+   "2014": 12,
+   "2015": 14,
+   "2016": 13,
+   "2017": 13,
+   "2018": 15,
+   "2019": 14,
+   "2020": 14,
+   "2021": 11,
+   "2022": 13,
+   "2023": 14,
+   "2024": 15,
+   "2025": 15,
+   "2026": 14
+  },
+  "L9": {
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 0,
+   "2017": 0,
+   "2018": 0,
+   "2019": 0,
+   "2020": 0,
+   "2021": 0,
+   "2022": 13,
+   "2023": 13,
+   "2024": 13,
+   "2025": 16,
+   "2026": 14
+  },
+  "S2": {
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 13,
+   "2017": 24,
+   "2018": 48,
+   "2019": 48,
+   "2020": 50,
+   "2021": 49,
+   "2022": 49,
+   "2023": 48,
+   "2024": 48,
+   "2025": 59,
+   "2026": 60
+  },
+  "S2_cloud_score_plus": {
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 26,
+   "2017": 24,
+   "2018": 48,
+   "2019": 48,
+   "2020": 50,
+   "2021": 49,
+   "2022": 49,
+   "2023": 47,
+   "2024": 48,
+   "2025": 60,
+   "2026": 61
+  }
+ },
+ "runs": [
+  {
+   "name": "L8+L9+S2 x 6 yr",
+   "sensors": [
+    "L8",
+    "L9",
+    "S2"
+   ],
+   "years": 6,
+   "expectation": [
+    2018,
+    2023
+   ],
+   "expectation_sensors": [
+    "L8",
+    "L9",
+    "S2"
+   ],
+   "layers": {
+    "Condition 2026": {
+     "description_chars": 4500085,
+     "s": 79.503,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 50.75,
+     "tiles": [
+      {
+       "s": 33.21,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 33.932,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 50.75,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 26.179,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 27.885,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 49.118,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 314977081,
+     "s": 67.185,
+     "ok": false,
+     "error": "getMap: User memory limit exceeded.",
+     "tiles": []
+    },
+    "Last detection (decrease)": {
+     "description_chars": 60887149,
+     "s": 40.559,
+     "ok": false,
+     "error": "getMap: Earth Engine memory capacity exceeded.",
+     "tiles": []
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 30443545,
+     "s": 45.818,
+     "ok": false,
+     "error": "getMap: User memory limit exceeded.",
+     "tiles": []
+    }
+   },
+   "inspector": {
+    "s": 58.767,
+    "ok": false,
+    "error": "User memory limit exceeded."
+   }
+  },
+  {
+   "name": "L8+L9+S2 x 8 yr",
+   "sensors": [
+    "L8",
+    "L9",
+    "S2"
+   ],
+   "years": 8,
+   "expectation": [
+    2016,
+    2023
+   ],
+   "expectation_sensors": [
+    "L8",
+    "L9",
+    "S2"
+   ],
+   "layers": {
+    "Condition 2026": {
+     "description_chars": 4500085,
+     "s": 86.643,
+     "ok": false,
+     "error": "{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"Earth Engine memory capacity exceeded.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n",
+     "max_tile_s": 35.576,
+     "tiles": [
+      {
+       "s": 29.4,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 31.285,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 35.576,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 4.109,
+       "status": 503,
+       "error": "{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"Earth Engine memory capacity exceeded.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n"
+      },
+      {
+       "s": 34.091,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 25.768,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 314977081,
+     "s": 146.91,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 58.201,
+     "tiles": [
+      {
+       "s": 54.074,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 45.59,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 47.668,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 38.903,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 36.091,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 58.201,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Last detection (decrease)": {
+     "description_chars": 60887149,
+     "s": 143.75,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 49.783,
+     "tiles": [
+      {
+       "s": 14.874,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 31.435,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 46.939,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 41.512,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 28.646,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 49.783,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 30443545,
+     "s": 195.927,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 84.115,
+     "tiles": [
+      {
+       "s": 84.115,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 6.573,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 47.022,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 55.805,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 5.925,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 50.887,
+       "status": 200,
+       "error": null
+      }
+     ]
+    }
+   },
+   "inspector": {
+    "s": 37.834,
+    "ok": false,
+    "error": "User memory limit exceeded."
+   }
+  },
+  {
+   "name": "L8+L9+S2 x 3 yr",
+   "sensors": [
+    "L8",
+    "L9",
+    "S2"
+   ],
+   "years": 3,
+   "expectation": [
+    2021,
+    2023
+   ],
+   "expectation_sensors": [
+    "L8",
+    "L9",
+    "S2"
+   ],
+   "layers": {
+    "Condition 2026": {
+     "description_chars": 4500085,
+     "s": 10.259,
+     "ok": false,
+     "error": "getMap: Earth Engine memory capacity exceeded.",
+     "tiles": []
+    },
+    "First detected season (decrease)": {
+     "description_chars": 314977081,
+     "s": 99.048,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 56.827,
+     "tiles": [
+      {
+       "s": 20.005,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 56.827,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 25.222,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 27.88,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 27.08,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 24.195,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Last detection (decrease)": {
+     "description_chars": 60887149,
+     "s": 91.895,
+     "ok": false,
+     "error": "{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"Earth Engine memory capacity exceeded.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n",
+     "max_tile_s": 33.188,
+     "tiles": [
+      {
+       "s": 18.264,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 0.622,
+       "status": 503,
+       "error": "{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"Earth Engine memory capacity exceeded.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n"
+      },
+      {
+       "s": 33.188,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 15.156,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 23.018,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 10.758,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 30443545,
+     "s": 14.271,
+     "ok": false,
+     "error": "getMap: Earth Engine memory capacity exceeded.",
+     "tiles": []
+    }
+   },
+   "inspector": {
+    "s": 96.61,
+    "ok": false,
+    "error": "User memory limit exceeded."
+   }
+  }
+ ]
+}
