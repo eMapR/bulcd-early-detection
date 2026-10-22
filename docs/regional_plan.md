@@ -16,10 +16,12 @@ the same products from a local backend (DataLoader + OSU Slurm), compared agains
   `bulcd.js`, which the interactive app uses). No algorithm code copied or modified.
 - **Backend-neutral where practical:** configuration, tiling, job tracking and the product spec don't import
   `ee`. GEE is one backend; a local Slurm backend comes later (not now).
-- **Pilot configuration:** monitoring year 2026; season Jun 1-Sep 30; 30 m; EPSG:5070, grid aligned to the
-  NLCD/LCMS 30 m grid (verify the alignment); 400 km^2 Oregon Coast Range box (20 x 20 km around the testsite,
-  -123.57, 44.84); 10 x 10 km tiles (4 tiles, with seams inside the box); single-season 2026 timing
-  products. Existing BULC-D defaults (the original GUI's, as in the apps) otherwise.
+- **Pilot configuration** (in `regional_runs/pilot_coast_range_2026.yaml`): monitoring year 2026; season
+  Jun 1-Sep 30; 30 m; EPSG:5070 on the NLCD/LCMS grid (verified 2026-10-22: transform
+  `[30, 0, -2493045, 0, -30, 3310005]`, `docs/findings.md`); tiles of 333 x 333 pixels (9.99 km; 10 km is not
+  a whole number of pixels), numbered from NLCD's origin; the pilot is 2 x 2 tiles (20 x 20 km) around the
+  tile corner nearest the testsite (-123.57, 44.84), so the seams cross the testsite; single-season 2026
+  timing products. Existing BULC-D defaults (the original GUI's, as in the apps) otherwise.
 - **Sensors (decided 2026-10-22, after the expectation-sensor results, `docs/findings.md` 2026-10-19):**
   expectation Landsat 8 only, 2018-2023 (the app default); monitoring Landsat 8 + Landsat 9, no Sentinel-2.
   Sentinel-2 in the expectation fails interactively beyond 2 years, and Sentinel-2 in monitoring without it in
@@ -71,7 +73,11 @@ the same products from a local backend (DataLoader + OSU Slurm), compared agains
   `wait_for` (Apostle 280 km^2 in 19 min, North Cascades 2,022 km^2 in 40 min, testsite 26 km^2 in 1.4 min,
   each one task).
 
-## Proposed layout
+## Layout
+
+Step 3 added `spec.py`, `run_config.py`, `tiling.py` and `regional_runs/` (run files); the rest is to come.
+`config.apply_advanced()` (moved out of the app's `build()`) builds every tile's BULCDConfig exactly as the
+interactive app does.
 
 ```
 src/bulcd_early_detection/regional/
@@ -88,15 +94,25 @@ gee/regional.js  viewer (later): the run's ImageCollection mosaicked, outputs.js
                  stored config; the interactive app is unchanged
 ```
 
-## Product spec v1 (draft)
+## Product spec v1
+
+Defined in `src/bulcd_early_detection/regional/spec.py`, the source of truth (band descriptions, property
+list). In short:
 
 | Band | Type | Values |
 |---|---|---|
-| `condition` | uint8 | 0 decrease, 1 unchanged, 2 increase, 3 not analyzed; masked = water / outside |
+| `condition` | uint8 | 0 decrease, 1 unchanged, 2 increase, 3 not analyzed (the apps' codes) |
 | `p_decrease`, `p_unchanged`, `p_increase` | uint16 | final probability x 10,000 |
-| `first_detection_doy`, `last_detection_doy` | uint16 | day of year (bin end date), 0 = none |
-| `episode_count` | uint8 | detection episodes (2026-10-13 definition) |
-| `n_obs_monitoring`, `n_obs_expectation` | uint16 | valid observations (bins) per period |
+| `first_detection_doy`, `last_detection_doy` | uint16 | day of year (bin end date), 0 = none or not analyzed |
+| `episode_count` | uint8 | detection episodes (2026-10-13 definition), 0 = none |
+| `n_obs_monitoring`, `n_obs_expectation` | uint16 | bins with at least one valid observation, per period |
 
-Image properties: `controls_json`, `config_json`, product version, both repos' commits, export date, input as-of
-date, tile id, grid.
+- **Masked = nodata** in every band (water or outside the region): masked in a GEE asset, 255 (uint8) or
+  65535 (uint16) in a file.
+- **Timing rule:** confirmed by default (only a season that ends as decrease counts), as in the apps;
+  recorded per run (`advanced.timing_rule`).
+- **condition** is classified from the float probabilities before scaling, so it is exact. Reclassifying from
+  the stored probabilities can differ only within 0.00005 of a threshold.
+- **Image properties:** product version, run id, tile id, monitoring year, season, timing rule and date
+  definition, bin days, grid, the whole run config and the BULCDConfig as JSON, as-of date, export date,
+  provenance (both repos' commits, bulcd and ee versions).

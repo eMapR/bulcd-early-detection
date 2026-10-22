@@ -33,6 +33,7 @@ dependency.
 pip install -e .              # this project only; leaves bulcd's install alone
 pip install -e ../BULC-D_rebuild  # bulcd, editable, for co-development (do this too)
 pip install -e ".[dev]"       # pytest
+pip install -e ".[regional]"  # pyyaml, pyproj: regional run files and tiling
 pytest                        # run tests (currently: dependency smoke test only)
 ```
 

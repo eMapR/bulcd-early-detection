@@ -1,0 +1,44 @@
+# Regional pilot run (docs/regional_plan.md, step 6). Load with
+# bulcd_early_detection.regional.run_config.RegionalRun.load(path).
+# region.bounds: EPSG:5070 meters, 2 x 2 tiles (333 px = 9.99 km each) around the
+# tile corner nearest the testsite (-123.57, 44.84): tiling.tiles_around().
+# Sensors decided 2026-10-22: expectation Landsat 8 only 2018-2023, monitoring L8 + L9.
+# Every other setting is the apps' default.
+run_id: r6-pilot-coast-range-2026
+description: 'Regional pilot: 2 x 2 tiles whose seams cross at the testsite (docs/regional_plan.md).'
+product_version: 1
+region:
+  name: Oregon Coast Range pilot (testsite)
+  bounds:
+  - -2153385.0
+  - 2730585.0
+  - -2133405.0
+  - 2750565.0
+grid:
+  crs: EPSG:5070
+  scale: 30
+  origin:
+  - -2493045.0
+  - 3310005.0
+  tile_px: 333
+controls:
+  monitoring_year: 2026
+  season_start: 06-01
+  season_end: 09-30
+  baseline_first_year: 2018
+  baseline_last_year: 2023
+  decision_threshold: 0.65
+  increase_threshold: 0.75
+  sensitivity: 1.0
+  fit_order: 1
+  expectation_sensors:
+  - L8
+advanced:
+  monitoring_sensors:
+  - L8
+  - L9
+  dampening: 0.7
+  posterior_leveler: 0.9
+  mask_forest: false
+  mask_water: true
+  timing_rule: confirmed

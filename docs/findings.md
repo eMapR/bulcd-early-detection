@@ -1573,3 +1573,39 @@ skips) and `gee/tests/controls_check.js`. The live app parity test (`gee/tests/r
 L8+S2, expectation 2022-2023, chosen in the GUI's Advanced settings) passed 2026-10-21. Configs and warnings
 match; condition, first detected season, last detection and episodes match Python with 0 differing values
 over the box; the inspector rows and expectation fit (62 bins, 43 observations) match at pixel 1.
+
+
+## 2026-10-22 — The regional grid: EPSG:5070, 30 m, on the NLCD/LCMS pixel grid
+
+The regional plan asked to verify that the products' grid lines up with NLCD and LCMS, so the products can
+be compared or masked with them pixel for pixel.
+
+**What the datasets use** (Earth Engine, `projection()` of each image):
+
+| Dataset | Pixel transform (x origin, y origin) | Origin mod 30 m |
+|---|---|---|
+| NLCD 2019 and 2021 (`USGS/NLCD_RELEASES/...`) | -2493045, 3310005 | 15, 15 |
+| Annual NLCD (`projects/sat-io/open-datasets/USGS/ANNUAL_NLCD/LANDCOVER`) | -2415585, 3314805 | 15, 15 |
+| LCMS 2025-11, CONUS (`projects/gtac-data-publish/assets/LCMS/Product_Version/2025-11`) | -2361585, 3177435 | 15, 15 |
+| LCMS v2024-10, CONUS (deprecated) | -2928465, 3265875 | 15, 15 |
+
+- **CRS:** all are Albers Conical Equal Area WKTs on WGS84 (standard parallels 29.5/45.5, center -96/23), not
+  the `EPSG:5070` code (NAD83). Earth Engine treats them as the same: at four Pacific Northwest points, `EPSG:5070`
+  and NLCD's WKT give coordinates within 0.1 mm. `pyproj` 3.7.2 also matches Earth Engine to 1 mm.
+- **Pixel lattice:** every origin is at 15 m mod 30 in x and y, so all four share one lattice.
+- **Test:** NLCD's (or LCMS's) native pixel coordinates were sampled at the centers of a candidate 30 m
+  `EPSG:5070` grid. On an aligned grid every center falls exactly mid-pixel (fraction 0.5). With origin
+  (-2493045, 3310005) the fraction was exactly 0.5 in x and y for NLCD 2021 and Annual NLCD at the testsite,
+  and for LCMS 2025-11 at the testsite, Pine Mountain and northeastern Oregon. A control grid shifted 15 m
+  landed on pixel edges (0 or 1).
+- **Pitfalls:** comparing `image.reproject(grid)` with the original image gives 0 differences on any grid,
+  because both sides are resampled onto the same output grid, so that test can't tell grids apart. And the
+  LCMS 2025-11 collection's `.first()` is the Alaska image, which has its own grid; filter to
+  `study_area == 'CONUS'`.
+
+**Decision:** regional products use `EPSG:5070`, 30 m, transform `[30, 0, -2493045, 0, -30, 3310005]` (NLCD's).
+Tiles are fixed 333 × 333-pixel blocks of that grid (9.99 km; 10 km is not a whole number of 30 m pixels),
+numbered by row and column from NLCD's origin, so a tile ID always means the same pixels
+(`regional/tiling.py`). The pilot is the 2 × 2 tiles around the tile corner nearest the testsite point
+(-123.57, 44.84). That corner is 2.3 km east and 0.8 km south of the point, so both seams cross the
+testsite.

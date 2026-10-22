@@ -60,6 +60,20 @@ SENSORS = ("L8", "L9", "S2")
 # 2026-09-18). MonitoringControls.expectation_sensors selects others.
 BASELINE_SENSORS = ("L8",)
 MONITORING_SENSORS = ("L8", "L9", "S2")
+# Algorithm defaults: the original BULC-D GUI's, as in the GEE app (gee/config.js
+# APP_DEFAULTS; read from the legacy source, see gee/tests/legacy_gui.js).
+# The expectation years, monitoring year, season and sensors had no default
+# there (the user entered them); the apps' are Early Detection choices.
+LEGACY_DEFAULTS = {"sensitivity": 1.0, "decrease_threshold": 0.65, "increase_threshold": 0.75, "dampening": 0.7,
+                   "posterior_leveler": 0.9, "mask_forest": False, "mask_water": True, "fit_order": 1}
+# Detection timing (first detected season, last detection, detection episodes):
+# confirmed = only a season that ends as decrease counts (the first-detected
+# season's definition since 2026-09-30); raw = any crossing counts. Not an
+# original-GUI setting (it had no such product). gee/config.js APP_DEFAULTS.timing_confirmed.
+TIMING_CONFIRMED_DEFAULT = True
+# Starting probabilities 0.1 decrease / 0.8 unchanged / 0.1 increase
+# (initializingLeveler 0.7 on "unchanged"). Fixed; not a control.
+INITIALIZING_LEVELER = 0.7
 # First year with a full season of data, and what is missing before it
 # (docs/findings.md, 2026-10-19: Jun-Sep scenes over the testsite).
 SENSOR_FULL_FROM = {"L8": 2014, "L9": 2022, "S2": 2018}
@@ -279,6 +293,23 @@ def build_config(
             custom_transition_matrix=PRODUCTION_TRANSITION_MATRIX, recency_factor=1.0
         ),
     )
+
+
+def apply_advanced(config: BULCDConfig, *, dampening: float, posterior_leveler: float, monitoring_sensors,
+                   mask_forest: bool, mask_water: bool) -> BULCDConfig:
+    """build_config() plus the apps' Advanced settings, in place: dampening,
+    posterior leveler, the fixed starting odds (INITIALIZING_LEVELER), which
+    monitoring sensors are enabled (the others stay in the config, disabled,
+    as the GUI's unticked boxes leave them) and the masks. The interactive app's
+    build() and the regional runs both use it. Returns `config`."""
+    config.bulc_advanced_params.dampening_factor = dampening
+    config.bulc_advanced_params.posterior_leveler = posterior_leveler
+    config.bulc_advanced_params.initializing_leveler = INITIALIZING_LEVELER
+    for code, sensor in config.evidence.target.sensors.items():
+        sensor.enabled = code in monitoring_sensors
+    config.study_area.mask_non_forest = mask_forest
+    config.study_area.mask_water = mask_water
+    return config
 
 
 _SENSOR_NAMES = {"L5": "Landsat 5", "L7": "Landsat 7", "L8": "Landsat 8", "L9": "Landsat 9", "S2": "Sentinel-2"}

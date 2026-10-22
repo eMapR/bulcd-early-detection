@@ -24,24 +24,14 @@ import ipywidgets as W
 from IPython.display import Markdown, display
 
 from . import compare, drawing, outputs, pixel, render, report
-from .config import BASELINE_SENSORS, FIT_ORDERS, SENSORS, MonitoringControls, build_config, sensor_warnings
+from .config import (BASELINE_SENSORS, FIT_ORDERS, INITIALIZING_LEVELER, LEGACY_DEFAULTS, SENSORS,
+                     TIMING_CONFIRMED_DEFAULT, MonitoringControls, apply_advanced, build_config, sensor_warnings)
 
 # Earth Engine requests have no deadline by default, so one stalled request can
 # freeze the whole app; fail it after this long instead (ms).
 REQUEST_DEADLINE_MS = 300_000
 EXAMPLE_ASSETS = {"testsite (western Oregon, 26 km²)": "projects/bulcd-python-rebuild/assets/testsite"}
 MAX_TIMING_SEASONS = 3
-# Algorithm defaults: the original BULC-D GUI's, as in the GEE app (gee/config.js
-# APP_DEFAULTS; read from the legacy source, see gee/tests/legacy_gui.js).
-# The expectation years, monitoring year, season and sensors had no default
-# there (the user entered them); theirs below are Early Detection choices.
-LEGACY_DEFAULTS = {"sensitivity": 1.0, "decrease_threshold": 0.65, "increase_threshold": 0.75, "dampening": 0.7,
-                   "posterior_leveler": 0.9, "mask_forest": False, "mask_water": True, "fit_order": 1}
-# Detection timing (first detected season, last detection, detection episodes):
-# confirmed = only a season that ends as decrease counts (the first-detected
-# season's definition since 2026-09-30); raw = any crossing counts. Not an
-# original-GUI setting (it had no such product). gee/config.js APP_DEFAULTS.timing_confirmed.
-TIMING_CONFIRMED_DEFAULT = True
 # Expectation fit order choices (config.FIT_ORDERS); gee/config.js FIT_ORDER_LABELS holds the same labels.
 FIT_ORDER_LABELS = {1: "1: one annual cycle (original BULC-D)", 2: "2: adds 2 cycles per year",
                     3: "3: adds 2 and 3 cycles per year"}
@@ -58,9 +48,6 @@ APP_PARAMETER_SWEEPS = [
     ("Posterior leveler", "pull toward even odds after each update (1 = off)", [0.7, 0.8, 0.9, 0.95, 1.0],
      lambda v: {"edit": compare._set_advanced("posterior_leveler", v)}, LEGACY_DEFAULTS["posterior_leveler"]),
 ]
-# Starting probabilities 0.1 decrease / 0.8 unchanged / 0.1 increase
-# (initializingLeveler 0.7 on "unchanged"). Fixed; not a control.
-INITIALIZING_LEVELER = 0.7
 
 
 _MONTHS = [(datetime.date(2025, m, 1).strftime("%b"), m) for m in range(1, 13)]
@@ -297,16 +284,10 @@ class EarlyDetectionApp:
 
     def build(self, controls, **aoi):
         """build_config() plus the advanced settings - the same shape as the notebooks' build()."""
-        config = build_config(controls, **aoi)
-        config.bulc_advanced_params.dampening_factor = round(self.dampening.value, 2)
-        config.bulc_advanced_params.posterior_leveler = round(self.posterior.value, 2)
-        config.bulc_advanced_params.initializing_leveler = INITIALIZING_LEVELER
-        for code, box in self.sensors.items():
-            if code in config.evidence.target.sensors:
-                config.evidence.target.sensors[code].enabled = box.value
-        config.study_area.mask_non_forest = self.mask_forest.value
-        config.study_area.mask_water = self.mask_water.value
-        return config
+        return apply_advanced(build_config(controls, **aoi), dampening=round(self.dampening.value, 2),
+                              posterior_leveler=round(self.posterior.value, 2),
+                              monitoring_sensors=self._checked(self.sensors), mask_forest=self.mask_forest.value,
+                              mask_water=self.mask_water.value)
 
     # ------------------------------------------------------------------ step 3: results
     def _build_results(self):

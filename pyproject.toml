@@ -12,6 +12,8 @@ requires-python = ">=3.10"
 dev = ["pytest"]
 # Prototype notebooks (notebooks/). Earth Engine itself comes in via bulcd.
 notebook = ["jupyterlab", "ipykernel", "matplotlib", "nbconvert", "ipyleaflet"]
+# Regional batch processing (src/bulcd_early_detection/regional/): run files and tiling.
+regional = ["pyyaml", "pyproj"]
 # Pulls the BULC-D core engine straight from GitHub. Only needed for a
 # from-scratch environment (CI, a new machine) that has no local
 # BULC-D_rebuild checkout - see README "Relationship to BULC-D_rebuild".

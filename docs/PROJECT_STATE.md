@@ -14,8 +14,23 @@ are in `docs/regional_plan.md`.
 **Step 1 (expectation sensors) is done and committed** on `legacy-parity-0011-app`. The user reviewed
 the results (2026-10-22) and chose, for the regional pilot: expectation Landsat 8 only, 2018-2023; monitoring
 Landsat 8 + Landsat 9, no Sentinel-2 (`docs/regional_plan.md`). `feature/regional-batch-processing` is created
-from `legacy-parity-0011-app` (plan step 2). **Next: plan step 3, regional configuration and output
-specification.** The apps' defaults are unchanged.
+from `legacy-parity-0011-app` (plan step 2). The apps' defaults are unchanged.
+
+**Step 3 (regional configuration and output specification) is done** (2026-10-22):
+- `src/bulcd_early_detection/regional/`: `spec.py` (product spec v1), `run_config.py` (`RegionalRun` <-> YAML;
+  `bulcd_config()` builds a tile's config as the app does), `tiling.py` (fixed 333-pixel tiles on the NLCD
+  grid; lon/lat AOI rings). No `ee` imports (a test checks). Needs the `regional` extra (pyyaml, pyproj).
+- `config.apply_advanced()`: the app's `build()` advanced-settings step, moved to `config.py` so the
+  regional runs share it (with `LEGACY_DEFAULTS`, `TIMING_CONFIRMED_DEFAULT`, `INITIALIZING_LEVELER`; still
+  importable from `app.py`). The GEE app is unchanged; the live parity test was not rerun.
+- `regional_runs/pilot_coast_range_2026.yaml`: the pilot (4 tiles r0056-0057 x c0034-0035).
+- Grid verified against NLCD and LCMS (`docs/findings.md`, 2026-10-22).
+- Tests: `tests/test_regional_config.py`; pytest 75 passed.
+
+**Next: plan step 4, the minimal GEE batch-export prototype** (`backends/gee.py`): one `run_bulcd` per tile ->
+an image to `spec.py` -> `Export.image.toAsset` on the grid (crs + crsTransform + dimensions, the tile's
+exact pixels; `tiling.lonlat_ring()` for the AOI). Start from `outputs.export_study_area`. Step 5 (one run
+per tile for every output) comes with it: the timing and episode functions call `run_bulcd` themselves.
 
 - **What step 1 delivered:** an expectation-sensor control in both apps (`config.py`
   `MonitoringControls.expectation_sensors`, `sensor_warnings()`; `gee/config.js` `sensorWarnings()`,
@@ -30,7 +45,7 @@ specification.** The apps' defaults are unchanged.
 - **Repos:** siblings in `/vol/v1/bulcd/`: `bulcd-early-detection` on `feature/regional-batch-processing`,
   `BULC-D_rebuild` on `legacy-parity-0011` (decision 0011 + `bulcd.js`; not merged to its `main`).
 - **Python:** conda env `bulcd` (Python 3.11) with `pip install -e ../BULC-D_rebuild` and
-  `pip install -e ".[dev,notebook]"`.
+  `pip install -e ".[dev,notebook,regional]"`.
 - **Node:** conda env `bulcd-gee` (Node 20), `npm install` done in `../BULC-D_rebuild/gee`.
 - **Paths:** the test scripts default to the laptop's paths, so set
   `BULCD_PYTHON=~/.conda/envs/bulcd/bin/python`, `BULCD_NODE=~/.conda/envs/bulcd-gee/bin/node`, and put
