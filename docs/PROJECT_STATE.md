@@ -11,10 +11,11 @@ the "why," not this file.
 **Current project:** regional batch processing for USFS Region 6. The agreed plan, decisions and order of work
 are in `docs/regional_plan.md`.
 
-**Step 1 (expectation sensors) is done and committed** on `legacy-parity-0011-app`. Next: **wait for the
-user's review of the results** (`docs/findings.md`, 2026-10-19). The plan's expectation years and sensors stay
-open until then. After that, create `feature/regional-batch-processing` from `legacy-parity-0011-app` (plan
-step 2).
+**Step 1 (expectation sensors) is done and committed** on `legacy-parity-0011-app`. The user reviewed
+the results (2026-10-22) and chose, for the regional pilot: expectation Landsat 8 only, 2018-2023; monitoring
+Landsat 8 + Landsat 9, no Sentinel-2 (`docs/regional_plan.md`). `feature/regional-batch-processing` is created
+from `legacy-parity-0011-app` (plan step 2). **Next: plan step 3, regional configuration and output
+specification.** The apps' defaults are unchanged.
 
 - **What step 1 delivered:** an expectation-sensor control in both apps (`config.py`
   `MonitoringControls.expectation_sensors`, `sensor_warnings()`; `gee/config.js` `sensorWarnings()`,
@@ -26,7 +27,7 @@ step 2).
   sections, including the new section 6) passed 2026-10-21.
 
 **Environment on islay** (set up 2026-10-21):
-- **Repos:** siblings in `/vol/v1/bulcd/`: `bulcd-early-detection` on `legacy-parity-0011-app`,
+- **Repos:** siblings in `/vol/v1/bulcd/`: `bulcd-early-detection` on `feature/regional-batch-processing`,
   `BULC-D_rebuild` on `legacy-parity-0011` (decision 0011 + `bulcd.js`; not merged to its `main`).
 - **Python:** conda env `bulcd` (Python 3.11) with `pip install -e ../BULC-D_rebuild` and
   `pip install -e ".[dev,notebook]"`.

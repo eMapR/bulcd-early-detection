@@ -20,7 +20,12 @@ the same products from a local backend (DataLoader + OSU Slurm), compared agains
   NLCD/LCMS 30 m grid (verify the alignment); 400 km^2 Oregon Coast Range box (20 x 20 km around the testsite,
   -123.57, 44.84); 10 x 10 km tiles (4 tiles, with seams inside the box); single-season 2026 timing
   products. Existing BULC-D defaults (the original GUI's, as in the apps) otherwise.
-- **Expectation years and sensors: not final** until the user has reviewed the expectation-sensor results.
+- **Sensors (decided 2026-10-22, after the expectation-sensor results, `docs/findings.md` 2026-10-19):**
+  expectation Landsat 8 only, 2018-2023 (the app default); monitoring Landsat 8 + Landsat 9, no Sentinel-2.
+  Sentinel-2 in the expectation fails interactively beyond 2 years, and Sentinel-2 in monitoring without it in
+  the expectation produced false decreases (findings 2026-09-28/30). The expectation/monitoring mismatch
+  warning still appears (L9 in monitoring only); L9 is Landsat 8's twin sensor, so this is not expected to
+  matter. Check in validation.
 - **No forest-only mask** (general landscape change). Water masked as in the apps. Optional land-cover masks
   evaluated later.
 - **Probabilities as scaled uint16;** measure the quantization error during validation.
