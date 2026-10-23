@@ -11,7 +11,7 @@ One image per tile, one BULC-D run per tile, one monitoring season
 Masking: a pixel outside the region or on water (the apps' JRC water mask)
 is masked in a GEE asset and holds the band's `nodata` value in a file;
 masked <=> nodata, in every band. Every other pixel has a value in every
-band.
+band, except the probabilities where BULC-D produced none (condition 3).
 """
 
 from __future__ import annotations
@@ -63,7 +63,8 @@ BANDS = (
          "2 increase (final P(increase) > the increase threshold), else 1 unchanged; 3 not analyzed "
          "(land without a BULC-D result, e.g. excluded by an optional land-cover mask). The apps' "
          "condition layer."),
-    Band("p_decrease", "uint16", "Final P(decrease) x 10,000.", PROBABILITY_SCALE),
+    Band("p_decrease", "uint16", "Final P(decrease) x 10,000; masked where BULC-D produced no probabilities.",
+         PROBABILITY_SCALE),
     Band("p_unchanged", "uint16", "Final P(unchanged) x 10,000.", PROBABILITY_SCALE),
     Band("p_increase", "uint16", "Final P(increase) x 10,000.", PROBABILITY_SCALE),
     Band("first_detection_doy", "uint16",
@@ -102,7 +103,8 @@ PROPERTIES = (
     "grid_json",             # {"crs", "transform"} of the tile's pixels
     "run_json",              # the whole RegionalRun (RegionalRun.to_dict())
     "config_json",           # the BULCDConfig the tile ran (aoi left out, as outputs.run_metadata)
-    "as_of_date",            # latest monitoring observation date the backend saw, YYYY-MM-DD
+    "as_of_date",            # end of the input window, YYYY-MM-DD: the season end, or the export date if earlier
+                             # (scenes acquired by then but not yet in the collections are missing)
     "export_date",           # when the tile was computed, YYYY-MM-DDTHH:MM:SSZ
     "provenance_json",       # git commits of both repos, bulcd and ee versions (provenance.py)
 )

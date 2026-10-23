@@ -1609,3 +1609,39 @@ numbered by row and column from NLCD's origin, so a tile ID always means the sam
 (`regional/tiling.py`). The pilot is the 2 × 2 tiles around the tile corner nearest the testsite point
 (-123.57, 44.84). That corner is 2.3 km east and 0.8 km south of the point, so both seams cross the
 testsite.
+
+## 2026-10-23 — Regional step 4: one BULC-D run per tile, and the first exported tile
+
+**One run per tile, verified on the graph.** A tile's product image (`regional/backends/gee.py`
+`product_image`) calls `outputs._outcome_from_result`, `detection_timing_from_result` and
+`detection_episode_from_result` on one `run_bulcd` result. The old `detection_timing_image(config)` and
+`detection_episode_image(config)` now delegate to those variants and serialize to the same graphs as before.
+The serialized graph of a whole tile holds 1 `Reducer.linearRegression` (the harmonic fit) and 2
+`Collection.iterate` (the BULC pass and the episode pass). Pitfall: this count can't show redundant runs. The
+EE serializer dedupes structurally identical subgraphs, so calling `run_bulcd(config)` three times with the
+same config also serializes to one fit. Server-side the graph is evaluated once either way. The `_from_result`
+variants make the single run explicit in the code, and they keep it single if the configs ever differ slightly.
+(`tests/test_regional_gee.py`)
+
+**Export.** `Export.image.toAsset` with `crs` + `crsTransform` (the tile's corner) + `dimensions` "333x333"
+and no `region` gives exactly the tile's pixels. The asset's projection is `EPSG:5070`
+`[30,0,-2153385,0,-30,2750565]`, with 110,889 pixels. Pyramiding is `sample` for every band.
+
+| Tile r0056c0034 (pilot, L8 2018-2023 expectation, L8+L9 monitoring 2026) | |
+|---|---|
+| Queued | 8.5 h (30,475 s; the project's batch queue, 2026-10-22 evening) |
+| Running | 67 s, 142 EECU-seconds |
+| Asset vs live (60 × 60 box of grid pixels at pixel 1, all 9 bands, masks included) | identical |
+| Condition | 9,756 decrease, 82,005 unchanged, 19,128 increase, none masked or not analyzed |
+| Episodes | 9,664 × 1, 85 × 2, 6 × 3, 1 × 4; every first detection is a decrease pixel; last ≥ first |
+| `p_decrease` range | 428-9145 (0.043-0.914, the posterior-leveler floor and cap) |
+| Observations | monitoring 14-19 bins, expectation 40-55 bins |
+| Pixel 1 | decrease, 0.914/0.043/0.043, first = last detection DOY 168, 1 episode, 17 / 47 observations |
+
+Pixel 1's 47 expectation observations match the pixel inspector's count for the same settings. That confirms
+`n_obs_*` (bins with a valid value in `organize_inputs()`'s binned collections) means what the inspector
+counts.
+
+Not exercised by this tile: water/masked pixels and condition 3 (it has none). The tile's provenance records
+`dirty: true` because it was exported before the step-4 commit.
+(`experiments/regional_tile_check.py`, `experiments/output/regional_pilot/r0056c0034_check.json`)

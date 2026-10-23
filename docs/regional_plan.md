@@ -47,6 +47,7 @@ the same products from a local backend (DataLoader + OSU Slurm), compared agains
 3. Regional configuration and output specification.
 4. Minimal GEE batch-export prototype on the existing engine.
 5. Verify that one BULC-D run per tile produces every output (no redundant runs).
+   *Steps 4-5 done 2026-10-23: tile r0056c0034 exported and identical to live (`docs/findings.md`).*
 6. Run the four-tile pilot.
 7. Validate against the interactive implementation, including tile seams.
 8. Benchmark performance; investigate memory limits (expectation sensors x length x `shardSize`).
@@ -75,7 +76,9 @@ the same products from a local backend (DataLoader + OSU Slurm), compared agains
 
 ## Layout
 
-Step 3 added `spec.py`, `run_config.py`, `tiling.py` and `regional_runs/` (run files); the rest is to come.
+Step 3 added `spec.py`, `run_config.py`, `tiling.py` and `regional_runs/` (run files). Step 4 added
+`provenance.py` and `backends/gee.py` (with a CLI: `python -m bulcd_early_detection.regional.backends.gee RUN.yaml
+[--tiles ID ...] [--dry-run] [--wait]`); `jobs.py`, `cli.py` and the viewer are to come.
 `config.apply_advanced()` (moved out of the app's `build()`) builds every tile's BULCDConfig exactly as the
 interactive app does.
 

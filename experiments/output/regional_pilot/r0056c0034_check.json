@@ -1,0 +1,143 @@
+{
+ "asset": "r0056c0034",
+ "asset_vs_live": {
+  "condition": {
+   "differ": 0,
+   "mask_differs": 0,
+   "valid": 3600
+  },
+  "episode_count": {
+   "differ": 0,
+   "mask_differs": 0,
+   "valid": 3600
+  },
+  "first_detection_doy": {
+   "differ": 0,
+   "mask_differs": 0,
+   "valid": 3600
+  },
+  "last_detection_doy": {
+   "differ": 0,
+   "mask_differs": 0,
+   "valid": 3600
+  },
+  "n_obs_expectation": {
+   "differ": 0,
+   "mask_differs": 0,
+   "valid": 3600
+  },
+  "n_obs_monitoring": {
+   "differ": 0,
+   "mask_differs": 0,
+   "valid": 3600
+  },
+  "p_decrease": {
+   "differ": 0,
+   "mask_differs": 0,
+   "valid": 3600
+  },
+  "p_increase": {
+   "differ": 0,
+   "mask_differs": 0,
+   "valid": 3600
+  },
+  "p_unchanged": {
+   "differ": 0,
+   "mask_differs": 0,
+   "valid": 3600
+  }
+ },
+ "asset_vs_live_identical": true,
+ "box": [
+  -2146485.0,
+  2740755.0,
+  -2144685.0,
+  2742555.0
+ ],
+ "condition": {
+  "0": 9756,
+  "1": 82005,
+  "2": 19128
+ },
+ "detections": {
+  "episodes_histogram": {
+   "0": 101133,
+   "1": 9664,
+   "2": 85,
+   "3": 6,
+   "4": 1
+  },
+  "first_detection_but_not_decrease": 0,
+  "last_before_first": 0,
+  "with_first_detection": 9756
+ },
+ "pixel_1": {
+  "condition": 0,
+  "episode_count": 1,
+  "first_detection_doy": 168,
+  "last_detection_doy": 168,
+  "n_obs_expectation": 47,
+  "n_obs_monitoring": 17,
+  "p_decrease": 9145,
+  "p_increase": 428,
+  "p_unchanged": 428
+ },
+ "pixels": {
+  "total": 110889,
+  "valid": 110889
+ },
+ "projection": {
+  "crs": "EPSG:5070",
+  "transform": [
+   30,
+   0,
+   -2153385,
+   0,
+   -30,
+   2750565
+  ],
+  "type": "Projection"
+ },
+ "properties": {
+  "as_of_date": "2026-09-30",
+  "bin_days": 4,
+  "export_date": "2026-10-23T03:19:56Z",
+  "monitoring_year": 2026,
+  "product_version": 1,
+  "run_id": "r6-pilot-coast-range-2026",
+  "season_end": "09-30",
+  "season_start": "06-01",
+  "tile_id": "r0056c0034",
+  "timing_date": "end date of the observation bin",
+  "timing_rule": "confirmed"
+ },
+ "provenance": {
+  "bulcd": {
+   "branch": "legacy-parity-0011",
+   "commit": "8e9c5d52e21b5ec57ccc2ad3328b5e7ce0b21bbb",
+   "dirty": false,
+   "version": "0.1.0"
+  },
+  "bulcd_early_detection": {
+   "branch": "feature/regional-batch-processing",
+   "commit": "32b11bf2e80067edfdda19e28d1ddd5625a38a25",
+   "dirty": true
+  },
+  "earthengine_api": "1.7.49"
+ },
+ "ranges": {
+  "episode_count_max": 4,
+  "episode_count_min": 0,
+  "first_detection_doy_max": 276,
+  "first_detection_doy_min": 0,
+  "last_detection_doy_max": 276,
+  "last_detection_doy_min": 0,
+  "n_obs_expectation_max": 55,
+  "n_obs_expectation_min": 40,
+  "n_obs_monitoring_max": 19,
+  "n_obs_monitoring_min": 14,
+  "p_decrease_max": 9145,
+  "p_decrease_min": 428
+ },
+ "tile": "r0056c0034"
+}

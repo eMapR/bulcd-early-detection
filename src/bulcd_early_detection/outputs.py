@@ -373,7 +373,13 @@ def detection_episode_image(config: BULCDConfig, threshold: float, increase_thre
     analyzed, or with `confirmed` (the default) not ending as decrease - the
     same rule combine_season_timing() applies. One BULC-D run. Feeds
     combine_episode_metrics(); gee/outputs.js detectionEpisodeImage()."""
-    result = run_bulcd(config)
+    return detection_episode_from_result(run_bulcd(config), config, threshold, increase_threshold, confirmed)
+
+
+def detection_episode_from_result(result, config: BULCDConfig, threshold: float,
+                                  increase_threshold: float | None = None, confirmed: bool = True) -> ee.Image:
+    """detection_episode_image() from an existing run_bulcd() result (so one
+    run can feed every output, as the regional tiles do)."""
     outcome = _outcome_from_result(result, config, threshold, increase_threshold).select("outcome")
     state = _episode_state(result.probability_stack, threshold)
     counts = outcome.eq(DECREASE) if confirmed else outcome.lte(INCREASE)
@@ -388,7 +394,12 @@ def detection_timing_image(config: BULCDConfig, threshold: float, increase_thres
     where it never did or the pixel isn't analyzed; plus `outcome`, the state
     at the end of the run (same codes as outcome_image, with
     `increase_threshold`). One BULC-D run feeds both."""
-    result = run_bulcd(config)
+    return detection_timing_from_result(run_bulcd(config), config, threshold, increase_threshold)
+
+
+def detection_timing_from_result(result, config: BULCDConfig, threshold: float,
+                                 increase_threshold: float | None = None) -> ee.Image:
+    """detection_timing_image() from an existing run_bulcd() result."""
     outcome = _outcome_from_result(result, config, threshold, increase_threshold).select("outcome")
 
     def code(img):

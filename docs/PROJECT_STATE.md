@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-10-21
+Last updated: 2026-10-23
 
 Concise current-state/handoff doc. Detailed lessons, experimental
 results, and their explanations live in `docs/findings.md` — read it for
@@ -27,10 +27,22 @@ from `legacy-parity-0011-app` (plan step 2). The apps' defaults are unchanged.
 - Grid verified against NLCD and LCMS (`docs/findings.md`, 2026-10-22).
 - Tests: `tests/test_regional_config.py`; pytest 75 passed.
 
-**Next: plan step 4, the minimal GEE batch-export prototype** (`backends/gee.py`): one `run_bulcd` per tile ->
-an image to `spec.py` -> `Export.image.toAsset` on the grid (crs + crsTransform + dimensions, the tile's
-exact pixels; `tiling.lonlat_ring()` for the AOI). Start from `outputs.export_study_area`. Step 5 (one run
-per tile for every output) comes with it: the timing and episode functions call `run_bulcd` themselves.
+**Steps 4-5 (GEE batch-export prototype; one run per tile) are done** (2026-10-23):
+- `regional/backends/gee.py`: `product_image()` builds every spec band from one `run_bulcd` result;
+  `export_tile()` / `submit()` export to `projects/bulcd-python-rebuild/assets/regional/<run_id>/<tile_id>`
+  (an ImageCollection per run) on the tile's exact pixels. CLI:
+  `python -m bulcd_early_detection.regional.backends.gee RUN.yaml [--tiles ID ...] [--dry-run] [--wait]`.
+- `outputs.detection_timing_from_result()` / `detection_episode_from_result()`; the old functions delegate
+  (same graphs). `regional/provenance.py`: git state of both repos, versions.
+- Spec amendments: probabilities are masked where BULC-D produced none; `as_of_date` = season end, or the
+  export date if earlier.
+- Tile r0056c0034 exported (8.5 h queued, 67 s running) and identical to live on a 60 x 60 box;
+  `experiments/regional_tile_check.py RUN.yaml TILE` checks a tile. Details in `docs/findings.md` (2026-10-23).
+- Tests: `tests/test_regional_gee.py` (needs EE credentials); pytest 81 passed.
+
+**Next: plan step 6, the four-tile pilot** (the other three tiles: r0056c0035, r0057c0034, r0057c0035), then
+step 7 (seams across the testsite, comparison with the interactive app). The live app parity test has not
+been rerun since the `app.build()` refactor (step 3).
 
 - **What step 1 delivered:** an expectation-sensor control in both apps (`config.py`
   `MonitoringControls.expectation_sensors`, `sensor_warnings()`; `gee/config.js` `sensorWarnings()`,
