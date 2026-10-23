@@ -49,6 +49,7 @@ the same products from a local backend (DataLoader + OSU Slurm), compared agains
 5. Verify that one BULC-D run per tile produces every output (no redundant runs).
    *Steps 4-5 done 2026-10-23: tile r0056c0034 exported and identical to live (`docs/findings.md`).*
 6. Run the four-tile pilot.
+   *Done 2026-10-23: all four tiles exported and identical to live (`docs/findings.md`).*
 7. Validate against the interactive implementation, including tile seams.
 8. Benchmark performance; investigate memory limits (expectation sensors x length x `shardSize`).
 9. Then expand job tracking, resumability and the regional viewer.

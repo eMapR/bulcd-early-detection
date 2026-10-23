@@ -40,9 +40,15 @@ from `legacy-parity-0011-app` (plan step 2). The apps' defaults are unchanged.
   `experiments/regional_tile_check.py RUN.yaml TILE` checks a tile. Details in `docs/findings.md` (2026-10-23).
 - Tests: `tests/test_regional_gee.py` (needs EE credentials); pytest 81 passed.
 
-**Next: plan step 6, the four-tile pilot** (the other three tiles: r0056c0035, r0057c0034, r0057c0035), then
-step 7 (seams across the testsite, comparison with the interactive app). The live app parity test has not
-been rerun since the `app.build()` refactor (step 3).
+**Step 6 (four-tile pilot) is done** (2026-10-23): all four tiles are in
+`projects/bulcd-python-rebuild/assets/regional/r6-pilot-coast-range-2026`, and each is identical to live on a
+box. Each tile took 1-2 min of compute (about 140 EECU-s); the batch queue waits (2.5-8.5 h) dominated the
+elapsed time. The first masked pixels (129 water pixels in r0056c0035) are consistent across bands and match
+live. Details in `docs/findings.md`.
+
+**Next: plan step 7, validation:** seams across the testsite (does a pixel get the same values from a tile
+as from an AOI that spans the seam?), and comparison with the interactive app. The live app parity test has
+not been rerun since the `app.build()` refactor (step 3).
 
 - **What step 1 delivered:** an expectation-sensor control in both apps (`config.py`
   `MonitoringControls.expectation_sensors`, `sensor_warnings()`; `gee/config.js` `sensorWarnings()`,

@@ -1645,3 +1645,28 @@ counts.
 Not exercised by this tile: water/masked pixels and condition 3 (it has none). The tile's provenance records
 `dirty: true` because it was exported before the step-4 commit.
 (`experiments/regional_tile_check.py`, `experiments/output/regional_pilot/r0056c0034_check.json`)
+
+## 2026-10-23 (later) — Regional step 6: the four-tile pilot
+
+The other three pilot tiles were submitted together. Each one ran as its own task, and the three ran in parallel.
+Provenance is clean in all three (exported from commit a38e922).
+
+| Tile | Queued | Running | EECU-s | Decrease / unchanged / increase | Masked | Episodes 1 / 2 / 3+ | Expectation obs |
+|---|---|---|---|---|---|---|---|
+| r0056c0034 | 8.5 h | 67 s | 142 | 9,756 / 82,005 / 19,128 | 0 | 9,664 / 85 / 7 | 40-55 |
+| r0056c0035 | 2.5 h | 91 s | 134 | 5,463 / 91,897 / 13,400 | 129 | 5,356 / 84 / 23 | 41-55 |
+| r0057c0034 | 2.5 h | 100 s | 137 | 12,763 / 88,750 / 9,376 | 0 | 12,669 / 77 / 17 | 35-54 |
+| r0057c0035 | 2.6 h | 71 s | 142 | 11,226 / 84,155 / 15,508 | 0 | 11,089 / 120 / 17 | 39-55 |
+
+- **The pilot covers 4 × 110,889 pixels (399 km²) and used about 555 EECU-seconds.** Each tile took 1-2 minutes of
+  computation. The wait in the batch queue (2.5-8.5 h) dominated the elapsed time.
+- **Every tile is identical to live** on a 60 × 60 box. The box is around pixel 1 in r0056c0034, and at the tile
+  center in the others.
+- **Masking:** r0056c0035 has 129 masked pixels near (-123.477, 44.905). All 129 are JRC surface water. All 9 bands
+  mask the same pixels, and the asset's mask equals the live mask over the whole tile. No tile has condition 3,
+  which is expected because the pilot uses no land-cover mask.
+- **Consistency:** in every tile, each first detection is on a decrease pixel, the last detection is never before
+  the first, and `p_decrease` stays within 428-9145, the posterior-leveler floor and cap.
+
+Seams and the comparison with the interactive app are step 7.
+(`experiments/output/regional_pilot/*_check.json`)
