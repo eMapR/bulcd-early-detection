@@ -1,0 +1,506 @@
+{
+ "aoi_independence": {
+  "corner": {
+   "bands": {
+    "condition": {
+     "<=1 px": {
+      "both_valid": 76,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=10 px": {
+      "both_valid": 100,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=2 px": {
+      "both_valid": 68,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=5 px": {
+      "both_valid": 156,
+      "differ": 0,
+      "mask_differs": 0
+     }
+    },
+    "episode_count": {
+     "<=1 px": {
+      "both_valid": 76,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=10 px": {
+      "both_valid": 100,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=2 px": {
+      "both_valid": 68,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=5 px": {
+      "both_valid": 156,
+      "differ": 0,
+      "mask_differs": 0
+     }
+    },
+    "first_detection_doy": {
+     "<=1 px": {
+      "both_valid": 76,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=10 px": {
+      "both_valid": 100,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=2 px": {
+      "both_valid": 68,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=5 px": {
+      "both_valid": 156,
+      "differ": 0,
+      "mask_differs": 0
+     }
+    },
+    "last_detection_doy": {
+     "<=1 px": {
+      "both_valid": 76,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=10 px": {
+      "both_valid": 100,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=2 px": {
+      "both_valid": 68,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=5 px": {
+      "both_valid": 156,
+      "differ": 0,
+      "mask_differs": 0
+     }
+    },
+    "n_obs_expectation": {
+     "<=1 px": {
+      "both_valid": 76,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=10 px": {
+      "both_valid": 100,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=2 px": {
+      "both_valid": 68,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=5 px": {
+      "both_valid": 156,
+      "differ": 0,
+      "mask_differs": 0
+     }
+    },
+    "n_obs_monitoring": {
+     "<=1 px": {
+      "both_valid": 76,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=10 px": {
+      "both_valid": 100,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=2 px": {
+      "both_valid": 68,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=5 px": {
+      "both_valid": 156,
+      "differ": 0,
+      "mask_differs": 0
+     }
+    },
+    "p_decrease": {
+     "<=1 px": {
+      "both_valid": 76,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=10 px": {
+      "both_valid": 100,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=2 px": {
+      "both_valid": 68,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=5 px": {
+      "both_valid": 156,
+      "differ": 0,
+      "mask_differs": 0
+     }
+    },
+    "p_increase": {
+     "<=1 px": {
+      "both_valid": 76,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=10 px": {
+      "both_valid": 100,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=2 px": {
+      "both_valid": 68,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=5 px": {
+      "both_valid": 156,
+      "differ": 0,
+      "mask_differs": 0
+     }
+    },
+    "p_unchanged": {
+     "<=1 px": {
+      "both_valid": 76,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=10 px": {
+      "both_valid": 100,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=2 px": {
+      "both_valid": 68,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=5 px": {
+      "both_valid": 156,
+      "differ": 0,
+      "mask_differs": 0
+     }
+    }
+   },
+   "total": {
+    "differ": 0,
+    "mask_differs": 0
+   }
+  },
+  "testsite": {
+   "bands": {
+    "condition": {
+     "<=1 px": {
+      "both_valid": 717,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=10 px": {
+      "both_valid": 3305,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=2 px": {
+      "both_valid": 708,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=5 px": {
+      "both_valid": 2080,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "farther": {
+      "both_valid": 22511,
+      "differ": 0,
+      "mask_differs": 0
+     }
+    },
+    "episode_count": {
+     "<=1 px": {
+      "both_valid": 717,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=10 px": {
+      "both_valid": 3305,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=2 px": {
+      "both_valid": 708,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=5 px": {
+      "both_valid": 2080,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "farther": {
+      "both_valid": 22511,
+      "differ": 0,
+      "mask_differs": 0
+     }
+    },
+    "first_detection_doy": {
+     "<=1 px": {
+      "both_valid": 717,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=10 px": {
+      "both_valid": 3305,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=2 px": {
+      "both_valid": 708,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=5 px": {
+      "both_valid": 2080,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "farther": {
+      "both_valid": 22511,
+      "differ": 0,
+      "mask_differs": 0
+     }
+    },
+    "last_detection_doy": {
+     "<=1 px": {
+      "both_valid": 717,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=10 px": {
+      "both_valid": 3305,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=2 px": {
+      "both_valid": 708,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=5 px": {
+      "both_valid": 2080,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "farther": {
+      "both_valid": 22511,
+      "differ": 0,
+      "mask_differs": 0
+     }
+    },
+    "n_obs_expectation": {
+     "<=1 px": {
+      "both_valid": 717,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=10 px": {
+      "both_valid": 3305,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=2 px": {
+      "both_valid": 708,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=5 px": {
+      "both_valid": 2080,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "farther": {
+      "both_valid": 22511,
+      "differ": 0,
+      "mask_differs": 0
+     }
+    },
+    "n_obs_monitoring": {
+     "<=1 px": {
+      "both_valid": 717,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=10 px": {
+      "both_valid": 3305,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=2 px": {
+      "both_valid": 708,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=5 px": {
+      "both_valid": 2080,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "farther": {
+      "both_valid": 22511,
+      "differ": 0,
+      "mask_differs": 0
+     }
+    },
+    "p_decrease": {
+     "<=1 px": {
+      "both_valid": 717,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=10 px": {
+      "both_valid": 3305,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=2 px": {
+      "both_valid": 708,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=5 px": {
+      "both_valid": 2080,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "farther": {
+      "both_valid": 22511,
+      "differ": 0,
+      "mask_differs": 0
+     }
+    },
+    "p_increase": {
+     "<=1 px": {
+      "both_valid": 717,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=10 px": {
+      "both_valid": 3305,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=2 px": {
+      "both_valid": 708,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=5 px": {
+      "both_valid": 2080,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "farther": {
+      "both_valid": 22511,
+      "differ": 0,
+      "mask_differs": 0
+     }
+    },
+    "p_unchanged": {
+     "<=1 px": {
+      "both_valid": 717,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=10 px": {
+      "both_valid": 3305,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=2 px": {
+      "both_valid": 708,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "<=5 px": {
+      "both_valid": 2080,
+      "differ": 0,
+      "mask_differs": 0
+     },
+     "farther": {
+      "both_valid": 22511,
+      "differ": 0,
+      "mask_differs": 0
+     }
+    }
+   },
+   "total": {
+    "differ": 0,
+    "mask_differs": 0
+   }
+  }
+ },
+ "app": {
+  "app_first_season_is_monitoring_year": 2049,
+  "condition_differs": 0,
+  "episodes_differ_in_year": 0,
+  "first_differs_in_year": 0,
+  "land": 29321,
+  "last_differs_in_year": 0,
+  "mask_differs": 0,
+  "p_decrease_differs": 0,
+  "p_increase_differs": 0,
+  "p_unchanged_differs": 0
+ },
+ "app_config_equals_run": true,
+ "app_season_vs_regional": {
+  "app 2024 / regional detected": 2441,
+  "app 2024 / regional none": 280,
+  "app 2025 / regional detected": 1351,
+  "app 2025 / regional none": 86,
+  "app 2026 / regional detected": 2049,
+  "app none / regional none": 23114
+ },
+ "app_timing_years": [
+  2024,
+  2025,
+  2026
+ ],
+ "corner_box": [
+  -2143695.0,
+  2740275.0,
+  -2143095.0,
+  2740875.0
+ ],
+ "mosaic": {
+  "region_pixels": 443556,
+  "tile_footprint_overlap": 0,
+  "tile_valid_sum": 443427,
+  "valid_pixels": 443427
+ },
+ "run_id": "r6-pilot-coast-range-2026",
+ "tiles": [
+  "r0056c0034",
+  "r0056c0035",
+  "r0057c0034",
+  "r0057c0035"
+ ]
+}

@@ -1670,3 +1670,54 @@ Provenance is clean in all three (exported from commit a38e922).
 
 Seams and the comparison with the interactive app are step 7.
 (`experiments/output/regional_pilot/*_check.json`)
+
+## 2026-10-24 — Regional step 7: tile seams and the interactive app
+
+`experiments/regional_seam_check.py` checks the four pilot tiles. Output:
+`experiments/output/regional_pilot/seam_check.json`.
+
+**Mosaic.** The four tiles cover the pilot region exactly once: 443,556 pixels, with no tile footprints
+overlapping. 443,427 of them are valid, the same as the tiles' own counts (only the 129 water pixels are masked).
+
+**Tiling is exact per pixel: 0 differences in all 9 bands, masks included.** BULC-D was run live on two
+other AOIs that cross the seams, and the results were compared with the tiles, each of which was run on its
+own tile AOI:
+
+| AOI run live | Pixels compared | Within 1 / 2 / 5 / 10 px of a seam | Differing values | Mask differences |
+|---|---|---|---|---|
+| testsite asset (26 km², crosses both seams) | 29,321 | 717 / 708 / 2,080 / 3,305 | 0 | 0 |
+| 20 × 20-px box on the 4-tile corner | 400 | 76 / 68 / 156 / 100 | 0 | 0 |
+
+The distance bins are exclusive (≤1, 1-2, 2-5, 5-10 px). This confirms the 2026-10-21 reasoning
+(`docs/regional_plan.md`, key technical points): the AOI changes neither the bins, nor which scenes a pixel gets,
+nor its probabilities. No overlap or edge buffer is needed between tiles.
+
+**The interactive app, with the pilot's settings on the testsite.** The Python app's widgets were set to the run's
+settings. Its `build()` equals the run's config. Its layers were built as in `EarlyDetectionApp._compute`.
+- **Condition and probabilities:** condition, P(decrease), P(unchanged) and P(increase) (scaled ×10,000) equal
+  the tiles on all 29,321 land pixels, and the masks agree.
+- **Pitfall:** the app clips its layers with `clip(geometry)`. That gives polygon-edge pixels fractional masks, so
+  a strict mask comparison flagged 387 edge pixels. None of them is valid on one side and masked on the other,
+  and without the clip the masks are identical. The check counts whole pixels (unweighted) and treats any
+  coverage as valid.
+- **Detection timing differs in meaning, not in values.** The app's timing layers combine three seasons
+  (2024-2026, the years after the expectation period): the earliest season that counts wins. A regional tile
+  holds the monitoring year only. On the 2,049 pixels where the app's first detected season is 2026, the first
+  detection, last detection and episode count are all identical to the tiles. Across the testsite:
+
+| App's first detected season | Regional 2026 detection | Pixels |
+|---|---|---|
+| 2026 | yes | 2,049 |
+| 2025 | yes / no | 1,351 / 86 |
+| 2024 | yes / no | 2,441 / 280 |
+| none | no | 23,114 |
+
+  Every regional detection falls in one of the app's three seasons. 3,792 pixels the app first detected in
+  2024 or 2025 are detected again in 2026, because each season is a separate run from the same starting odds
+  (2026-10-13). On those pixels the regional `first_detection_doy` is the 2026 crossing, not the app's earlier
+  date. A multi-year "first detected" product would combine the yearly regional runs the way
+  `combine_season_timing` does; that is a design question for later, not a bug.
+
+**App parity rerun.** `gee/tests/run_app_parity.py` passed in all six sections (2026-10-24). This is the first
+run since step 3 moved the advanced settings into `config.apply_advanced()`. The GEE app's pixel inspector
+dates pixel 1's first crossing to 2026-06-17 (DOY 168), the same as the regional tile's `first_detection_doy`.

@@ -51,6 +51,7 @@ the same products from a local backend (DataLoader + OSU Slurm), compared agains
 6. Run the four-tile pilot.
    *Done 2026-10-23: all four tiles exported and identical to live (`docs/findings.md`).*
 7. Validate against the interactive implementation, including tile seams.
+   *Done 2026-10-24: 0 differences across seams and against the app (`docs/findings.md`).*
 8. Benchmark performance; investigate memory limits (expectation sensors x length x `shardSize`).
 9. Then expand job tracking, resumability and the regional viewer.
 

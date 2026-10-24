@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-10-23
+Last updated: 2026-10-24
 
 Concise current-state/handoff doc. Detailed lessons, experimental
 results, and their explanations live in `docs/findings.md` — read it for
@@ -46,9 +46,18 @@ box. Each tile took 1-2 min of compute (about 140 EECU-s); the batch queue waits
 elapsed time. The first masked pixels (129 water pixels in r0056c0035) are consistent across bands and match
 live. Details in `docs/findings.md`.
 
-**Next: plan step 7, validation:** seams across the testsite (does a pixel get the same values from a tile
-as from an AOI that spans the seam?), and comparison with the interactive app. The live app parity test has
-not been rerun since the `app.build()` refactor (step 3).
+**Step 7 (validation) is done** (2026-10-24, `experiments/regional_seam_check.py`):
+- **Seams:** the tiles equal live runs on AOIs that cross them (the testsite, 29,321 px; a 20 x 20 box on the
+  4-tile corner), with 0 differences in any band. Tiling is exact per pixel, so no overlap or buffer is needed.
+- **App comparison:** the app's condition and probabilities equal the tiles on the testsite.
+- **Timing caveat:** the app's timing layers span 3 seasons (2024-2026); a tile holds the monitoring year only.
+  The values agree where the app's first season is 2026. 3,792 pixels detected earlier are detected again in
+  2026, with 2026 dates.
+- **Parity:** the live app parity test passed again (all six sections).
+
+**Next: plan step 8, benchmark performance and memory limits** (expectation sensors x length x `shardSize`,
+in batch). Open design question: whether regional products need a multi-year "first detected" (combining
+yearly runs as `combine_season_timing` does).
 
 - **What step 1 delivered:** an expectation-sensor control in both apps (`config.py`
   `MonitoringControls.expectation_sensors`, `sensor_warnings()`; `gee/config.js` `sensorWarnings()`,
