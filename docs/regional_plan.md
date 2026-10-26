@@ -53,6 +53,8 @@ the same products from a local backend (DataLoader + OSU Slurm), compared agains
 7. Validate against the interactive implementation, including tile seams.
    *Done 2026-10-24: 0 differences across seams and against the app (`docs/findings.md`).*
 8. Benchmark performance; investigate memory limits (expectation sensors x length x `shardSize`).
+   *Done 2026-10-26: no batch memory failures up to L8+L9+S2 6 years; 2 tasks at a time; about 150 EECU-s
+   per tile at the pilot settings (`docs/findings.md`).*
 9. Then expand job tracking, resumability and the regional viewer.
 
 ## Key technical points (from the 2026-10-21 investigation)
@@ -66,7 +68,8 @@ the same products from a local backend (DataLoader + OSU Slurm), compared agains
   variants that take an existing result (the current functions delegate to them, so behavior is unchanged;
   `layer_size_check.js` and the parity tests confirm it).
 - **Memory:** the expectation harmonic fit's memory depends on years x bins x sensors per pixel, not area, so
-  smaller tiles don't help; in batch, `Export.image` `shardSize` is the lever to test. A 6-year L8+S2
+  smaller tiles don't help; in batch, `Export.image` `shardSize` is the lever to test. (Step 8: not needed;
+  every combination tested completed at the default.) A 6-year L8+S2
   expectation completed as a batch export at North Cascades while interactive requests failed.
 - **"Description length exceeds maximum"** is a Code Editor map-layer limit; batch exports and displaying stored
   assets avoid it.

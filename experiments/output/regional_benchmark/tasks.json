@@ -1,0 +1,102 @@
+{
+ "tile": "r0056c0034",
+ "submitted": "2026-10-26T15:12:23+00:00",
+ "variants": {
+  "l8-6y": {
+   "task_id": "NECKADQ2AQWUFAQC7XEKME2X",
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8-6y/r0056c0034",
+   "shard_size": null,
+   "warnings": [
+    "The expectation uses Landsat 8 and monitoring uses Landsat 8 and Landsat 9. Differences between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but not in the expectation produced false decreases at stable sites that disappeared when both periods used the same sensors."
+   ]
+  },
+  "l8-6y-s64": {
+   "task_id": "ZQYVMFF4DWWTEWVTKLPVPVVH",
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8-6y-s64/r0056c0034",
+   "shard_size": 64,
+   "warnings": [
+    "The expectation uses Landsat 8 and monitoring uses Landsat 8 and Landsat 9. Differences between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but not in the expectation produced false decreases at stable sites that disappeared when both periods used the same sensors."
+   ]
+  },
+  "l8-8y": {
+   "task_id": "CS3CZWBCCA42RXA6N2AYGUEV",
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8-8y/r0056c0034",
+   "shard_size": null,
+   "warnings": [
+    "The expectation uses Landsat 8 and monitoring uses Landsat 8 and Landsat 9. Differences between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but not in the expectation produced false decreases at stable sites that disappeared when both periods used the same sensors."
+   ]
+  },
+  "l8-10y": {
+   "task_id": "PAFJBT5VMLQH6QWQS7ZYUDL5",
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8-10y/r0056c0034",
+   "shard_size": null,
+   "warnings": [
+    "The expectation uses Landsat 8 and monitoring uses Landsat 8 and Landsat 9. Differences between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but not in the expectation produced false decreases at stable sites that disappeared when both periods used the same sensors."
+   ]
+  },
+  "l8s2-2y": {
+   "task_id": "MFVCPOOYDZ7P3YHKCUA2VGCA",
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8s2-2y/r0056c0034",
+   "shard_size": null,
+   "warnings": [
+    "The expectation uses Landsat 8 and Sentinel-2 and monitoring uses Landsat 8 and Landsat 9. Differences between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but not in the expectation produced false decreases at stable sites that disappeared when both periods used the same sensors."
+   ]
+  },
+  "l8s2-4y": {
+   "task_id": "MP54TSORIPT64MAPI7R3GFNR",
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8s2-4y/r0056c0034",
+   "shard_size": null,
+   "warnings": [
+    "The expectation uses Landsat 8 and Sentinel-2 and monitoring uses Landsat 8 and Landsat 9. Differences between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but not in the expectation produced false decreases at stable sites that disappeared when both periods used the same sensors.",
+    "A 4-year expectation with Sentinel-2 is likely to exceed Earth Engine's memory limit: in tests, Sentinel-2 expectations longer than 2 years failed in the pixel inspector (\"User memory limit exceeded\"), and the detection-timing layers often failed as well. Use fewer expectation years or leave Sentinel-2 out of the expectation."
+   ]
+  },
+  "l8s2-6y": {
+   "task_id": "K6EV6CFZJI4WP7CFNGTPC5VE",
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8s2-6y/r0056c0034",
+   "shard_size": null,
+   "warnings": [
+    "The expectation uses Landsat 8 and Sentinel-2 and monitoring uses Landsat 8 and Landsat 9. Differences between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but not in the expectation produced false decreases at stable sites that disappeared when both periods used the same sensors.",
+    "A 6-year expectation with Sentinel-2 is likely to exceed Earth Engine's memory limit: in tests, Sentinel-2 expectations longer than 2 years failed in the pixel inspector (\"User memory limit exceeded\"), and the detection-timing layers often failed as well. Use fewer expectation years or leave Sentinel-2 out of the expectation."
+   ]
+  },
+  "l8s2-6y-s128": {
+   "task_id": "F63UNI2OA25NGGJEYF2HNYUK",
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8s2-6y-s128/r0056c0034",
+   "shard_size": 128,
+   "warnings": [
+    "The expectation uses Landsat 8 and Sentinel-2 and monitoring uses Landsat 8 and Landsat 9. Differences between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but not in the expectation produced false decreases at stable sites that disappeared when both periods used the same sensors.",
+    "A 6-year expectation with Sentinel-2 is likely to exceed Earth Engine's memory limit: in tests, Sentinel-2 expectations longer than 2 years failed in the pixel inspector (\"User memory limit exceeded\"), and the detection-timing layers often failed as well. Use fewer expectation years or leave Sentinel-2 out of the expectation."
+   ]
+  },
+  "l8s2-6y-s64": {
+   "task_id": "IHIMSYJZ3KSRTFYJLJD26QOQ",
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8s2-6y-s64/r0056c0034",
+   "shard_size": 64,
+   "warnings": [
+    "The expectation uses Landsat 8 and Sentinel-2 and monitoring uses Landsat 8 and Landsat 9. Differences between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but not in the expectation produced false decreases at stable sites that disappeared when both periods used the same sensors.",
+    "A 6-year expectation with Sentinel-2 is likely to exceed Earth Engine's memory limit: in tests, Sentinel-2 expectations longer than 2 years failed in the pixel inspector (\"User memory limit exceeded\"), and the detection-timing layers often failed as well. Use fewer expectation years or leave Sentinel-2 out of the expectation."
+   ]
+  },
+  "l8l9s2-6y": {
+   "task_id": "3HKBDZNUOHDJOGARGUVNDVI5",
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8l9s2-6y/r0056c0034",
+   "shard_size": null,
+   "warnings": [
+    "The expectation uses Landsat 8, Landsat 9 and Sentinel-2 and monitoring uses Landsat 8 and Landsat 9. Differences between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but not in the expectation produced false decreases at stable sites that disappeared when both periods used the same sensors.",
+    "Landsat 9 has no observations before 2022 (its first scenes are from Oct 31, 2021), which affects expectation years 2018-2021; the sensor mix changes partway through the expectation.",
+    "A 6-year expectation with Sentinel-2 is likely to exceed Earth Engine's memory limit: in tests, Sentinel-2 expectations longer than 2 years failed in the pixel inspector (\"User memory limit exceeded\"), and the detection-timing layers often failed as well. Use fewer expectation years or leave Sentinel-2 out of the expectation."
+   ]
+  },
+  "l8l9s2-6y-s64": {
+   "task_id": "77C3B4HU77KVG3SS4LOV6HXA",
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8l9s2-6y-s64/r0056c0034",
+   "shard_size": 64,
+   "warnings": [
+    "The expectation uses Landsat 8, Landsat 9 and Sentinel-2 and monitoring uses Landsat 8 and Landsat 9. Differences between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but not in the expectation produced false decreases at stable sites that disappeared when both periods used the same sensors.",
+    "Landsat 9 has no observations before 2022 (its first scenes are from Oct 31, 2021), which affects expectation years 2018-2021; the sensor mix changes partway through the expectation.",
+    "A 6-year expectation with Sentinel-2 is likely to exceed Earth Engine's memory limit: in tests, Sentinel-2 expectations longer than 2 years failed in the pixel inspector (\"User memory limit exceeded\"), and the detection-timing layers often failed as well. Use fewer expectation years or leave Sentinel-2 out of the expectation."
+   ]
+  }
+ }
+}

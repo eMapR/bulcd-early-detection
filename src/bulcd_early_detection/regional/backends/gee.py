@@ -122,12 +122,15 @@ def ensure_collection(run: RegionalRun, asset_root: str = DEFAULT_ASSET_ROOT) ->
     return path
 
 
-def export_tile(run: RegionalRun, tile: Tile, asset_root: str = DEFAULT_ASSET_ROOT, start: bool = True):
+def export_tile(run: RegionalRun, tile: Tile, asset_root: str = DEFAULT_ASSET_ROOT, start: bool = True,
+                shard_size: int | None = None):
     """Builds the tile's image and its Export.image.toAsset task (started
-    unless `start` is False). One BULC-D run."""
+    unless `start` is False). One BULC-D run. `shard_size`: Earth Engine's
+    shardSize (pixels per side of each computation shard; its default 256)."""
     config = tile_config(run, tile)
     image = product_image(run, config).set(tile_properties(run, tile, config))
     transform, dimensions = tile_transform(run, tile)
+    extra = {} if shard_size is None else {"shardSize": shard_size}
     task = ee.batch.Export.image.toAsset(
         image=image,
         description=f"{run.run_id}_{tile.id}",
@@ -138,6 +141,7 @@ def export_tile(run: RegionalRun, tile: Tile, asset_root: str = DEFAULT_ASSET_RO
         # Categorical bands: pyramids keep a sample, never an average.
         pyramidingPolicy={".default": "sample"},
         maxPixels=1e10,
+        **extra,
     )
     if start:
         task.start()

@@ -1,0 +1,237 @@
+{
+ "tile": "r0056c0034",
+ "submitted": "2026-10-26T15:12:23+00:00",
+ "variants": {
+  "l8-6y": {
+   "sensors": [
+    "L8"
+   ],
+   "years": 6,
+   "shard_size": 256,
+   "state": "COMPLETED",
+   "queued_s": 3.712,
+   "running_s": 179.371,
+   "start_utc": "2026-10-26T15:12:10+00:00",
+   "end_utc": "2026-10-26T15:15:10+00:00",
+   "eecu_s": 151.9547576904297,
+   "error": null,
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8-6y/r0056c0034"
+  },
+  "l8-6y-s64": {
+   "sensors": [
+    "L8"
+   ],
+   "years": 6,
+   "shard_size": 64,
+   "state": "COMPLETED",
+   "queued_s": 25.291,
+   "running_s": 271.375,
+   "start_utc": "2026-10-26T15:12:34+00:00",
+   "end_utc": "2026-10-26T15:17:05+00:00",
+   "eecu_s": 241.7603302001953,
+   "error": null,
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8-6y-s64/r0056c0034"
+  },
+  "l8-8y": {
+   "sensors": [
+    "L8"
+   ],
+   "years": 8,
+   "shard_size": 256,
+   "state": "COMPLETED",
+   "queued_s": 185.172,
+   "running_s": 348.739,
+   "start_utc": "2026-10-26T15:15:15+00:00",
+   "end_utc": "2026-10-26T15:21:04+00:00",
+   "eecu_s": 471.1111755371094,
+   "error": null,
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8-8y/r0056c0034"
+  },
+  "l8-10y": {
+   "sensors": [
+    "L8"
+   ],
+   "years": 10,
+   "shard_size": 256,
+   "state": "COMPLETED",
+   "queued_s": 296.129,
+   "running_s": 282.476,
+   "start_utc": "2026-10-26T15:17:08+00:00",
+   "end_utc": "2026-10-26T15:21:50+00:00",
+   "eecu_s": 623.6397094726562,
+   "error": null,
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8-10y/r0056c0034"
+  },
+  "l8s2-2y": {
+   "sensors": [
+    "L8",
+    "S2"
+   ],
+   "years": 2,
+   "shard_size": 256,
+   "state": "COMPLETED",
+   "queued_s": 532.802,
+   "running_s": 354.132,
+   "start_utc": "2026-10-26T15:21:06+00:00",
+   "end_utc": "2026-10-26T15:27:00+00:00",
+   "eecu_s": 393.2098693847656,
+   "error": null,
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8s2-2y/r0056c0034"
+  },
+  "l8s2-4y": {
+   "sensors": [
+    "L8",
+    "S2"
+   ],
+   "years": 4,
+   "shard_size": 256,
+   "state": "COMPLETED",
+   "queued_s": 580.312,
+   "running_s": 479.155,
+   "start_utc": "2026-10-26T15:21:55+00:00",
+   "end_utc": "2026-10-26T15:29:54+00:00",
+   "eecu_s": 458.2345275878906,
+   "error": null,
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8s2-4y/r0056c0034"
+  },
+  "l8s2-6y": {
+   "sensors": [
+    "L8",
+    "S2"
+   ],
+   "years": 6,
+   "shard_size": 256,
+   "state": "COMPLETED",
+   "queued_s": 888.32,
+   "running_s": 569.918,
+   "start_utc": "2026-10-26T15:27:05+00:00",
+   "end_utc": "2026-10-26T15:36:35+00:00",
+   "eecu_s": 640.819580078125,
+   "error": null,
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8s2-6y/r0056c0034"
+  },
+  "l8s2-6y-s128": {
+   "sensors": [
+    "L8",
+    "S2"
+   ],
+   "years": 6,
+   "shard_size": 128,
+   "state": "COMPLETED",
+   "queued_s": 1059.797,
+   "running_s": 448.736,
+   "start_utc": "2026-10-26T15:29:58+00:00",
+   "end_utc": "2026-10-26T15:37:27+00:00",
+   "eecu_s": 630.244873046875,
+   "error": null,
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8s2-6y-s128/r0056c0034"
+  },
+  "l8s2-6y-s64": {
+   "sensors": [
+    "L8",
+    "S2"
+   ],
+   "years": 6,
+   "shard_size": 64,
+   "state": "COMPLETED",
+   "queued_s": 1462.69,
+   "running_s": 874.417,
+   "start_utc": "2026-10-26T15:36:43+00:00",
+   "end_utc": "2026-10-26T15:51:17+00:00",
+   "eecu_s": 695.6671142578125,
+   "error": null,
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8s2-6y-s64/r0056c0034"
+  },
+  "l8l9s2-6y": {
+   "sensors": [
+    "L8",
+    "L9",
+    "S2"
+   ],
+   "years": 6,
+   "shard_size": 256,
+   "state": "COMPLETED",
+   "queued_s": 1509.465,
+   "running_s": 495.842,
+   "start_utc": "2026-10-26T15:37:31+00:00",
+   "end_utc": "2026-10-26T15:45:47+00:00",
+   "eecu_s": 652.8072509765625,
+   "error": null,
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8l9s2-6y/r0056c0034"
+  },
+  "l8l9s2-6y-s64": {
+   "sensors": [
+    "L8",
+    "L9",
+    "S2"
+   ],
+   "years": 6,
+   "shard_size": 64,
+   "state": "COMPLETED",
+   "queued_s": 2006.038,
+   "running_s": 679.373,
+   "start_utc": "2026-10-26T15:45:49+00:00",
+   "end_utc": "2026-10-26T15:57:08+00:00",
+   "eecu_s": 962.2503662109375,
+   "error": null,
+   "asset": "projects/bulcd-python-rebuild/assets/regional_bench/bench-l8l9s2-6y-s64/r0056c0034"
+  }
+ },
+ "identical_checks": {
+  "l8-6y vs pilot tile": {
+   "condition": 0,
+   "episode_count": 0,
+   "first_detection_doy": 0,
+   "last_detection_doy": 0,
+   "n_obs_expectation": 0,
+   "n_obs_monitoring": 0,
+   "p_decrease": 0,
+   "p_increase": 0,
+   "p_unchanged": 0
+  },
+  "l8-6y-s64 vs l8-6y": {
+   "condition": 0,
+   "episode_count": 0,
+   "first_detection_doy": 0,
+   "last_detection_doy": 0,
+   "n_obs_expectation": 0,
+   "n_obs_monitoring": 0,
+   "p_decrease": 0,
+   "p_increase": 0,
+   "p_unchanged": 0
+  },
+  "l8l9s2-6y-s64 vs l8l9s2-6y": {
+   "condition": 0,
+   "episode_count": 0,
+   "first_detection_doy": 0,
+   "last_detection_doy": 0,
+   "n_obs_expectation": 0,
+   "n_obs_monitoring": 0,
+   "p_decrease": 0,
+   "p_increase": 0,
+   "p_unchanged": 0
+  },
+  "l8s2-6y-s128 vs l8s2-6y": {
+   "condition": 0,
+   "episode_count": 0,
+   "first_detection_doy": 0,
+   "last_detection_doy": 0,
+   "n_obs_expectation": 0,
+   "n_obs_monitoring": 0,
+   "p_decrease": 0,
+   "p_increase": 0,
+   "p_unchanged": 0
+  },
+  "l8s2-6y-s64 vs l8s2-6y": {
+   "condition": 0,
+   "episode_count": 0,
+   "first_detection_doy": 0,
+   "last_detection_doy": 0,
+   "n_obs_expectation": 0,
+   "n_obs_monitoring": 0,
+   "p_decrease": 0,
+   "p_increase": 0,
+   "p_unchanged": 0
+  }
+ }
+}

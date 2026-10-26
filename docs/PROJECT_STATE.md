@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-10-24
+Last updated: 2026-10-26
 
 Concise current-state/handoff doc. Detailed lessons, experimental
 results, and their explanations live in `docs/findings.md` — read it for
@@ -55,9 +55,18 @@ live. Details in `docs/findings.md`.
   2026, with 2026 dates.
 - **Parity:** the live app parity test passed again (all six sections).
 
-**Next: plan step 8, benchmark performance and memory limits** (expectation sensors x length x `shardSize`,
-in batch). Open design question: whether regional products need a multi-year "first detected" (combining
-yearly runs as `combine_season_timing` does).
+**Step 8 (batch benchmark) is done** (2026-10-26, `experiments/regional_benchmark.py`, 11 variants of tile
+r0056c0034):
+- **Memory:** no batch memory failures, up to L8+L9+S2 with a 6-year expectation. The interactive 2-year
+  Sentinel-2 limit doesn't apply to batch tiles.
+- **`shardSize`:** smaller shards only cost more and don't change the output. Reruns are identical.
+- **Cost:** about 150 EECU-s per tile at the pilot settings; L8 8/10 years and Sentinel-2 expectations cost 2.6-4x.
+- **Concurrency:** at most 2 of the project's tasks run at once (the pilot's ran one at a time). Roughly 1 day and
+  42 EECU-hours per 1,000 tiles at the pilot settings.
+
+**Next: plan step 9**, job tracking, resumability and the regional viewer, after the user decides on scope
+(Region 6 extent and tile count, multi-year "first detected" or one season per run, whether to batch several
+tiles per task).
 
 - **What step 1 delivered:** an expectation-sensor control in both apps (`config.py`
   `MonitoringControls.expectation_sensors`, `sensor_warnings()`; `gee/config.js` `sensorWarnings()`,

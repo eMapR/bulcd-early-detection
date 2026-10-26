@@ -1648,7 +1648,8 @@ Not exercised by this tile: water/masked pixels and condition 3 (it has none). T
 
 ## 2026-10-23 (later) — Regional step 6: the four-tile pilot
 
-The other three pilot tiles were submitted together. Each one ran as its own task, and the three ran in parallel.
+The other three pilot tiles were submitted together, one task each. They ran one after another, not in
+parallel: each started within 2 s of the previous one finishing (corrected 2026-10-26, see step 8).
 Provenance is clean in all three (exported from commit a38e922).
 
 | Tile | Queued | Running | EECU-s | Decrease / unchanged / increase | Masked | Episodes 1 / 2 / 3+ | Expectation obs |
@@ -1721,3 +1722,45 @@ settings. Its `build()` equals the run's config. Its layers were built as in `Ea
 **App parity rerun.** `gee/tests/run_app_parity.py` passed in all six sections (2026-10-24). This is the first
 run since step 3 moved the advanced settings into `config.apply_advanced()`. The GEE app's pixel inspector
 dates pixel 1's first crossing to 2026-06-17 (DOY 168), the same as the regional tile's `first_detection_doy`.
+
+## 2026-10-26 — Regional step 8: batch-export benchmark (expectation sensors × length × shardSize)
+
+Pilot tile r0056c0034 was exported in 11 variants. Only the expectation sensors, the expectation years and
+`shardSize` changed; monitoring was L8+L9 2026 throughout. All 11 were submitted together on 2026-10-26 at 15:12 UTC
+(`experiments/regional_benchmark.py`; results in `experiments/output/regional_benchmark/results.json`).
+Each variant ran once, so the times are single measurements.
+
+| Expectation | Years | shardSize | State | Queued | Running | EECU-s |
+|---|---|---|---|---|---|---|
+| L8 (pilot) | 6 | 256 | completed | 4 s | 179 s | 152 |
+| L8 | 6 | 64 | completed | 25 s | 271 s | 242 |
+| L8 | 8 | 256 | completed | 3.1 min | 349 s | 471 |
+| L8 | 10 | 256 | completed | 4.9 min | 282 s | 624 |
+| L8+S2 | 2 | 256 | completed | 8.9 min | 354 s | 393 |
+| L8+S2 | 4 | 256 | completed | 9.7 min | 479 s | 458 |
+| L8+S2 | 6 | 256 | completed | 14.8 min | 570 s | 641 |
+| L8+S2 | 6 | 128 | completed | 17.7 min | 449 s | 630 |
+| L8+S2 | 6 | 64 | completed | 24.4 min | 874 s | 696 |
+| L8+L9+S2 | 6 | 256 | completed | 25.2 min | 496 s | 653 |
+| L8+L9+S2 | 6 | 64 | completed | 33.4 min | 679 s | 962 |
+
+- **No memory failures in batch.** At tile size, every combination completed, including L8+S2 and L8+L9+S2 over
+  6 years at the default `shardSize`. The interactive Sentinel-2 limit (2 years; 2026-10-19) applies to map tiles
+  and the inspector, not to batch exports of a tile. `shardSize` is not needed as a memory lever. Smaller shards
+  cost more EECU (64: +59% for L8, +9% for L8+S2, +47% for L8+L9+S2) and change nothing in the output.
+- **The outputs are deterministic, and `shardSize` doesn't change them.** The L8 6-year rerun is identical to the
+  pilot tile exported on 2026-10-22 (all 9 bands, masks included). Each `shardSize` 64 or 128 variant is identical
+  to the same settings at 256.
+- **Cost vs. settings:** about 150 EECU-s per tile for the pilot settings.
+  - L8 at 8 and 10 years cost 3.1x and 4.1x as much. The 6 -> 8 year step is steeper than linear in years; this
+    is not explained, from one sample each.
+  - Sentinel-2 makes the expectation cost 390-640 EECU-s from 2 to 6 years, and adding L9 to L8+S2 adds little
+    (653 vs 641).
+- **Concurrency: at most 2 of this project's tasks ran at once.** Each queued task started when a running one
+  finished. The four pilot exports (2026-10-22/23) ran one at a time. The queue times above are waits for those
+  2 slots, not Earth Engine's global queue. The first pilot tile's 8.5 h and the others' 2.5 h were at first
+  queued while nothing of this project ran, so those were the global queue.
+- **Scaling estimate, pilot settings:** about 42 EECU-hours per 1,000 tiles (99,800 km²). With 2 tasks at a time
+  at 1-3 min each, that is about 1 day of wall time per 1,000 tiles, plus any global queue wait. At this
+  concurrency the slots, not memory or EECU, limit a regional run. Fewer, larger tasks (several tiles per export)
+  would not reduce EECU but could reduce the per-task overhead; that remains untested.
