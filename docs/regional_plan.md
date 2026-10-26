@@ -65,6 +65,8 @@ the same products from a local backend (DataLoader + OSU Slurm), compared agains
 8a. Detection-year band: 2024 and 2025 season runs of the pilot, the 10-band stack, validated against the app.
    *Done 2026-10-26: 0 differences from the app's first-detected-season layer (`docs/findings.md`).*
 8b. Export optimization: several tiles per task vs one (`experiments/regional_block_benchmark.py`).
+   *Done 2026-10-26: 2 x 2-tile tasks gave 2.1x the throughput and 31% less EECU per tile; outputs identical
+   (`docs/findings.md`). The user decides whether to adopt them.*
 8c. Region 6 extent: National Forest boundaries x ecoregions; tile list.
 9. Then expand job tracking, resumability and the regional viewer.
 

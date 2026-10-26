@@ -1805,3 +1805,76 @@ earlier", and 0 for none. 2024 stays the fixed earliest season.
   - With unweighted reducers, `frequencyHistogram` reports masked pixels as a `"null"` key. That key is the
     129 water pixels, not missing data.
 - **Pilot result (4 tiles, 443,427 land pixels):** 89.6% none, 5.5% 2024 or earlier, 2.5% 2025, 2.4% 2026.
+
+## 2026-10-26 (later) — Region 6 extent: National Forest boundaries and ecoregions (preparation only)
+
+The first regional product covers National Forest land in Oregon and Washington. Nothing was processed for this
+entry; it records what was found.
+
+- **Boundaries:** `users/clarype/National_Forest_Boundaries_R6` (updated 2025-07-14) holds all 112 USFS
+  administrative forest units nationwide, despite its name. `REGION == '06'` selects 17 units, 113,501 km²:
+  - Columbia River Gorge NSA, Colville, Deschutes, Fremont-Winema, Gifford Pinchot, Malheur;
+  - Mt. Baker-Snoqualmie, Mt. Hood, Ochoco, Okanogan-Wenatchee, Olympic, Rogue River-Siskiyou;
+  - Siuslaw, Umatilla, Umpqua, Wallowa-Whitman, Willamette.
+
+  These are administrative (proclaimed) boundaries, so they include private and state inholdings. Restricting to
+  NFS ownership would need a surface-ownership layer; that is a user decision. The extent is lon -124.42 to
+  -116.38, lat 41.88 to 49.00.
+- **Tiles:** 1,863 grid tiles (333 px) touch the 17 units, out of 8,064 in their bounding box. That is about
+  185,900 km² of tiles for 113,501 km² of forest. At the pilot settings one season is about 78 EECU-hours, and
+  about 21-31 h of task time at 2-3 tasks at a time (about 2 min each), plus any queue wait. The detection-year
+  stack needs three seasons (2024, 2025, 2026), so about 3x that. The stacking itself costs under 1 EECU-s per
+  tile.
+- **The run region must become a polygon.** `run_config.Region` is a rectangle today. A tile list (or a polygon)
+  and a per-pixel mask to the forest boundary are needed; whether to mask outside the forest or keep whole
+  tiles is still open.
+- **Ecoregions:** no FS Multi-Model R6 ecoregion asset was found in `projects/bulcd-python-rebuild/assets` or
+  `users/clarype`; the plan names that source, so its path is needed from the user. For orientation, overlap with
+  EPA Level III (`EPA/Ecoregions/2013/L3`), in km² of National Forest:
+
+  | Ecoregion | km² |
+  |---|---|
+  | Cascades | 27,971 |
+  | Blue Mountains | 27,114 |
+  | North Cascades | 19,954 |
+  | Eastern Cascades Slopes and Foothills | 19,193 |
+  | Coast Range | 6,664 |
+  | Columbia Mountains/Northern Rockies | 6,432 |
+  | Klamath Mountains | 4,857 |
+  | Columbia Plateau | 502 |
+  | Puget Lowland | ~270 |
+  | Northern Basin and Range | 99 |
+  | Willamette Valley | 82 |
+  | Small slivers of others | — |
+
+  Other candidate layers: EPA Level IV (601 features intersect the forests) and `RESOLVE/ECOREGIONS/2017` (16).
+
+## 2026-10-26 (later) — Export optimization: several tiles per task
+
+One 4 × 4-tile area (r0055-r0058 × c0033-c0036; the pilot is its center) was exported three ways, one phase after
+another: 1 task of 16 tiles (block4, 1332 px), 4 tasks of 4 tiles (block2, 666 px), and 16 single-tile tasks.
+The grid, algorithm and settings are the pilot's. A block task runs BULC-D once on the block's AOI and writes the
+block's exact pixels (`experiments/regional_block_benchmark.py`; `experiments/output/regional_benchmark/blocks.json`,
+`blocks_tasks.json`). Each phase ran once (20:27-20:58 UTC), so these are single measurements.
+
+| Phase | Tasks | Makespan | Tiles/hour | EECU-s/tile | Running per task |
+|---|---|---|---|---|---|
+| block4 (16 tiles/task) | 1 | 772 s | 75 | 196 | 768 s |
+| block2 (4 tiles/task) | 4 | 321 s | 180 | 113 | 141-219 s |
+| single (1 tile/task) | 16 | 677 s | 85 | 165 | 61-194 s |
+
+- **Outputs are identical.** Every tile of every block asset equals the single-tile asset, in all 9 bands with
+  masks (32 comparisons). The 4 single pilot tiles equal the pilot's own 2026-10-22/23 tiles.
+- **Queue overhead:** there was no global queue wait this time; the first tasks of each phase started within
+  2-4 s. Up to **3 tasks ran at once** in every phase, so the singles waited for slots: 0-10 min, 378 s on
+  average. One task can't use more than one slot. block4 therefore ran alone and was the slowest, even though it
+  had no queue wait.
+- **Per-task overhead is large.** A single tile ran 61-194 s (119 s mean) and about 165 EECU-s. A 4-tile block
+  ran 141-219 s (174 s mean), about 44 s and 113 EECU-s per tile: **31% less EECU and 2.1x the throughput**. The
+  fixed per-task cost (building the inputs and the expectation fit for the AOI, task setup) is paid once per 4
+  tiles.
+- **Bigger is not better past 2 × 2.** At 16 tiles, EECU per tile rose to 196 and the task could not share the
+  slots. 3 × 3 was not tried.
+- **Implication:** with 2 × 2 blocks and 3 slots, one season of the 1,863 Region 6 tiles is about 10-11 h of task
+  time and about 59 EECU-hours, against about 22 h and 85 EECU-hours as single tiles. This excludes global queue
+  waits and the extra area of blocks at the forest edges.

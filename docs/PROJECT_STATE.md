@@ -74,9 +74,14 @@ r0056c0034):
   the whole region.
 - Up to 3 tasks ran at once (step 8 saw 2). Details in `docs/findings.md`.
 
-**In progress: step 8b**, export optimization (`experiments/regional_block_benchmark.py`). It exports a 4 x 4 tile
-area as 1 task, 4 tasks and 16 tasks. Next is **8c**, the Region 6 extent: National Forest land in OR/WA, with
-the boundaries x ecoregions. Report 8a + 8b to the user before any full Region 6 processing. Keep the
+**Step 8b (export optimization) is done** (2026-10-26, `experiments/regional_block_benchmark.py`). A 4 x 4 tile
+area was exported as 1, 4 and 16 tasks, and the outputs are identical. 2 x 2-tile tasks gave 180 tiles/h and
+113 EECU-s per tile, against 85 tiles/h and 165 EECU-s for single tiles. 4 x 4 was the worst. Details in
+`docs/findings.md`.
+
+**Step 8c (Region 6 extent):** research only, in `docs/findings.md`. 17 R6 forests, and 1,863 tiles touch them.
+Waiting on the user for three things: the FS Multi-Model ecoregion asset, administrative boundaries vs NFS
+ownership, and adopting 2 x 2 blocks. Report 8a + 8b to the user before any full Region 6 processing. Keep the
 branch unmerged; keep the benchmark assets (`regional_bench/`) until the performance evaluation is finished;
 don't redeploy the GEE app yet.
 
