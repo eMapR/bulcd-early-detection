@@ -110,6 +110,32 @@ PROPERTIES = (
 )
 
 
+# ---------------------------------------------------------------- the stack
+# The regional product delivered per tile: the monitoring year's season tile
+# (the bands above, values and properties unchanged) plus detection_year,
+# combined from that year's and earlier years' season tiles of the same run
+# settings. Each season is a separate run from the same starting odds against
+# the same expectation, as in the apps' first-detected-season layer
+# (outputs.combine_season_timing): the earliest season that counts wins. A
+# change before the earliest season is detected again in it, so the earliest
+# year means "that year or earlier".
+STACK_VERSION = 1
+DETECTION_YEAR = Band(
+    "detection_year", "uint16",
+    "Earliest monitoring season (year) in which a detection counts under timing_rule (confirmed: the season "
+    "ends as decrease); the earliest season (detection_year_floor) means that year or earlier; 0 = none in any "
+    "season. The apps' first detected season.")
+STACK_BANDS = BANDS + (DETECTION_YEAR,)
+STACK_BAND_NAMES = tuple(b.name for b in STACK_BANDS)
+# The season tile's PROPERTIES (kept as they are), plus:
+STACK_PROPERTIES = PROPERTIES + (
+    "stack_version",          # STACK_VERSION
+    "detection_years",        # the seasons combined, comma-separated, e.g. "2024,2025,2026"
+    "detection_year_floor",   # the earliest season: detection_year == floor means floor or earlier
+    "season_assets_json",     # {year: the season tile asset ID}
+)
+
+
 def scale_probability(p: float) -> int:
     """Stored value of a probability (the backends do the same on images)."""
     if not 0.0 <= p <= 1.0:
@@ -125,7 +151,10 @@ def spec_dict() -> dict:
     """The spec as data, e.g. to store beside a run's outputs."""
     return {"product_version": PRODUCT_VERSION, "bands": [dataclasses.asdict(b) | {"nodata": b.nodata} for b in BANDS],
             "condition_labels": CONDITION_LABELS, "probability_scale": PROBABILITY_SCALE, "none": NONE,
-            "timing_rules": TIMING_RULES, "timing_date": TIMING_DATE, "properties": PROPERTIES}
+            "timing_rules": TIMING_RULES, "timing_date": TIMING_DATE, "properties": PROPERTIES,
+            "stack": {"stack_version": STACK_VERSION, "bands": [dataclasses.asdict(b) | {"nodata": b.nodata}
+                                                                for b in STACK_BANDS],
+                      "properties": STACK_PROPERTIES}}
 
 
 def spec_json() -> str:

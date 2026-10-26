@@ -96,3 +96,39 @@ def test_properties_follow_the_spec(gee, run):
 def test_band_names(gee, run):
     image = gee.product_image(run, gee.tile_config(run, run.tiles[0]))
     assert image.bandNames().getInfo() == list(spec.BAND_NAMES)
+
+
+def _season_runs(run, *years):
+    import dataclasses
+    return [dataclasses.replace(run, run_id=f"x-{y}", controls=dataclasses.replace(run.controls, monitoring_year=y))
+            for y in years]
+
+
+def test_stack_seasons_must_differ_only_in_year(gee, run):
+    import dataclasses
+    assert gee.season_years(run, _season_runs(run, 2025, 2024)) == [2024, 2025, 2026]
+    with pytest.raises(ValueError, match="before 2026"):
+        gee.season_years(run, _season_runs(run, 2026))
+    other = dataclasses.replace(_season_runs(run, 2025)[0],
+                                controls=dataclasses.replace(run.controls, monitoring_year=2025, sensitivity=2.0))
+    with pytest.raises(ValueError, match="settings differ"):
+        gee.season_years(run, [other])
+
+
+def test_detection_year_is_the_earliest_season_that_counts(gee):
+    """One pixel per case: first_detection_doy per season (0 = none, None = masked)."""
+    cases = {  # (2024, 2025, 2026) -> detection_year
+        (0, 0, 0): 0, (0, 0, 170): 2026, (0, 150, 0): 2025, (0, 150, 170): 2025,
+        (120, 0, 0): 2024, (120, 150, 170): 2024, (None, 150, 170): 2025,
+    }
+    def season(v):
+        img = ee.Image.cat([ee.Image(v if v is not None else 0).toUint16().rename("first_detection_doy")
+                            .updateMask(int(v is not None)), ee.Image(1).toUint8().rename("condition")])
+        return img
+    for doys, expected in cases.items():
+        seasons = {y: season(v) for y, v in zip((2024, 2025, 2026), doys)}
+        got = gee.detection_year_image(seasons).reduceRegion(ee.Reducer.first(), ee.Geometry.Point(0, 0), 30)
+        assert got.getInfo()["detection_year"] == expected, doys
+    masked = {2024: season(0), 2025: season(0), 2026: season(170).updateMask(0)}
+    got = gee.detection_year_image(masked).reduceRegion(ee.Reducer.first(), ee.Geometry.Point(0, 0), 30)
+    assert got.getInfo()["detection_year"] is None

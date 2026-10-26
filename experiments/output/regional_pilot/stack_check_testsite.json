@@ -1,0 +1,152 @@
+{
+ "app_aoi": "testsite",
+ "app_config_equals_run": true,
+ "app_land_stack_masked": 0,
+ "app_timing_years": [
+  2024,
+  2025,
+  2026
+ ],
+ "app_vs_stack": {
+  "app 0 / stack 0": 23114,
+  "app 2024 / stack 2024": 2721,
+  "app 2025 / stack 2025": 1437,
+  "app 2026 / stack 2026": 2049
+ },
+ "app_vs_stack_differ": 0,
+ "app_years_are_the_stacks": true,
+ "ok": {
+  "app": true,
+  "tiles": true
+ },
+ "run_id": "r6-pilot-coast-range-2026",
+ "stack_valid_app_masked": 0,
+ "tiles": {
+  "r0056c0034": {
+   "band_names_are_the_spec": true,
+   "detection_year": {
+    "0": 99058,
+    "2024": 7044,
+    "2025": 2961,
+    "2026": 1826
+   },
+   "detection_year_inconsistent_with_seasons": 0,
+   "detection_year_mask_differs": 0,
+   "properties_are_the_spec": true,
+   "season_bands_differ": {
+    "condition": 0,
+    "episode_count": 0,
+    "first_detection_doy": 0,
+    "last_detection_doy": 0,
+    "n_obs_expectation": 0,
+    "n_obs_monitoring": 0,
+    "p_decrease": 0,
+    "p_increase": 0,
+    "p_unchanged": 0
+   },
+   "season_properties_kept": true,
+   "stack_properties": {
+    "detection_year_floor": 2024,
+    "detection_years": "2024,2025,2026",
+    "season_assets_json": "{\"2024\": \"projects/bulcd-python-rebuild/assets/regional/r6-pilot-coast-range-2024/r0056c0034\", \"2025\": \"projects/bulcd-python-rebuild/assets/regional/r6-pilot-coast-range-2025/r0056c0034\", \"2026\": \"projects/bulcd-python-rebuild/assets/regional/r6-pilot-coast-range-2026/r0056c0034\"}",
+    "stack_version": 1
+   }
+  },
+  "r0056c0035": {
+   "band_names_are_the_spec": true,
+   "detection_year": {
+    "0": 104297,
+    "2024": 3817,
+    "2025": 1028,
+    "2026": 1618,
+    "null": 129
+   },
+   "detection_year_inconsistent_with_seasons": 0,
+   "detection_year_mask_differs": 0,
+   "properties_are_the_spec": true,
+   "season_bands_differ": {
+    "condition": 0,
+    "episode_count": 0,
+    "first_detection_doy": 0,
+    "last_detection_doy": 0,
+    "n_obs_expectation": 0,
+    "n_obs_monitoring": 0,
+    "p_decrease": 0,
+    "p_increase": 0,
+    "p_unchanged": 0
+   },
+   "season_properties_kept": true,
+   "stack_properties": {
+    "detection_year_floor": 2024,
+    "detection_years": "2024,2025,2026",
+    "season_assets_json": "{\"2024\": \"projects/bulcd-python-rebuild/assets/regional/r6-pilot-coast-range-2024/r0056c0035\", \"2025\": \"projects/bulcd-python-rebuild/assets/regional/r6-pilot-coast-range-2025/r0056c0035\", \"2026\": \"projects/bulcd-python-rebuild/assets/regional/r6-pilot-coast-range-2026/r0056c0035\"}",
+    "stack_version": 1
+   }
+  },
+  "r0057c0034": {
+   "band_names_are_the_spec": true,
+   "detection_year": {
+    "0": 96655,
+    "2024": 7246,
+    "2025": 3731,
+    "2026": 3257
+   },
+   "detection_year_inconsistent_with_seasons": 0,
+   "detection_year_mask_differs": 0,
+   "properties_are_the_spec": true,
+   "season_bands_differ": {
+    "condition": 0,
+    "episode_count": 0,
+    "first_detection_doy": 0,
+    "last_detection_doy": 0,
+    "n_obs_expectation": 0,
+    "n_obs_monitoring": 0,
+    "p_decrease": 0,
+    "p_increase": 0,
+    "p_unchanged": 0
+   },
+   "season_properties_kept": true,
+   "stack_properties": {
+    "detection_year_floor": 2024,
+    "detection_years": "2024,2025,2026",
+    "season_assets_json": "{\"2024\": \"projects/bulcd-python-rebuild/assets/regional/r6-pilot-coast-range-2024/r0057c0034\", \"2025\": \"projects/bulcd-python-rebuild/assets/regional/r6-pilot-coast-range-2025/r0057c0034\", \"2026\": \"projects/bulcd-python-rebuild/assets/regional/r6-pilot-coast-range-2026/r0057c0034\"}",
+    "stack_version": 1
+   }
+  },
+  "r0057c0035": {
+   "band_names_are_the_spec": true,
+   "detection_year": {
+    "0": 97433,
+    "2024": 6078,
+    "2025": 3228,
+    "2026": 4150
+   },
+   "detection_year_inconsistent_with_seasons": 0,
+   "detection_year_mask_differs": 0,
+   "properties_are_the_spec": true,
+   "season_bands_differ": {
+    "condition": 0,
+    "episode_count": 0,
+    "first_detection_doy": 0,
+    "last_detection_doy": 0,
+    "n_obs_expectation": 0,
+    "n_obs_monitoring": 0,
+    "p_decrease": 0,
+    "p_increase": 0,
+    "p_unchanged": 0
+   },
+   "season_properties_kept": true,
+   "stack_properties": {
+    "detection_year_floor": 2024,
+    "detection_years": "2024,2025,2026",
+    "season_assets_json": "{\"2024\": \"projects/bulcd-python-rebuild/assets/regional/r6-pilot-coast-range-2024/r0057c0035\", \"2025\": \"projects/bulcd-python-rebuild/assets/regional/r6-pilot-coast-range-2025/r0057c0035\", \"2026\": \"projects/bulcd-python-rebuild/assets/regional/r6-pilot-coast-range-2026/r0057c0035\"}",
+    "stack_version": 1
+   }
+  }
+ },
+ "years": [
+  2024,
+  2025,
+  2026
+ ]
+}

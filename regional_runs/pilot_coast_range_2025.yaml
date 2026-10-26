@@ -1,0 +1,42 @@
+# Regional pilot, monitoring season 2025. Identical to pilot_coast_range_2026.yaml except
+# monitoring_year (and run_id, description): one of the seasons combined into the
+# 2026 stack's detection_year band (docs/regional_plan.md).
+run_id: r6-pilot-coast-range-2025
+description: 'Regional pilot, monitoring season 2025: a detection-year season for
+  r6-pilot-coast-range-2026 (docs/regional_plan.md).'
+product_version: 1
+region:
+  name: Oregon Coast Range pilot (testsite)
+  bounds:
+  - -2153385.0
+  - 2730585.0
+  - -2133405.0
+  - 2750565.0
+grid:
+  crs: EPSG:5070
+  scale: 30
+  origin:
+  - -2493045.0
+  - 3310005.0
+  tile_px: 333
+controls:
+  monitoring_year: 2025
+  season_start: 06-01
+  season_end: 09-30
+  baseline_first_year: 2018
+  baseline_last_year: 2023
+  decision_threshold: 0.65
+  increase_threshold: 0.75
+  sensitivity: 1.0
+  fit_order: 1
+  expectation_sensors:
+  - L8
+advanced:
+  monitoring_sensors:
+  - L8
+  - L9
+  dampening: 0.7
+  posterior_leveler: 0.9
+  mask_forest: false
+  mask_water: true
+  timing_rule: confirmed

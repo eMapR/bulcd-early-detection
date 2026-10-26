@@ -33,6 +33,13 @@ the same products from a local backend (DataLoader + OSU Slurm), compared agains
 - **Probabilities as scaled uint16;** measure the quantization error during validation.
 - **Ecoregions:** the existing R6 ecoregion boundaries from the FS Multi-Model project. Asset paths to be
   identified when expanding beyond the pilot.
+- **Extent (decided 2026-10-26):** the first regional product covers National Forest land in Oregon and
+  Washington, not the whole states. Candidate boundaries: `users/clarype/National_Forest_Boundaries_R6`, filtered
+  to `REGION == '06'` (17 administrative units; see `docs/findings.md` 2026-10-26).
+- **Detection year (decided 2026-10-26):** the product is a 10-band stack, the monitoring season's 9 bands plus
+  `detection_year`. That band is the earliest confirmed season among 2024 (fixed floor, meaning "2024 or
+  earlier"), 2025 and 2026, and 0 means none. It is built from one season run per year. The season tiles stay as
+  they are.
 - **Validation:** engineering validation (does the batch workflow reproduce BULC-D?) is separate from
   scientific validation (are detections real disturbances?). Engineering equivalence and performance first;
   the reference-data assessment after the pilot works. Include Robert's Pine Mountain pixel/box
@@ -53,8 +60,12 @@ the same products from a local backend (DataLoader + OSU Slurm), compared agains
 7. Validate against the interactive implementation, including tile seams.
    *Done 2026-10-24: 0 differences across seams and against the app (`docs/findings.md`).*
 8. Benchmark performance; investigate memory limits (expectation sensors x length x `shardSize`).
-   *Done 2026-10-26: no batch memory failures up to L8+L9+S2 6 years; 2 tasks at a time; about 150 EECU-s
+   *Done 2026-10-26: no batch memory failures up to L8+L9+S2 6 years; 2-3 tasks at a time; about 150 EECU-s
    per tile at the pilot settings (`docs/findings.md`).*
+8a. Detection-year band: 2024 and 2025 season runs of the pilot, the 10-band stack, validated against the app.
+   *Done 2026-10-26: 0 differences from the app's first-detected-season layer (`docs/findings.md`).*
+8b. Export optimization: several tiles per task vs one (`experiments/regional_block_benchmark.py`).
+8c. Region 6 extent: National Forest boundaries x ecoregions; tile list.
 9. Then expand job tracking, resumability and the regional viewer.
 
 ## Key technical points (from the 2026-10-21 investigation)

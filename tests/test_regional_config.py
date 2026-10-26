@@ -50,6 +50,12 @@ def test_bands_and_nodata():
                                             "description": spec.BAND["p_decrease"].description, "nodata": 65535}
 
 
+def test_stack_is_the_season_tile_plus_detection_year():
+    assert spec.STACK_BAND_NAMES == spec.BAND_NAMES + ("detection_year",)
+    assert spec.STACK_PROPERTIES[:len(spec.PROPERTIES)] == spec.PROPERTIES
+    assert spec.spec_dict()["stack"]["bands"][-1]["nodata"] == 65535
+
+
 def test_probability_scaling_error_is_at_most_half_a_step():
     for p in (0.0, 1.0, 0.65, 0.043, 0.914, 0.123456789, 0.99995, 0.00004):
         assert abs(spec.unscale_probability(spec.scale_probability(p)) - p) <= 0.5 / spec.PROBABILITY_SCALE + 1e-15

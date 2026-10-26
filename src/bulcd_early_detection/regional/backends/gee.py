@@ -3,6 +3,7 @@ one image to the product spec (spec.py), exported as an asset into the run's
 ImageCollection on the run's grid.
 
     python -m bulcd_early_detection.regional.backends.gee RUN.yaml [--tiles ID ...] [--dry-run] [--wait]
+    python -m bulcd_early_detection.regional.backends.gee RUN.yaml --stack-with EARLIER_SEASON.yaml ... [--tiles ...]
 
 Every band derives from the same run_bulcd() result, through the same
 functions the apps' layers use (outputs.py), so a tile reproduces the apps'
@@ -160,6 +161,89 @@ def submit(run: RegionalRun, tile_ids: list[str] | None = None, asset_root: str 
     return [export_tile(run, t, asset_root) for t in tiles]
 
 
+# ---------------------------------------------------------------- the stack (spec.STACK_BANDS)
+def season_years(run: RegionalRun, season_runs: list[RegionalRun]) -> list[int]:
+    """The seasons a stack combines (sorted, ending with run's monitoring year).
+    Every season run must be `run` with only monitoring_year (and run_id,
+    description) changed, and earlier."""
+    def settings(r):
+        d = r.to_dict()
+        d.pop("run_id"), d.pop("description"), d["controls"].pop("monitoring_year")
+        return d
+    years = [r.controls.monitoring_year for r in season_runs]
+    for r in season_runs:
+        if settings(r) != settings(run):
+            raise ValueError(f"{r.run_id}: settings differ from {run.run_id} beyond monitoring_year")
+    if len(set(years)) != len(years) or max(years, default=0) >= run.controls.monitoring_year:
+        raise ValueError(f"season years must be distinct and before {run.controls.monitoring_year}: {years}")
+    return sorted(years) + [run.controls.monitoring_year]
+
+
+def detection_year_image(seasons: dict[int, ee.Image]) -> ee.Image:
+    """detection_year from season tiles ({year: tile image}): the earliest
+    season whose first_detection_doy is set (it is set only where a detection
+    counts under the run's timing_rule), else spec.NONE. Masked as the latest
+    season."""
+    years = sorted(seasons)
+    year = ee.Image(spec.NONE)
+    for y in reversed(years):   # earliest written last, so it wins
+        year = year.where(seasons[y].select("first_detection_doy").unmask(spec.NONE).gt(spec.NONE), y)
+    return year.updateMask(seasons[years[-1]].select("condition").mask()).toUint16().rename("detection_year")
+
+
+def stack_collection_id(run: RegionalRun, asset_root: str = DEFAULT_ASSET_ROOT) -> str:
+    return f"{collection_id(run, asset_root)}-stack"
+
+
+def stack_image(run: RegionalRun, season_runs: list[RegionalRun], tile: Tile,
+                asset_root: str = DEFAULT_ASSET_ROOT) -> ee.Image:
+    """The tile's stack from stored season tiles: `run`'s tile (bands and
+    properties unchanged) + detection_year. No BULC-D run."""
+    years = season_years(run, season_runs)
+    by_year = {r.controls.monitoring_year: r for r in [*season_runs, run]}
+    assets = {y: f"{collection_id(by_year[y], asset_root)}/{tile.id}" for y in years}
+    seasons = {y: ee.Image(a) for y, a in assets.items()}
+    image = seasons[years[-1]].addBands(detection_year_image(seasons))   # keeps the season tile's properties
+    return image.set({
+        "stack_version": spec.STACK_VERSION,
+        "detection_years": ",".join(map(str, years)),
+        "detection_year_floor": years[0],
+        "season_assets_json": json.dumps({str(y): a for y, a in assets.items()}, sort_keys=True),
+    })
+
+
+def export_stack_tile(run: RegionalRun, season_runs: list[RegionalRun], tile: Tile,
+                      asset_root: str = DEFAULT_ASSET_ROOT, start: bool = True):
+    """Exports the tile's stack on the tile's pixels, as export_tile()."""
+    for r in [*season_runs, run]:
+        ee.data.getAsset(f"{collection_id(r, asset_root)}/{tile.id}")   # raises if a season tile is missing
+    transform, dimensions = tile_transform(run, tile)
+    task = ee.batch.Export.image.toAsset(
+        image=stack_image(run, season_runs, tile, asset_root),
+        description=f"{run.run_id}-stack_{tile.id}",
+        assetId=f"{stack_collection_id(run, asset_root)}/{tile.id}",
+        crs=run.grid.crs,
+        crsTransform=transform,
+        dimensions=dimensions,
+        pyramidingPolicy={".default": "sample"},
+        maxPixels=1e10,
+    )
+    if start:
+        task.start()
+    return task
+
+
+def submit_stack(run: RegionalRun, season_runs: list[RegionalRun], tile_ids: list[str] | None = None,
+                 asset_root: str = DEFAULT_ASSET_ROOT) -> list:
+    tiles = [t for t in run.tiles if not tile_ids or t.id in tile_ids]
+    path = stack_collection_id(run, asset_root)
+    try:
+        ee.data.getAsset(path)
+    except ee.EEException:
+        ee.data.createAsset({"type": "IMAGE_COLLECTION"}, path)
+    return [export_stack_tile(run, season_runs, t, asset_root) for t in tiles]
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("run", help="run file (YAML)")
@@ -168,8 +252,24 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--project", default="bulcd-python-rebuild")
     p.add_argument("--dry-run", action="store_true", help="print the tiles and warnings; start nothing")
     p.add_argument("--wait", action="store_true", help="wait for the tasks to finish")
+    p.add_argument("--stack-with", nargs="+", metavar="SEASON_RUN",
+                   help="export the stack instead (from stored season tiles: RUN's + these earlier seasons')")
     a = p.parse_args(argv)
     run = RegionalRun.load(a.run)
+    if a.stack_with:
+        season_runs = [RegionalRun.load(f) for f in a.stack_with]
+        print(f"{run.run_id} stack: seasons {season_years(run, season_runs)} -> {stack_collection_id(run, a.asset_root)}")
+        if a.dry_run:
+            return 0
+        ee.Initialize(project=a.project)
+        tasks = submit_stack(run, season_runs, a.tiles, a.asset_root)
+        for task in tasks:
+            print("started", task.status()["description"], task.id)
+        if a.wait:
+            states = outputs.wait_for(tasks)
+            print(json.dumps(states, indent=1))
+            return 0 if all(s == "COMPLETED" for s in states.values()) else 1
+        return 0
     for w in run.warnings():
         print("Warning:", w)
     tiles = [t for t in run.tiles if not a.tiles or t.id in a.tiles]

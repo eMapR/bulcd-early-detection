@@ -1764,3 +1764,44 @@ Each variant ran once, so the times are single measurements.
   at 1-3 min each, that is about 1 day of wall time per 1,000 tiles, plus any global queue wait. At this
   concurrency the slots, not memory or EECU, limit a regional run. Fewer, larger tasks (several tiles per export)
   would not reduce EECU but could reduce the per-task overhead; that remains untested.
+
+## 2026-10-26 (later) — The detection-year band: a 10-band stack from three season runs
+
+`detection_year` is the 10th band of the regional product. The 9 season bands come from one run per monitoring
+season. The user asked for one layer of the first confirmed detection year: 2026, 2025, 2024 meaning "2024 or
+earlier", and 0 for none. 2024 stays the fixed earliest season.
+
+- **How it is built** (`regional/backends/gee.py`: `season_years`, `detection_year_image`, `stack_image`,
+  `export_stack_tile`; `spec.STACK_BANDS`, `STACK_PROPERTIES`):
+  - The 2024 and 2025 seasons are ordinary runs: `regional_runs/pilot_coast_range_{2024,2025}.yaml` are the 2026
+    pilot with only `monitoring_year`, `run_id` and the description changed (`season_years` refuses anything else).
+  - The stack tile is the 2026 season tile asset, unchanged (its 9 bands, masks and properties), plus
+    `detection_year`: the earliest season whose `first_detection_doy` is set. Under the confirmed rule that means
+    the season ends as decrease. The band is masked where `condition` is.
+  - Stack properties are added: `stack_version`, `detection_years` "2024,2025,2026", `detection_year_floor` 2024, and
+    `season_assets_json`, which names the three season tiles.
+  - The stack export reads finished assets only, so the 2026 processing is not rerun. It costs 0.6-0.8 EECU-s and
+    15-37 s per tile.
+  - CLI: `python -m bulcd_early_detection.regional.backends.gee RUN_2026.yaml --stack-with RUN_2024.yaml
+    RUN_2025.yaml`. Output goes to `regional/<run_id>-stack/<tile>`.
+- **This is the apps' rule.** `outputs.combine_season_timing` takes, over `_timing_years()` = 2024-2026, the
+  earliest season that counts. Each season is an independent run from the same starting odds against the same
+  2018-2023 expectation. A change before 2024 is detected again in 2024, which is why the floor means "or earlier".
+  This resolves the step-7 timing caveat: the 3,792 testsite pixels the app dates before 2026 now carry their year.
+- **The season exports** were 8 tasks (2024 and 2025 × 4 tiles), each 135-235 EECU-s and 48-252 s running,
+  consistent with step 8. All 8 waited 70 min in the queue (submitted 19:08 UTC, started 20:18-20:22). Then up to
+  **3 ran at once**, which corrects step 8's "at most 2". The concurrency varies. It is not a fixed 2-slot limit.
+- **Validation** (`experiments/regional_stack_check.py`, outputs
+  `experiments/output/regional_pilot/stack_check_{testsite,region}.json`):
+  - **Per tile:** the 9 season bands are identical to the 2026 tile (values and masks), and every 2026 property is
+    kept. The band names and property set are the spec's. The `detection_year` mask equals the `condition` mask.
+    `detection_year` agrees with the three season tiles on every pixel: Y means season Y is set and no earlier
+    season is; 0 means none is.
+  - **Against the app's first-detected-season layer**, built with the app's own widgets set to the run's settings
+    (the config equals the run's): 0 differences.
+    - On the testsite: 23,114 pixels are 0; 2,721 are 2024; 1,437 are 2025; 2,049 are 2026.
+    - On one live AOI over the whole 2 × 2 region: 397,443 / 24,185 / 10,948 / 10,851. The 129 water pixels are
+      masked in both. No pixel is masked in one and valid in the other.
+  - With unweighted reducers, `frequencyHistogram` reports masked pixels as a `"null"` key. That key is the
+    129 water pixels, not missing data.
+- **Pilot result (4 tiles, 443,427 land pixels):** 89.6% none, 5.5% 2024 or earlier, 2.5% 2025, 2.4% 2026.

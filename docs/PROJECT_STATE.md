@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-10-26
+Last updated: 2026-10-26 (later)
 
 Concise current-state/handoff doc. Detailed lessons, experimental
 results, and their explanations live in `docs/findings.md` — read it for
@@ -64,9 +64,21 @@ r0056c0034):
 - **Concurrency:** at most 2 of the project's tasks run at once (the pilot's ran one at a time). Roughly 1 day and
   42 EECU-hours per 1,000 tiles at the pilot settings.
 
-**Next: plan step 9**, job tracking, resumability and the regional viewer, after the user decides on scope
-(Region 6 extent and tile count, multi-year "first detected" or one season per run, whether to batch several
-tiles per task).
+**Step 8a (detection-year band) is done** (2026-10-26):
+- The 2024 and 2025 season runs of the pilot (`regional_runs/pilot_coast_range_{2024,2025}.yaml`) were exported
+  to `regional/r6-pilot-coast-range-{2024,2025}`.
+- The 10-band stack (`--stack-with`; `spec.STACK_BANDS`) is in `regional/r6-pilot-coast-range-2026-stack`. It is
+  the 2026 tile unchanged plus `detection_year`.
+- Checked with `experiments/regional_stack_check.py`: the season bands and properties are identical to the 2026
+  tile, and `detection_year` has 0 differences from the app's first-detected-season layer on the testsite and on
+  the whole region.
+- Up to 3 tasks ran at once (step 8 saw 2). Details in `docs/findings.md`.
+
+**In progress: step 8b**, export optimization (`experiments/regional_block_benchmark.py`). It exports a 4 x 4 tile
+area as 1 task, 4 tasks and 16 tasks. Next is **8c**, the Region 6 extent: National Forest land in OR/WA, with
+the boundaries x ecoregions. Report 8a + 8b to the user before any full Region 6 processing. Keep the
+branch unmerged; keep the benchmark assets (`regional_bench/`) until the performance evaluation is finished;
+don't redeploy the GEE app yet.
 
 - **What step 1 delivered:** an expectation-sensor control in both apps (`config.py`
   `MonitoringControls.expectation_sensors`, `sensor_warnings()`; `gee/config.js` `sensorWarnings()`,
