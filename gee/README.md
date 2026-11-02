@@ -80,7 +80,11 @@ inspect its NBR/fit and probability history.
 4. **Pixel inspector.** Click the map or type a longitude/latitude and press **Submit
    Pixel**. "Expectation -> Monitoring" (the expectation-period observations the fit
    used, the fitted curve through both periods, and the monitoring observations) with
-   a summary of the fit at the pixel, then "Target Year vs. Fit" and "Probability
+   a summary of the fit at the pixel. When years separate the expectation from the
+   target year (e.g. 2024-2025 for 2018-2023 and 2026), their observations, with the
+   monitoring sensors and season, are plotted as "between periods (not used)" for
+   context only (a separate request: if it fails, the chart draws without them).
+   Then "Target Year vs. Fit" and "Probability
    Through Time", all sampled on the 30 m result grid, probabilities at each observation's
    own date. Its notes list the monitoring season's detection episodes,
    with first and last detection. A run keeps the coordinate boxes, so Submit Pixel inspects the same pixel

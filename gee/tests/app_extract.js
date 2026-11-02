@@ -113,14 +113,17 @@ async function selectPixels(handle, created, map, pixels, how, thresholds) {
     const rows = inspector.historyRows(tables, run.config);
     const exp = await evaluate(inspector.expectationQuery(bulcd, run.result, run.config, p.lon, p.lat));
     const expRows = inspector.expectationRows(exp, run.config);
+    const gap = inspector.gapQuery(bulcd, run.result, run.config, p.lon, p.lat);
+    const gapRows = gap ? inspector.expectationRows(await evaluate(gap), run.config) : [];
     out[p.label] = pixelRecord(p, rows, fit && fit.table, prob && prob.table, thresholds.decrease,
                                thresholds.increase);
     out[p.label].expectation = {
       rows: expRows, fit: exp.fit, regressors: exp.regressors,
       summary: inspector.expectationSummary(exp, expRows, run.config),
       timeline_matches: !!timeline &&
-        tablesClose(timeline.table, inspector.timelineTable(expRows, rows, run.config.reduction.band)),
+        tablesClose(timeline.table, inspector.timelineTable(expRows, rows, run.config.reduction.band, gapRows)),
       timeline_rows: timeline ? timeline.table.rows.length : 0,
+      gap_rows: gapRows.length,
     };
     out[p.label].how = how[p.label] || 'click';
     out[p.label].boxes = [handle.lonBox.getValue(), handle.latBox.getValue()];

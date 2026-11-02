@@ -56,6 +56,10 @@ async function main() {
       queried.push({ query: 'expectation', lon, lat });
       return realInspector.expectationQuery(b, result, config, lon, lat);
     },
+    gapQuery(b, result, config, lon, lat) {
+      queried.push({ query: 'gap', lon, lat });
+      return realInspector.gapQuery(b, result, config, lon, lat);
+    },
   });
 
   const handle = app.main(bulcd, appConfig, outputs, inspector, aoi, controlsUi);
@@ -89,7 +93,7 @@ async function main() {
     else handle.submit.state.handlers.click();
     await waitFor(() => created.charts.length >= before + 3, 'the inspector after ' + how);
     const mine = queried.slice(firstQuery);
-    assert.deepStrictEqual(mine.map((q) => q.query), ['history', 'expectation'], how + ': one query of each kind');
+    assert.deepStrictEqual(mine.map((q) => q.query).sort(), ['expectation', 'gap', 'history'], how + ': one query of each kind');
     mine.forEach((q) => assert.deepStrictEqual([q.lon, q.lat], [A.lon, A.lat], how + ': ' + q.query + ' query at A'));
     assert.deepStrictEqual(markerAt(), [A.lon, A.lat], how + ': marker at A');
     assert.deepStrictEqual(boxes(), expectedBoxes, how + ': coordinate boxes hold A');
@@ -101,11 +105,14 @@ async function main() {
                                            config);
     const exp = await evaluate(realInspector.expectationQuery(bulcd, result, config, A.lon, A.lat));
     const expRows = realInspector.expectationRows(exp, config);
+    const gap = realInspector.gapQuery(bulcd, result, config, A.lon, A.lat);
+    assert(gap, how + ': the default settings leave years between the periods');
+    const gapRows = realInspector.expectationRows(await evaluate(gap), config);
     const same = tablesClose;
     assert(same(prob, realInspector.probabilityTable(rows, controls.decrease_threshold, controls.increase_threshold)),
            how + ': probability chart = fresh computation at A');
     assert(same(fit, realInspector.targetFitTable(rows, config.reduction.band)), how + ': fit chart = fresh at A');
-    assert(same(timeline, realInspector.timelineTable(expRows, rows, config.reduction.band)),
+    assert(same(timeline, realInspector.timelineTable(expRows, rows, config.reduction.band, gapRows)),
            how + ': timeline chart = fresh at A');
     return rows;
   }
