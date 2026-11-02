@@ -24,7 +24,9 @@ import ipywidgets as W
 from IPython.display import Markdown, display
 
 from . import compare, drawing, outputs, pixel, render, report
-from .config import BASELINE_SENSORS, FIT_ORDERS, SENSORS, MonitoringControls, build_config, sensor_warnings
+from .config import (BASELINE_SENSORS, DEFAULT_MONITORING_SENSORS, EXPECTATION_YEARS, FIT_ORDERS, MONITORING_SENSORS,
+                     MONITORING_YEARS, SENSORS, MonitoringControls, availability_problem, build_config, sensor_warnings,
+                     with_monitoring_sensors)
 
 # Earth Engine requests have no deadline by default, so one stalled request can
 # freeze the whole app; fail it after this long instead (ms).
@@ -180,9 +182,10 @@ class EarlyDetectionApp:
     def _build_settings_step(self):
         style = {"description_width": "170px"}
         wide = W.Layout(width="560px")
-        self.expectation = W.IntRangeSlider(value=(2018, 2023), min=2016, max=2025, description="Expectation years:",
+        self.expectation = W.IntRangeSlider(value=(2018, 2023), min=EXPECTATION_YEARS[0], max=EXPECTATION_YEARS[1],
+                                            description="Expectation years:",
                                             style=style, layout=wide)
-        self.monitoring_year = W.Dropdown(options=[2024, 2025, 2026], value=2026, description="Monitoring year:", style=style)
+        self.monitoring_year = W.Dropdown(options=list(MONITORING_YEARS), value=2026, description="Monitoring year:", style=style)
         self.window = SeasonWindow()
         d = LEGACY_DEFAULTS
         self.sensitivity = W.FloatSlider(value=d["sensitivity"], min=0.25, max=3.0, step=0.05, description="Sensitivity:",
@@ -203,9 +206,12 @@ class EarlyDetectionApp:
                                        description="Posterior leveler:", style=style, layout=wide)
         self.fit_order = W.Dropdown(options=[(FIT_ORDER_LABELS[n], n) for n in FIT_ORDERS], value=d["fit_order"],
                                     description="Expectation fit order:", style=style, layout=W.Layout(width="480px"))
-        labels = {"L8": "Landsat 8", "L9": "Landsat 9", "S2": "Sentinel-2"}
-        self.expectation_sensors = {s: W.Checkbox(value=s in BASELINE_SENSORS, description=labels[s]) for s in SENSORS}
-        self.sensors = {s: W.Checkbox(value=True, description=labels[s]) for s in SENSORS}
+        labels = {"L5": "Landsat 5", "L7": "Landsat 7", "L8": "Landsat 8", "L9": "Landsat 9", "S2": "Sentinel-2"}
+        narrow = W.Layout(width="130px")
+        self.expectation_sensors = {s: W.Checkbox(value=s in BASELINE_SENSORS, description=labels[s], indent=False,
+                                                  layout=narrow) for s in SENSORS}
+        self.sensors = {s: W.Checkbox(value=s in DEFAULT_MONITORING_SENSORS, description=labels[s], indent=False,
+                                      layout=narrow) for s in MONITORING_SENSORS}
         self.mask_forest = W.Checkbox(value=d["mask_forest"], description="Analyze forest only (Hansen tree cover ≥ 10%)",
                                       style={"description_width": "initial"})
         self.mask_water = W.Checkbox(value=d["mask_water"], description="Leave out water",
@@ -254,6 +260,8 @@ class EarlyDetectionApp:
             problem = "Select at least one expectation sensor."
         elif not self._checked(self.sensors):
             problem = "Select at least one monitoring sensor."
+        else:
+            problem = availability_problem(self._checked(self.expectation_sensors), self._checked(self.sensors), e0, e1, m)
         self.settings_ok = problem is None
         if hasattr(self, "run_btn"):
             self.run_btn.disabled = not (self.settings_ok and self.area is not None)
@@ -284,7 +292,8 @@ class EarlyDetectionApp:
     def sensor_warnings(self) -> list[str]:
         """config.sensor_warnings() for the current widgets (gee/config.js sensorWarnings())."""
         e0, e1 = self.expectation.value
-        return sensor_warnings(self._checked(self.expectation_sensors), self._checked(self.sensors), e0, e1)
+        return sensor_warnings(self._checked(self.expectation_sensors), self._checked(self.sensors), e0, e1,
+                               self.monitoring_year.value, self._timing_years() if self.timing.value else None)
 
     def controls(self, monitoring_year: int | None = None) -> MonitoringControls:
         (e0, e1), (start, end) = self.expectation.value, self.window.value
@@ -301,9 +310,7 @@ class EarlyDetectionApp:
         config.bulc_advanced_params.dampening_factor = round(self.dampening.value, 2)
         config.bulc_advanced_params.posterior_leveler = round(self.posterior.value, 2)
         config.bulc_advanced_params.initializing_leveler = INITIALIZING_LEVELER
-        for code, box in self.sensors.items():
-            if code in config.evidence.target.sensors:
-                config.evidence.target.sensors[code].enabled = box.value
+        with_monitoring_sensors(config, self._checked(self.sensors))
         config.study_area.mask_non_forest = self.mask_forest.value
         config.study_area.mask_water = self.mask_water.value
         return config
@@ -439,17 +446,21 @@ class EarlyDetectionApp:
         self.status.value = "Preparing map layers…"
         large = outputs.aoi_size_report(area)["area_km2"] > outputs.TESTED_LIVE_KM2
         low = high = None
+        source = outputs.reference_source(img_years)
+        suffix = "" if source == "S2" else f" ({outputs.REFERENCE_SOURCE_LABELS[source]})"
+        self.run_state["reference_source"] = source
         for y in img_years:
-            self._add_result_layer(f"True color {y}", lambda y=y: outputs.annual_true_color(geom, y, window).clip(geom)
+            self._add_result_layer(f"True color {y}{suffix}", lambda y=y: outputs.annual_true_color(geom, y, window,
+                                                                                                    source).clip(geom)
                                    .visualize(**render.TRUE_COLOR), note="reference imagery")
         def nbr_vis():
             nonlocal low, high
-            nbrs = [outputs.annual_nbr(geom, y, window, reproject=not large) for y in img_years]
+            nbrs = [outputs.annual_nbr(geom, y, window, reproject=not large, source=source) for y in img_years]
             land = [n_.updateMask(render._not_water()) for n_ in nbrs]
             low, high = outputs.nbr_stretch(land, geom, scale=120 if large else outputs.SCALE)
             return ee.Image.cat(land).clip(geom).visualize(min=[low] * 3, max=[high] * 3)
         self.status.value = "Preparing the NBR composite…"
-        self._add_result_layer(f"NBR composite R={img_years[0]} G={img_years[1]} B={img_years[2]}", nbr_vis,
+        self._add_result_layer(f"NBR composite R={img_years[0]} G={img_years[1]} B={img_years[2]}{suffix}", nbr_vis,
                                note="spectral timing clues")
         if timing is not None:
             self._add_result_layer("First detected season (decrease)", lambda: timing.select("first_decrease_year").visualize(
@@ -514,10 +525,16 @@ class EarlyDetectionApp:
             self.status.value = "Drawing annual true color…"
             display(Markdown("Reference imagery, independent of BULC-D. The true-color and NBR-composite layers can also "
                              "be turned on in the Map layers panel above the results map."))
-            report.annual_true_color_row(area, frame, bbox, token, img_years, window,
+            source = self.run_state["reference_source"]
+            report.annual_true_color_row(area, frame, bbox, token, img_years, window, source=source,
                                          suptitle="True color: clear-sky median, same window and stretch each year")
+            if source != "S2":
+                display(Markdown(f"Landsat imagery (5, 7, 8 and 9, whichever flew): the years shown start before "
+                                 f"{outputs.REFERENCE_S2_FROM}, when Sentinel-2 data are sparse or missing. Landsat 7's "
+                                 "striped gaps can show where few clear scenes overlap."))
             stretch = f"one stretch {low:.2f}–{high:.2f}" if low is not None else "layer failed to load"
-            display(Markdown(f"**NBR composite** (R = {img_years[0]}, G = {img_years[1]}, B = {img_years[2]}; "
+            display(Markdown(f"**NBR composite{' (Landsat)' if source != 'S2' else ''}** (R = {img_years[0]}, "
+                             f"G = {img_years[1]}, B = {img_years[2]}; "
                              f"{stretch}): colors are spectral timing clues, not confirmed disturbance dates."))
             display(W.HTML(render_legend(render.nbr_rgb_legend(img_years))))
         with self.out["Parameter behavior"]:

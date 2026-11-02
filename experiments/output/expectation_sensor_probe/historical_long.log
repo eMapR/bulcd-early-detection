@@ -1,0 +1,14 @@
+/Users/clarype/miniconda3/envs/bulcd/lib/python3.11/site-packages/google/api_core/_python_version_support.py:254: FutureWarning: You are using a Python version (3.11.15) which Google will stop supporting in new releases of google.api_core once it reaches its end of life (2027-10-24). Please upgrade to the latest Python version, or at least Python 3.12, to continue receiving updates for google.api_core past that date.
+  warnings.warn(message, FutureWarning)
+availability {"L5":{"2008":13,"2009":14,"2010":10,"2011":12,"2012":0,"2013":0,"2014":0,"2015":0,"2016":0,"2017":0,"2018":0,"2019":0,"2020":0,"2021":0,"2022":0,"2023":0,"2024":0,"2025":0,"2026":0},"L7":{"2008":12,"2009":13,"2010":12,"2011":14,"2012":13,"2013":13,"2014":12,"2015":15,"2016":13,"2017":14,"2018":15,"2019":15,"2020":13,"2021":13,"2022":10,"2023":10,"2024":0,"2025":0,"2026":0},"L8":{"2008":0,"2009":0,"2010":0,"2011":0,"2012":0,"2013":12,"2014":12,"2015":14,"2016":13,"2017":13,"2018":15,"2019":14,"2020":14,"2021":11,"2022":13,"2023":14,"2024":15,"2025":15,"2026":14},"L9":{"2008":0,"2009":0,"2010":0,"2011":0,"2012":0,"2013":0,"2014":0,"2015":0,"2016":0,"2017":0,"2018":0,"2019":0,"2020":0,"2021":0,"2022":13,"2023":13,"2024":13,"2025":16,"2026":14},"S2":{"2008":0,"2009":0,"2010":0,"2011":0,"2012":0,"2013":0,"2014":0,"2015":0,"2016":13,"2017":24,"2018":48,"2019":48,"2020":50,"2021":49,"2022":49,"2023":48,"2024":48,"2025":59,"2026":60},"S2_cloud_score_plus":{"2008":0,"2009":0,"2010":0,"2011":0,"2012":0,"2013":0,"2014":0,"2015":0,"2016":26,"2017":24,"2018":48,"2019":48,"2020":50,"2021":49,"2022":49,"2023":47,"2024":48,"2025":60,"2026":61}}
+L7+L8 x 14 yr inspector {"s":76.413,"ok":true,"error":null}
+L7+L8 x 14 yr Condition 2026: 4.2M chars, 42 s, ok
+L7+L8 x 14 yr First detected season (decrease): 293.5M chars, 75 s, ok
+L7+L8 x 14 yr Last detection (decrease): 56.7M chars, 81 s, ok
+L7+L8 x 14 yr Detection episodes (decrease): 28.4M chars, 58 s, ok
+L5+L7+L8 x 14 yr inspector {"s":41.776,"ok":true,"error":null}
+L5+L7+L8 x 14 yr Condition 2026: 4.9M chars, 37 s, ok
+L5+L7+L8 x 14 yr First detected season (decrease): 343.1M chars, 84 s, ok
+L5+L7+L8 x 14 yr Last detection (decrease): 66.3M chars, 60 s, ok
+L5+L7+L8 x 14 yr Detection episodes (decrease): 33.2M chars, 117 s, ok
+PROBE DONE experiments/output/expectation_sensor_probe/historical_long.json

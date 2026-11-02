@@ -9,9 +9,7 @@ the "why," not this file.
 ## Pick up here (2026-11-02, laptop)
 
 **Current project:** regional batch processing for USFS Region 6 (`docs/regional_plan.md`). Before it,
-at the user's request (2026-11-02), **historical years**: monitoring years back to 2015, expectation years
-back to 2010, Landsat 5 and 7 as sensors, in both apps, tested and documented. Then plan step 2
-(`feature/regional-batch-processing` from `legacy-parity-0011-app`).
+at the user's request (2026-11-02), historical years (done below). Next: plan step 2.
 
 **Done on `legacy-parity-0011-app`:**
 - Pixel inspector (GEE): observations in the years between the expectation and monitoring periods,
@@ -19,18 +17,20 @@ back to 2010, Landsat 5 and 7 as sensors, in both apps, tested and documented. T
 - **Step 1, expectation sensors: finished.** Probe complete (`experiments/output/expectation_sensor_probe/`),
   `S2_EXPECTATION_MAX_YEARS = 2` with the measured failure in the warning, live parity passed,
   `docs/findings.md` 2026-10-19 entry. Results reported to the user 2026-11-02.
+- **Historical years: done** (`docs/findings.md`, 2026-11-02). Expectation 2010–2025, monitoring 2015–2026,
+  Landsat 5/7 sensors, data-availability warnings/blocks (`SENSOR_GAPS`), Landsat reference imagery before
+  2017, in both apps. Defaults and the default config unchanged. Tests: `tests/test_historical_years.py`,
+  cross-check in `tests/test_expectation_sensors.py`, `controls_check.js` historical section, live parity
+  section 7.
 
-**In progress: historical years** (findings entry 2026-11-02 to write). Measured so far:
-- `experiments/historical_sensor_availability.py` → `experiments/output/historical_sensors/availability.json`:
-  Landsat 5 has data 2008–2011 only; Landsat 7 through 2023 (none 2024+, fewer 2022–2023); Sentinel-2 none
-  at the testsite before 2016. L7 − L8 NBR offset small (median within ±0.013 at three sites, 2013–2016).
-- `experiments/historical_sensor_consistency.py` → `.../consistency.csv`: monitoring 2015 vs a 2010–2014
-  expectation, no false change at two stable forests with any sensor mix; at the testsite, Landsat 8 in
-  both periods agrees best with an independent L8 NBR drop.
+**Open / to check:**
+- In the Code Editor (after deploying): a long multi-Landsat expectation (e.g. L5+L7+L8 2010–2023), to see whether
+  First detected season (343 M chars expanded) still renders. If not, apply the 2026-10-13 one-band/`min()` fix.
+- Then plan step 2: `feature/regional-batch-processing` from `legacy-parity-0011-app` (`docs/regional_plan.md`).
 
 **Environment:** see memory/README. Python `/Users/clarype/miniconda3/envs/bulcd/bin/python`; node from
 `/Users/clarype/miniconda3/envs/bulcd-gee/bin` (prepend to PATH, or node-backed tests skip). Live parity:
-`cd gee/tests && python run_app_parity.py` (~45 min). GEE deploy after committing:
+`cd gee/tests && python run_app_parity.py` (~50 min). GEE deploy after committing:
 `python tools/build_gee_deploy.py clarype`.
 
 **New machine:** both repos as siblings, `bulcd-early-detection` on `legacy-parity-0011-app` and

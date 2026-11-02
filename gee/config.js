@@ -33,18 +33,35 @@ var PRODUCTION_TRANSITION_MATRIX = [
 // screening); sensors selectable for each period, the expectation defaulting to
 // Landsat 8 only (a multi-year L8+S2 fit ran out of Earth Engine memory).
 var CLOUD_COVER_THRESHOLD = 70;
-var SENSORS = ['L8', 'L9', 'S2'];
-var MONITORING_SENSORS = ['L8', 'L9', 'S2'];
-var SENSOR_LABELS = {L8: 'Landsat 8', L9: 'Landsat 9', S2: 'Sentinel-2'};
-// First year with a full season of data, and what is missing before it
-// (config.py SENSOR_FULL_FROM / _SENSOR_GAPS; docs/findings.md, 2026-10-19).
-var SENSOR_FULL_FROM = {L8: 2014, L9: 2022, S2: 2018};
+var SENSORS = ['L5', 'L7', 'L8', 'L9', 'S2'];
+// Monitoring can't use Landsat 5 (it stopped imaging in 2011, before the earliest monitoring year).
+var MONITORING_SENSORS = ['L7', 'L8', 'L9', 'S2'];
+// Monitoring sensors on by default (config.py DEFAULT_MONITORING_SENSORS); Landsat 7 is an opt-in.
+var DEFAULT_MONITORING_SENSORS = ['L8', 'L9', 'S2'];
+var SENSOR_LABELS = {L5: 'Landsat 5', L7: 'Landsat 7', L8: 'Landsat 8', L9: 'Landsat 9', S2: 'Sentinel-2'};
+// Years each sensor has no or fewer observations in, for the default Jun-Sep
+// season: [first year, last year (inclusive; null = open-ended), 'none' or
+// 'fewer', what is missing]. Same table as config.py SENSOR_GAPS
+// (docs/findings.md, 2026-10-19 and 2026-11-02).
 var SENSOR_GAPS = {
-  L8: 'no observations before 2014 (its first scenes are from April 2013)',
-  L9: 'no observations before 2022 (its first scenes are from Oct 31, 2021)',
-  S2: 'fewer observations before 2018 (one satellite until Sentinel-2B joined in mid-2017: about a quarter to ' +
-      'half as many scenes in tests)'
+  L5: [[2012, null, 'none', 'no observations after 2011 (it stopped imaging in November 2011)']],
+  L7: [[2024, null, 'none', 'no observations after 2023 (none from 2024 in tests)'],
+       [2022, 2023, 'fewer', 'fewer observations in 2022-2023 (its orbit was lowered in 2022: about two thirds to ' +
+                             'three quarters as many scenes in tests)']],
+  L8: [[null, 2012, 'none', 'no observations before 2013 (its first scenes are from April 2013)']],
+  L9: [[null, 2021, 'none', 'no observations before 2022 (its first scenes are from Oct 31, 2021)']],
+  S2: [[null, 2015, 'none', 'no observations before 2016 (none in Earth Engine\'s surface-reflectance collection at ' +
+                            'the testsite in tests)'],
+       [2016, 2017, 'fewer', 'fewer observations before 2018 (one satellite until Sentinel-2B joined in mid-2017: ' +
+                             'about a quarter to half as many scenes in tests)']]
 };
+// Said whenever a sensor is chosen for either period (config.py SENSOR_NOTES).
+var SENSOR_NOTES = {
+  L7: 'Landsat 7 images since 2003 have striped gaps (its scan-line corrector failed; about a fifth of each scene ' +
+      'is missing), so it gives fewer clear observations per pixel than Landsat 8: about 75-95% as many in tests.'
+};
+// Landsat 5 and 7 (TM/ETM+) vs Landsat 8 and 9 (OLI): different instruments.
+var TM_ETM = ['L5', 'L7'];
 // Expectation length (years) above which a Sentinel-2 expectation is likely to
 // exceed Earth Engine's interactive memory limit (config.py S2_EXPECTATION_MAX_YEARS).
 var S2_EXPECTATION_MAX_YEARS = 2;
@@ -93,8 +110,8 @@ var APP_DEFAULTS = {
   dampening: 0.7,                                   // original GUI
   posterior_leveler: 0.9,                           // original GUI
   fit_order: 1,                                     // original GUI (constant + unimodal)
-  expectation_sensors: {L8: true, L9: false, S2: false},  // Early Detection choice (config.py BASELINE_SENSORS)
-  sensors: {L8: true, L9: true, S2: true},          // monitoring sensors; Early Detection choice
+  expectation_sensors: {L5: false, L7: false, L8: true, L9: false, S2: false},  // Early Detection choice (config.py BASELINE_SENSORS)
+  sensors: {L7: false, L8: true, L9: true, S2: true},  // monitoring sensors (config.py DEFAULT_MONITORING_SENSORS)
   mask_forest: false,                               // original GUI: no forest mask
   mask_water: true,                                 // original GUI: water masked
   allow_large: false
@@ -102,8 +119,8 @@ var APP_DEFAULTS = {
 
 // app.py widget limits.
 var RANGES = {
-  expectation_years: [2016, 2025],
-  monitoring_years: [2024, 2025, 2026],
+  expectation_years: [2010, 2025],                  // config.py EXPECTATION_YEARS
+  monitoring_years: [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026],  // MONITORING_YEARS
   sensitivity: {min: 0.25, max: 3.0, step: 0.05},
   threshold: {min: 0.5, max: 0.99, step: 0.01},     // each of the decrease and increase thresholds
   dampening: {min: 0.1, max: 1.0, step: 0.05},
@@ -168,25 +185,93 @@ function sensorList(codes) {
   return names.length === 1 ? names[0] : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
 }
 
+function yearsLabel(first, last) {
+  return first === last ? 'year ' + first : 'years ' + first + '-' + last;
+}
+
+// [kind, text, overlap first, overlap last] for each of `code`'s gaps that
+// overlaps firstYear..lastYear (config.py _gaps_within()).
+function gapsWithin(code, firstYear, lastYear) {
+  return (SENSOR_GAPS[code] || []).map(function (g) {
+    var a = Math.max(firstYear, g[0] === null ? firstYear : g[0]);
+    var b = Math.min(lastYear, g[1] === null ? lastYear : g[1]);
+    return a <= b ? [g[2], g[3], a, b] : null;
+  }).filter(function (x) { return x; });
+}
+
+// Whether `code` has observations in at least one of firstYear..lastYear (config.py has_data()).
+function hasData(code, firstYear, lastYear) {
+  var covered = 0;
+  gapsWithin(code, firstYear, lastYear).forEach(function (g) { if (g[0] === 'none') covered += g[3] - g[2] + 1; });
+  return covered < lastYear - firstYear + 1;
+}
+
+// The data-availability problem that blocks a run, or null: no chosen
+// expectation sensor has observations in any expectation year, or no chosen
+// monitoring sensor in the monitoring year. Same text as config.py availability_problem().
+function availabilityProblem(c) {
+  var periods = [['expectation', checked(c.expectation_sensors), c.expectation_first, c.expectation_last],
+                 ['monitoring', checked(c.sensors), c.monitoring_year, c.monitoring_year]];
+  for (var i = 0; i < periods.length; i++) {
+    var p = periods[i], codes = p[1], y0 = p[2], y1 = p[3];
+    if (!codes.length || codes.some(function (s) { return hasData(s, y0, y1); })) continue;
+    var reasons = [];
+    codes.forEach(function (s) {
+      gapsWithin(s, y0, y1).forEach(function (g) { if (g[0] === 'none') reasons.push(SENSOR_LABELS[s] + ' has ' + g[1]); });
+    });
+    return 'No selected ' + p[0] + ' sensor has observations in ' + (y0 === y1 ? y0 : y0 + '-' + y1) + ': ' +
+           reasons.join('; ') + '. Choose other sensors or years.';
+  }
+  return null;
+}
+
 // Warnings about the sensor choice (none blocks a run). Same text as config.py
-// sensor_warnings(): the periods use different sensors; an expectation sensor
-// has no or fewer data in some expectation years; a Sentinel-2 expectation
-// long enough to likely exceed Earth Engine's interactive memory limit.
+// sensor_warnings(): the periods use different sensors (among those with
+// observations in each period); an expectation sensor has no or fewer data in
+// some expectation years; a monitoring sensor has no or fewer data in the
+// monitoring year; a first-detected-season year with no monitoring data (when
+// the first-detected season is on); notes on a chosen sensor; a Sentinel-2
+// expectation long enough to likely exceed Earth Engine's interactive memory limit.
 function sensorWarnings(c) {
   var exp = checked(c.expectation_sensors), mon = checked(c.sensors), out = [];
-  if (exp.length && mon.length && exp.join() !== mon.join()) {
-    out.push('The expectation uses ' + sensorList(exp) + ' and monitoring uses ' + sensorList(mon) + '. ' +
-             'Differences between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but ' +
-             'not in the expectation produced false decreases at stable sites that disappeared when both periods ' +
-             'used the same sensors.');
+  var expUsed = exp.filter(function (s) { return hasData(s, c.expectation_first, c.expectation_last); });
+  var monUsed = mon.filter(function (s) { return hasData(s, c.monitoring_year, c.monitoring_year); });
+  if (expUsed.length && monUsed.length && expUsed.join() !== monUsed.join()) {
+    var differ = SENSORS.filter(function (s) { return (expUsed.indexOf(s) >= 0) !== (monUsed.indexOf(s) >= 0); });
+    var text = 'The expectation uses ' + sensorList(expUsed) + ' and monitoring uses ' + sensorList(monUsed) + '. ';
+    if (differ.indexOf('S2') < 0 && differ.some(function (s) { return TM_ETM.indexOf(s) >= 0; })) {
+      text += 'Landsat 5 and 7 (TM/ETM+) and Landsat 8 and 9 (OLI) measure slightly different wavelengths, and ' +
+              'BULC-D does not adjust for it. In tests the NBR difference between them was small (median 0.013 or ' +
+              'less) and caused no false change in stable forest, but decreases agreed best with real change when ' +
+              'Landsat 8 was in both periods.';
+    } else {
+      text += 'Differences between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but ' +
+              'not in the expectation produced false decreases at stable sites that disappeared when both periods ' +
+              'used the same sensors.';
+    }
+    out.push(text);
   }
   exp.forEach(function (s) {
-    var full = SENSOR_FULL_FROM[s];
-    if (c.expectation_first >= full) return;
-    var end = Math.min(c.expectation_last, full - 1);
-    var years = end === c.expectation_first ? 'year ' + c.expectation_first : 'years ' + c.expectation_first + '-' + end;
-    out.push(SENSOR_LABELS[s] + ' has ' + SENSOR_GAPS[s] + ', which affects expectation ' + years +
-             (exp.length > 1 ? '; the sensor mix changes partway through the expectation.' : '.'));
+    gapsWithin(s, c.expectation_first, c.expectation_last).forEach(function (g) {
+      out.push(SENSOR_LABELS[s] + ' has ' + g[1] + ', which affects expectation ' + yearsLabel(g[2], g[3]) +
+               (exp.length > 1 ? '; the sensor mix changes partway through the expectation.' : '.'));
+    });
+  });
+  mon.forEach(function (s) {
+    gapsWithin(s, c.monitoring_year, c.monitoring_year).forEach(function (g) {
+      out.push(SENSOR_LABELS[s] + ' has ' + g[1] + ', which affects the monitoring year (' + c.monitoring_year + ').');
+    });
+  });
+  var empty = (c.timing ? timingYears(c) : []).filter(function (y) {
+    return y !== c.monitoring_year && !mon.some(function (s) { return hasData(s, y, y); });
+  });
+  if (empty.length) {
+    out.push('No selected monitoring sensor has observations in ' + empty.join(', ') + ', so the ' +
+             'first-detected-season run for ' + (empty.length === 1 ? 'that season' : 'those seasons') + ' has ' +
+             'nothing to evaluate and shows no detection there.');
+  }
+  SENSORS.forEach(function (s) {
+    if (SENSOR_NOTES[s] && (exp.indexOf(s) >= 0 || mon.indexOf(s) >= 0)) out.push(SENSOR_NOTES[s]);
   });
   var n = c.expectation_last - c.expectation_first + 1;
   if (exp.indexOf('S2') >= 0 && n > S2_EXPECTATION_MAX_YEARS) {
@@ -219,7 +304,7 @@ function validateControls(c) {
   if (FIT_ORDERS.indexOf(c.fit_order) < 0) return 'The expectation fit order must be 1, 2 or 3.';
   if (!SENSORS.some(function (s) { return c.expectation_sensors[s]; })) return 'Select at least one expectation sensor.';
   if (!MONITORING_SENSORS.some(function (s) { return c.sensors[s]; })) return 'Select at least one monitoring sensor.';
-  return null;
+  return availabilityProblem(c);
 }
 
 // Seasons for the first-detected-season layer: up to the last three years
@@ -283,8 +368,12 @@ function buildConfig(c, aoi) {
     });
     return out;
   }
-  var target = sensors(MONITORING_SENSORS, c.monitoring_year, c.monitoring_year);
-  MONITORING_SENSORS.forEach(function (s) { target[s].enabled = !!c.sensors[s]; });
+  // The default monitoring sensors stay listed, enabled or not; an opt-in sensor
+  // (Landsat 7) is added only when chosen (config.py with_monitoring_sensors()).
+  var target = sensors(MONITORING_SENSORS.filter(function (s) {
+    return DEFAULT_MONITORING_SENSORS.indexOf(s) >= 0 || c.sensors[s];
+  }), c.monitoring_year, c.monitoring_year);
+  Object.keys(target).forEach(function (s) { target[s].enabled = !!c.sensors[s]; });
   return {
     study_area: {aoi_coordinates: aoi.aoi_coordinates == null ? null : aoi.aoi_coordinates,
                  aoi_asset: aoi.aoi_asset == null ? null : aoi.aoi_asset,
@@ -320,7 +409,10 @@ exports.APP_DEFAULTS = APP_DEFAULTS;
 exports.RANGES = RANGES;
 exports.SENSORS = SENSORS;
 exports.MONITORING_SENSORS = MONITORING_SENSORS;
-exports.SENSOR_FULL_FROM = SENSOR_FULL_FROM;
+exports.DEFAULT_MONITORING_SENSORS = DEFAULT_MONITORING_SENSORS;
+exports.SENSOR_GAPS = SENSOR_GAPS;
+exports.hasData = hasData;
+exports.availabilityProblem = availabilityProblem;
 exports.S2_EXPECTATION_MAX_YEARS = S2_EXPECTATION_MAX_YEARS;
 exports.sensorWarnings = sensorWarnings;
 exports.SENSOR_LABELS = SENSOR_LABELS;

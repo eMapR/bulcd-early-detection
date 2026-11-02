@@ -442,20 +442,69 @@ def _clear_s2(region: ee.Geometry, year: int, window: tuple[str, str], cs_thresh
     )
 
 
-def annual_true_color(region: ee.Geometry, year: int, window: tuple[str, str] = ("08-01", "09-15")) -> ee.Image:
-    """Sentinel-2 red/green/blue for one year: median of clear (Cloud Score+)
-    observations in the MM-DD window. For areas too large for one clear
-    date; same processing every year."""
-    return _clear_s2(region, year, window).select(["B4", "B3", "B2"]).median()
+# Reference imagery source: Sentinel-2 when every year shown is from
+# REFERENCE_S2_FROM on, else Landsat for all of them, so one composite never
+# mixes sources (Sentinel-2 has no data before 2016 and fewer scenes before
+# 2018 in Earth Engine's surface-reflectance collection; docs/findings.md,
+# 2026-11-02). gee/outputs.js holds the same values.
+REFERENCE_S2_FROM = 2017
+REFERENCE_SOURCE_LABELS = {"S2": "Sentinel-2", "Landsat": "Landsat"}
+# Landsat Collection 2 Level 2 SR: Sentinel-2 band name -> each sensor's band.
+_LANDSAT_REFERENCE = {
+    "LANDSAT/LT05/C02/T1_L2": ["SR_B1", "SR_B2", "SR_B3", "SR_B4", "SR_B7"],
+    "LANDSAT/LE07/C02/T1_L2": ["SR_B1", "SR_B2", "SR_B3", "SR_B4", "SR_B7"],
+    "LANDSAT/LC08/C02/T1_L2": ["SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B7"],
+    "LANDSAT/LC09/C02/T1_L2": ["SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B7"],
+}
+_S2_NAMES = ["B2", "B3", "B4", "B8", "B12"]   # blue, green, red, NIR, SWIR2
+
+
+def reference_source(years) -> str:
+    """"S2" if every year in `years` is from REFERENCE_S2_FROM on, else "Landsat"."""
+    return "S2" if min(years) >= REFERENCE_S2_FROM else "Landsat"
+
+
+def _clear_landsat(region: ee.Geometry, year: int, window: tuple[str, str]) -> ee.ImageCollection:
+    """Landsat 5/7/8/9 SR for one year's MM-DD window (whichever flew),
+    QA_PIXEL-masked (fill, dilated cloud, cirrus, cloud, shadow), with
+    Sentinel-2 band names and scale (reflectance x 10000) so the same
+    display settings and NBR bands apply. Reference imagery only -
+    independent of BULC-D's evidence pipeline."""
+    def prepare(bands):
+        def f(image):
+            clear = image.select("QA_PIXEL").bitwiseAnd(0b11111).eq(0)
+            return image.select(bands, _S2_NAMES).multiply(0.275).add(-2000).updateMask(clear)
+        return f
+    cols = [ee.ImageCollection(cid).filterBounds(region).filterDate(f"{year}-{window[0]}", f"{year}-{window[1]}")
+            .map(prepare(bands)) for cid, bands in _LANDSAT_REFERENCE.items()]
+    out = cols[0]
+    for c in cols[1:]:
+        out = out.merge(c)
+    return out
+
+
+def _clear(region, year, window, source="S2", cs_threshold=0.6) -> ee.ImageCollection:
+    return _clear_s2(region, year, window, cs_threshold) if source == "S2" else _clear_landsat(region, year, window)
+
+
+def annual_true_color(region: ee.Geometry, year: int, window: tuple[str, str] = ("08-01", "09-15"),
+                      source: str = "S2") -> ee.Image:
+    """Red/green/blue for one year: median of clear observations in the MM-DD
+    window, Sentinel-2 (Cloud Score+) or Landsat (`source`,
+    reference_source()). For areas too large for one clear date; same
+    processing every year."""
+    return _clear(region, year, window, source).select(["B4", "B3", "B2"]).median()
 
 
 def annual_nbr(region: ee.Geometry, year: int, window: tuple[str, str] = ("07-01", "09-15"),
-               crs: str | None = None, cs_threshold: float = 0.6, reproject: bool = True) -> ee.Image:
-    """Sentinel-2 NBR (B8, B12) for one year: median of Cloud Score+-masked
-    observations in the MM-DD `window`, on a fixed 30 m UTM grid. Same
-    processing every year, so years are directly comparable. Reference
-    imagery only - independent of BULC-D's evidence pipeline."""
-    col = _clear_s2(region, year, window, cs_threshold)
+               crs: str | None = None, cs_threshold: float = 0.6, reproject: bool = True,
+               source: str = "S2") -> ee.Image:
+    """NBR (NIR, SWIR2) for one year: median of clear observations in the
+    MM-DD `window`, Sentinel-2 (Cloud Score+-masked) or Landsat (`source`,
+    reference_source()), on a fixed 30 m UTM grid. Same processing every
+    year, so years from one source are directly comparable. Reference imagery
+    only - independent of BULC-D's evidence pipeline."""
+    col = _clear(region, year, window, source, cs_threshold)
     nbr = col.map(lambda i: i.normalizedDifference(["B8", "B12"])).median().rename(f"nbr_{year}")
     # A fixed 30 m grid for analysis; skip for display over large areas, where
     # forcing 30 m everywhere is very expensive (the map is drawn coarser anyway).

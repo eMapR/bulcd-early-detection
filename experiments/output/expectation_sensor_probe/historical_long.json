@@ -1,0 +1,517 @@
+{
+ "started": "2026-11-02T18:50:28.684Z",
+ "area": "projects/bulcd-python-rebuild/assets/testsite",
+ "zoom": 13,
+ "tiles": 6,
+ "pixel": {
+  "label": "Pixel 1 (decrease)",
+  "lon": -123.56922,
+  "lat": 44.84283
+ },
+ "availability": {
+  "L5": {
+   "2008": 13,
+   "2009": 14,
+   "2010": 10,
+   "2011": 12,
+   "2012": 0,
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 0,
+   "2017": 0,
+   "2018": 0,
+   "2019": 0,
+   "2020": 0,
+   "2021": 0,
+   "2022": 0,
+   "2023": 0,
+   "2024": 0,
+   "2025": 0,
+   "2026": 0
+  },
+  "L7": {
+   "2008": 12,
+   "2009": 13,
+   "2010": 12,
+   "2011": 14,
+   "2012": 13,
+   "2013": 13,
+   "2014": 12,
+   "2015": 15,
+   "2016": 13,
+   "2017": 14,
+   "2018": 15,
+   "2019": 15,
+   "2020": 13,
+   "2021": 13,
+   "2022": 10,
+   "2023": 10,
+   "2024": 0,
+   "2025": 0,
+   "2026": 0
+  },
+  "L8": {
+   "2008": 0,
+   "2009": 0,
+   "2010": 0,
+   "2011": 0,
+   "2012": 0,
+   "2013": 12,
+   "2014": 12,
+   "2015": 14,
+   "2016": 13,
+   "2017": 13,
+   "2018": 15,
+   "2019": 14,
+   "2020": 14,
+   "2021": 11,
+   "2022": 13,
+   "2023": 14,
+   "2024": 15,
+   "2025": 15,
+   "2026": 14
+  },
+  "L9": {
+   "2008": 0,
+   "2009": 0,
+   "2010": 0,
+   "2011": 0,
+   "2012": 0,
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 0,
+   "2017": 0,
+   "2018": 0,
+   "2019": 0,
+   "2020": 0,
+   "2021": 0,
+   "2022": 13,
+   "2023": 13,
+   "2024": 13,
+   "2025": 16,
+   "2026": 14
+  },
+  "S2": {
+   "2008": 0,
+   "2009": 0,
+   "2010": 0,
+   "2011": 0,
+   "2012": 0,
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 13,
+   "2017": 24,
+   "2018": 48,
+   "2019": 48,
+   "2020": 50,
+   "2021": 49,
+   "2022": 49,
+   "2023": 48,
+   "2024": 48,
+   "2025": 59,
+   "2026": 60
+  },
+  "S2_cloud_score_plus": {
+   "2008": 0,
+   "2009": 0,
+   "2010": 0,
+   "2011": 0,
+   "2012": 0,
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 26,
+   "2017": 24,
+   "2018": 48,
+   "2019": 48,
+   "2020": 50,
+   "2021": 49,
+   "2022": 49,
+   "2023": 47,
+   "2024": 48,
+   "2025": 60,
+   "2026": 61
+  }
+ },
+ "runs": [
+  {
+   "name": "L7+L8 x 14 yr",
+   "sensors": [
+    "L7",
+    "L8"
+   ],
+   "years": 14,
+   "expectation": [
+    2010,
+    2023
+   ],
+   "monitoring_year": 2026,
+   "warnings": [
+    "The expectation uses Landsat 7 and Landsat 8 and monitoring uses Landsat 8, Landsat 9 and Sentinel-2. Differences between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but not in the expectation produced false decreases at stable sites that disappeared when both periods used the same sensors.",
+    "Landsat 7 has fewer observations in 2022-2023 (its orbit was lowered in 2022: about two thirds to three quarters as many scenes in tests), which affects expectation years 2022-2023; the sensor mix changes partway through the expectation.",
+    "Landsat 8 has no observations before 2013 (its first scenes are from April 2013), which affects expectation years 2010-2012; the sensor mix changes partway through the expectation.",
+    "Landsat 7 images since 2003 have striped gaps (its scan-line corrector failed; about a fifth of each scene is missing), so it gives fewer clear observations per pixel than Landsat 8: about 75-95% as many in tests."
+   ],
+   "expectation_sensors": [
+    "L7",
+    "L8"
+   ],
+   "layers": {
+    "Condition 2026": {
+     "description_chars": 4193545,
+     "s": 42.229,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 23.371,
+     "tiles": [
+      {
+       "s": 12.401,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 20.035,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 20.263,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 20.371,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 17.883,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 23.371,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 293519281,
+     "s": 75.034,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 34.647,
+     "tiles": [
+      {
+       "s": 26.625,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 34.647,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 18.23,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 21.996,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 31.788,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 13.605,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Last detection (decrease)": {
+     "description_chars": 56748859,
+     "s": 81.272,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 40.733,
+     "tiles": [
+      {
+       "s": 22.724,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 15.143,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 26.146,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 29.558,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 15.632,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 40.733,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 28374400,
+     "s": 58.165,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 37.374,
+     "tiles": [
+      {
+       "s": 35.783,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 29.795,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 35.329,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 4.31,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 32.092,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 37.374,
+       "status": 200,
+       "error": null
+      }
+     ]
+    }
+   },
+   "inspector": {
+    "s": 76.413,
+    "ok": true,
+    "error": null
+   }
+  },
+  {
+   "name": "L5+L7+L8 x 14 yr",
+   "sensors": [
+    "L5",
+    "L7",
+    "L8"
+   ],
+   "years": 14,
+   "expectation": [
+    2010,
+    2023
+   ],
+   "monitoring_year": 2026,
+   "warnings": [
+    "The expectation uses Landsat 5, Landsat 7 and Landsat 8 and monitoring uses Landsat 8, Landsat 9 and Sentinel-2. Differences between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but not in the expectation produced false decreases at stable sites that disappeared when both periods used the same sensors.",
+    "Landsat 5 has no observations after 2011 (it stopped imaging in November 2011), which affects expectation years 2012-2023; the sensor mix changes partway through the expectation.",
+    "Landsat 7 has fewer observations in 2022-2023 (its orbit was lowered in 2022: about two thirds to three quarters as many scenes in tests), which affects expectation years 2022-2023; the sensor mix changes partway through the expectation.",
+    "Landsat 8 has no observations before 2013 (its first scenes are from April 2013), which affects expectation years 2010-2012; the sensor mix changes partway through the expectation.",
+    "Landsat 7 images since 2003 have striped gaps (its scan-line corrector failed; about a fifth of each scene is missing), so it gives fewer clear observations per pixel than Landsat 8: about 75-95% as many in tests."
+   ],
+   "expectation_sensors": [
+    "L5",
+    "L7",
+    "L8"
+   ],
+   "layers": {
+    "Condition 2026": {
+     "description_chars": 4901485,
+     "s": 37.417,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 26.879,
+     "tiles": [
+      {
+       "s": 15.461,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 14.435,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 23.65,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 23.769,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 26.879,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 13.098,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 343075081,
+     "s": 83.927,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 41.69,
+     "tiles": [
+      {
+       "s": 21.096,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 35.125,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 41.69,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 17.68,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 35.629,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 25.699,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Last detection (decrease)": {
+     "description_chars": 66306049,
+     "s": 59.827,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 39.43,
+     "tiles": [
+      {
+       "s": 19.017,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 10.615,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 39.43,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 32.406,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 38.172,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 20.204,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 33152995,
+     "s": 117.317,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 40.591,
+     "tiles": [
+      {
+       "s": 31.124,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 38.954,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 32.092,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 31.58,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 40.591,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 35.468,
+       "status": 200,
+       "error": null
+      }
+     ]
+    }
+   },
+   "inspector": {
+    "s": 41.776,
+    "ok": true,
+    "error": null
+   }
+  }
+ ],
+ "finished": "2026-11-02T19:01:48.878Z"
+}

@@ -51,7 +51,16 @@ app's own code (src/bulcd_early_detection) on the same settings:
    expectation sensors; condition, first-detected-season and episode layers ==
    Python over the box; inspector rows and expectation fit == Python at pixel 1.
 
-Run from the bulcd env: cd gee/tests && python run_app_parity.py   (~45 min)
+7. Historical years (docs/findings.md, 2026-11-02): expectation 2010-2014 with
+   Landsat 5, 7 and 8, monitoring 2015 with Landsat 7 and 8, set in the GUI and
+   run: no blocking problem; config and first-detected-season configs ==
+   build() (Landsat 7 added to monitoring only because it is ticked); sensor
+   warnings identical in both apps and shown; the reference imagery layers are
+   Landsat (named so) and the NBR composite loads; condition, first-detected-
+   season and episode layers == Python over the box; inspector rows and
+   expectation fit == Python at pixel 1.
+
+Run from the bulcd env: cd gee/tests && python run_app_parity.py   (~50 min)
 Node and bulcd.js come from ../../BULC-D_rebuild/gee (BULCD_GEE overrides).
 """
 
@@ -88,6 +97,9 @@ TIMING_BOX_BANDS = ["first_decrease_year", "first_decrease_doy"]
 # Must match app_extract.js EXP_SENSOR_RUN: a short expectation, under the Sentinel-2
 # memory limit (docs/findings.md, 2026-10-19).
 EXPECTATION_SENSOR_RUN = dict(expectation=(2022, 2023), expectation_sensors=("L8", "S2"))
+# Must match app_extract.js HISTORICAL_RUN (docs/findings.md, 2026-11-02).
+HISTORICAL_RUN = dict(expectation=(2010, 2014), monitoring_year=2015, expectation_sensors=("L5", "L7", "L8"),
+                      sensors=("L7", "L8"))
 REGRESSORS = {1: ["constant", "cos", "sin"], 2: ["constant", "cos", "sin", "cos2", "sin2"],
               3: ["constant", "cos", "sin", "cos2", "sin2", "cos3", "sin3"]}
 # The original BULC-D GUI's thresholds (gee/tests/legacy_gui.js), the default in both apps.
@@ -240,6 +252,32 @@ def python_side(pixels):
                                    .clip(geom).select("outcome")),
         "timing_box": pool.submit(region, outputs.combine_season_timing(seasons).clip(geom).select(TIMING_BOX_BANDS)),
         "episodes_box": pool.submit(region, outputs.combine_episode_metrics(codes(app_s)).clip(geom)),
+        "rows": {first: pool.submit(pixel.pixel_history, config, *pixels[first])},
+        "expectation": {first: pool.submit(expectation_history, config, *pixels[first])},
+    }
+
+    hr = HISTORICAL_RUN
+    app_h = EarlyDetectionApp()
+    app_h.monitoring_year.value = hr["monitoring_year"]
+    app_h.expectation.value = hr["expectation"]
+    for k, box in app_h.expectation_sensors.items():
+        box.value = k in hr["expectation_sensors"]
+    for k, box in app_h.sensors.items():
+        box.value = k in hr["sensors"]
+    c = app_h.controls()
+    config = build(app_h, c)
+    years = app_h._timing_years()
+    seasons = {y: outputs.detection_timing_image(build(app_h, app_h.controls(y)), c.decision_threshold,
+                                                 c.increase_threshold) for y in years}
+    out["historical"] = {
+        "config": dataclasses.asdict(config), "timing_years": years, "warnings": app_h.sensor_warnings(),
+        "settings_ok": app_h.settings_ok, "reference_source": outputs.reference_source(
+            [hr["monitoring_year"] - 2, hr["monitoring_year"] - 1, hr["monitoring_year"]]),
+        "timing_configs": [dataclasses.asdict(build(app_h, app_h.controls(y))) for y in years],
+        "outcome_box": pool.submit(region, outputs.outcome_image(config, c.decision_threshold, c.increase_threshold)
+                                   .clip(geom).select("outcome")),
+        "timing_box": pool.submit(region, outputs.combine_season_timing(seasons).clip(geom).select(TIMING_BOX_BANDS)),
+        "episodes_box": pool.submit(region, outputs.combine_episode_metrics(codes(app_h)).clip(geom)),
         "rows": {first: pool.submit(pixel.pixel_history, config, *pixels[first])},
         "expectation": {first: pool.submit(expectation_history, config, *pixels[first])},
     }
@@ -612,6 +650,45 @@ def main():
     failures += compare_pixels("expectation sensors", je["pixels"], pe["rows"],
                                [LEGACY_THRESHOLDS["decrease"], LEGACY_THRESHOLDS["increase"]])
     failures += compare_expectation("expectation sensors", je["pixels"], pe["expectation"])
+
+    hr = HISTORICAL_RUN
+    print(f"7. Historical years (GUI): expectation {hr['expectation'][0]}-{hr['expectation'][1]} "
+          f"{'+'.join(hr['expectation_sensors'])}, monitoring {hr['monitoring_year']} {'+'.join(hr['sensors'])}")
+    jh, ph = js["historical"], py["historical"]
+    f = []
+    if jh["problem"] is not None or not ph["settings_ok"]:
+        f.append(f"historical settings blocked: JS {jh['problem']!r}, Python settings_ok={ph['settings_ok']}")
+    if [k for k, on in jh["controls"]["expectation_sensors"].items() if on] != list(hr["expectation_sensors"]) or \
+            [k for k, on in jh["controls"]["sensors"].items() if on] != list(hr["sensors"]):
+        f.append(f"GUI read sensors {jh['controls']['expectation_sensors']} / {jh['controls']['sensors']}")
+    f += subset_mismatches(jh["config"], ph["config"], "historical config")
+    exp_keys = list(ph["config"]["evidence"]["expectation"]["sensors"])
+    target = {k: v["enabled"] for k, v in ph["config"]["evidence"]["target"]["sensors"].items()}
+    if exp_keys != list(hr["expectation_sensors"]):
+        f.append(f"Python expectation sensors {exp_keys}")
+    if target != {"L7": True, "L8": True, "L9": False, "S2": False}:
+        f.append(f"Python monitoring sensors {target}")
+    for y, a, b in zip(ph["timing_years"], jh["timing_configs"], ph["timing_configs"]):
+        f += subset_mismatches(a, b, f"historical timing config {y}")
+    if jh["warnings"] != ph["warnings"]:
+        f.append(f"historical warnings differ: JS {jh['warnings']} vs Python {ph['warnings']}")
+    if not all(f"Warning: {w}" in jh["description"] for w in jh["warnings"]):
+        f.append("the settings description does not show every historical warning")
+    imagery = [n for n in jh["layers"] if n.startswith(("True color", "NBR composite"))]
+    if ph["reference_source"] != "Landsat" or not imagery or not all(n.endswith("(Landsat)") for n in imagery):
+        f.append(f"reference imagery layers not Landsat: {imagery} (Python source {ph['reference_source']})")
+    print(f"  configs == build(); warnings ({len(jh['warnings'])}) identical and shown; imagery layers {imagery}: "
+          f"{'yes' if not f else 'NO'}")
+    for w in jh["warnings"]:
+        print(f"      Warning: {w}")
+    failures += f
+    failures += compare_box("historical condition", jh["outcome_box"], ph["outcome_box"])
+    failures += compare_box("historical first detected season", jh["timing_box"], ph["timing_box"])
+    failures += compare_box("historical last detection / episodes", jh["episodes_box"], ph["episodes_box"])
+    failures += check_episodes(jh["timing_box"], jh["episodes_box"], "historical")
+    failures += compare_pixels("historical", jh["pixels"], ph["rows"],
+                               [LEGACY_THRESHOLDS["decrease"], LEGACY_THRESHOLDS["increase"]])
+    failures += compare_expectation("historical", jh["pixels"], ph["expectation"])
 
     if failures:
         print("\nAPP PARITY FAILED")

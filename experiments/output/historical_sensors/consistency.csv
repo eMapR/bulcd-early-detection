@@ -1,0 +1,22 @@
+aoi,role,variant,expectation,monitoring,status,error,run_s,forest_km2,decrease_km2,increase_km2,decrease_pixels,early_frac,median_first_doy,first_doy_p10,first_doy_p90,doy_hist,ref_dnbr_frac
+interior_forest_quiet,"interior forest, stable",L8 13-14 -> L8,L8 2013-2014,L8,ok,,2,3.066,0.0,0.0,0,,,,,,
+interior_forest_quiet,"interior forest, stable",L7 -> L7,L7 2010-2014,L7,ok,,8,3.066,0.0,0.0,0,,,,,,
+interior_forest_quiet,"interior forest, stable",L7 -> L8,L7 2010-2014,L8,ok,,10,3.066,0.0,0.0,0,,,,,,
+interior_forest_quiet,"interior forest, stable",L7 -> L7+L8,L7 2010-2014,L7+L8,ok,,9,3.066,0.0,0.0,0,,,,,,
+interior_forest_quiet,"interior forest, stable",L7+L8 -> L7+L8,L7+L8 2010-2014,L7+L8,ok,,12,3.066,0.0,0.0,0,,,,,,
+interior_forest_quiet,"interior forest, stable",L5+L7 -> L8,L5+L7 2010-2014,L8,ok,,21,3.066,0.0,0.0,0,,,,,,
+interior_forest_quiet,"interior forest, stable",L5+L7+L8 -> L7+L8,L5+L7+L8 2010-2014,L7+L8,ok,,9,3.066,0.0,0.0,0,,,,,,
+stockton_interior,"interior forest, stable",L8 13-14 -> L8,L8 2013-2014,L8,ok,,4,3.066,0.0009,0.0,1,0.0,260.0,260.0,260.0,260:1,
+stockton_interior,"interior forest, stable",L7 -> L7,L7 2010-2014,L7,ok,,8,3.066,0.0009,0.0009,1,1.0,164.0,164.0,164.0,164:1,
+stockton_interior,"interior forest, stable",L7 -> L8,L7 2010-2014,L8,ok,,4,3.066,0.0,0.0027,0,,,,,,
+stockton_interior,"interior forest, stable",L7 -> L7+L8,L7 2010-2014,L7+L8,ok,,9,3.066,0.0,0.0009,0,,,,,,
+stockton_interior,"interior forest, stable",L7+L8 -> L7+L8,L7+L8 2010-2014,L7+L8,ok,,12,3.066,0.0,0.0,0,,,,,,
+stockton_interior,"interior forest, stable",L5+L7 -> L8,L5+L7 2010-2014,L8,ok,,10,3.066,0.0018,0.0027,2,0.0,252.0,232.8,271.2,228:1 276:1,
+stockton_interior,"interior forest, stable",L5+L7+L8 -> L7+L8,L5+L7+L8 2010-2014,L7+L8,ok,,9,3.066,0.0,0.0,0,,,,,,
+testsite,"managed forest, harvests",L8 13-14 -> L8,L8 2013-2014,L8,ok,,6,24.461,0.0486,1.6983,54,0.759,160.0,160.0,217.60000000000014,160:41 168:6 184:1 232:1 240:2 256:2 272:1,0.574
+testsite,"managed forest, harvests",L7 -> L7,L7 2010-2014,L7,ok,,12,24.461,0.0558,1.6281,62,0.339,176.0,160.0,207.2,160:21 168:1 176:30 192:1 200:2 208:1 232:4 240:1 272:1,0.387
+testsite,"managed forest, harvests",L7 -> L8,L7 2010-2014,L8,ok,,5,24.461,0.0711,1.3896,79,0.595,160.0,160.0,256.0,160:47 168:8 176:1 184:1 216:1 232:3 240:4 256:12 272:2,0.405
+testsite,"managed forest, harvests",L7 -> L7+L8,L7 2010-2014,L7+L8,ok,,10,24.461,0.0486,1.3338,54,0.833,160.0,160.0,168.0,160:45 168:5 176:2 192:1 208:1,0.5
+testsite,"managed forest, harvests",L7+L8 -> L7+L8,L7+L8 2010-2014,L7+L8,ok,,8,24.461,0.0441,1.0674,49,0.878,160.0,160.0,168.0,160:43 168:2 176:1 200:1 208:1 216:1,0.571
+testsite,"managed forest, harvests",L5+L7 -> L8,L5+L7 2010-2014,L8,ok,,8,24.461,0.0639,1.6524,71,0.732,160.0,160.0,256.0,160:52 168:4 176:2 184:2 232:1 240:2 256:7 272:1,0.423
+testsite,"managed forest, harvests",L5+L7+L8 -> L7+L8,L5+L7+L8 2010-2014,L7+L8,ok,,15,24.461,0.0423,1.2897,47,0.894,160.0,160.0,163.2,160:42 168:4 192:1,0.574

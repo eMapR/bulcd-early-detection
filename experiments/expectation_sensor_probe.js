@@ -3,9 +3,10 @@
 // Drives the GEE app (gee/app.js, stub `ui`, testsite asset, Run) with the
 // default settings except the expectation: years 2022-2023, 2021-2023, 2020-2023,
 // 2018-2023 and 2016-2023 (2, 3, 4, 6, 8 years), sensors L8 (today's default,
-// the control), L8+S2 and L8+L9+S2. The config module passed to main() sets the
-// expectation years and sensors (the app's expectation-sensor control);
-// nothing else changes. For each run it records:
+// the control), L8+S2 and L8+L9+S2, set through the GUI's year and
+// expectation-sensor widgets (until 2026-11-02 the probe replaced the config
+// module's buildConfig() instead; same configs). Nothing else changes. For each
+// run it records:
 //   - each BULC-D layer's fully expanded description size (the Code Editor's
 //     "Description length exceeds maximum" limit; gee/tests/layer_size_check.js);
 //   - the map tiles at zoom 13 over the testsite for the condition,
@@ -13,10 +14,15 @@
 //     fetched in parallel per layer as a browser would: time and any error;
 //   - the inspector query at reference pixel 1 (the app's own
 //     historyQuery + expectationQuery): time and any error.
-// Also counts raw L8/L9/S2 scenes over the testsite per year in the season window.
+// Also counts raw L5/L7/L8/L9/S2 scenes over the testsite per year in the season window.
+//
+// Historical runs (docs/findings.md, 2026-11-02): PROBE_LAST sets the expectation's last year (default
+// 2023), PROBE_MONITORING the monitoring year (default 2026) and PROBE_MON_SENSORS the monitoring sensors
+// (default: the app's). The settings are made through the GUI's own widgets, as a user would.
 //
 // usage: node experiments/expectation_sensor_probe.js [out.json]   (hours; run in the background)
 // PROBE_SENSORS=L8+L9+S2 PROBE_YEARS=4,6,8 limit the runs (e.g. to resume an interrupted probe).
+// e.g. PROBE_SENSORS=L7,L5+L7+L8 PROBE_YEARS=5 PROBE_LAST=2014 PROBE_MONITORING=2015 PROBE_MON_SENSORS=L7+L8
 const fs = require('fs');
 const path = require('path');
 
@@ -30,11 +36,13 @@ const OUT = process.argv[2] || path.join(ROOT, 'experiments', 'output', 'expecta
 const SENSOR_SETS = (process.env.PROBE_SENSORS ? process.env.PROBE_SENSORS.split(',').map((s) => s.split('+'))
                      : [['L8'], ['L8', 'S2'], ['L8', 'L9', 'S2']]);
 const YEARS = (process.env.PROBE_YEARS ? process.env.PROBE_YEARS.split(',').map(Number)
-               : [2, 4, 6, 8]);  // expectation lengths, all ending 2023
-const LAST_YEAR = 2023;
+               : [2, 4, 6, 8]);  // expectation lengths, all ending LAST_YEAR
+const LAST_YEAR = Number(process.env.PROBE_LAST || 2023);
+const MONITORING_YEAR = Number(process.env.PROBE_MONITORING || 2026);
+const MON_SENSORS = process.env.PROBE_MON_SENSORS ? process.env.PROBE_MON_SENSORS.split('+') : null;
 const ZOOM = 13;
 const TILE_TIMEOUT_MS = 15 * 60 * 1000;
-const LAYERS = ['Condition 2026', 'First detected season (decrease)', 'Last detection (decrease)',
+const LAYERS = ['Condition ' + MONITORING_YEAR, 'First detected season (decrease)', 'Last detection (decrease)',
                 'Detection episodes (decrease)'];
 
 // Same as gee/tests/layer_size_check.js expandedLength().
@@ -105,11 +113,11 @@ async function layerTiles(layer, tiles) {
 
 async function availability(geom) {
   const counts = {};
-  const ids = { L8: 'LANDSAT/LC08/C02/T1_L2', L9: 'LANDSAT/LC09/C02/T1_L2', S2: 'COPERNICUS/S2_SR_HARMONIZED',
+  const ids = { L5: 'LANDSAT/LT05/C02/T1_L2', L7: 'LANDSAT/LE07/C02/T1_L2', L8: 'LANDSAT/LC08/C02/T1_L2', L9: 'LANDSAT/LC09/C02/T1_L2', S2: 'COPERNICUS/S2_SR_HARMONIZED',
                 S2_cloud_score_plus: 'GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED' };
   for (const [k, id] of Object.entries(ids)) {
     const d = {};
-    for (let y = 2013; y <= 2026; y++) {
+    for (let y = 2008; y <= 2026; y++) {
       d[y] = ee.ImageCollection(id).filterBounds(geom).filterDate(y + '-06-01', y + '-10-01').size();
     }
     counts[k] = await evaluate(ee.Dictionary(d));
@@ -121,22 +129,10 @@ async function main() {
   await init();
   const bulcd = require(path.join(BULCD_GEE, 'bulcd.js'));
   const appConfig = require(path.join(ROOT, 'gee', 'config.js'));
-  let expectationSensors = null, expectationFirst = null;
-  // The app's config module with only the expectation (first year, sensors) replaced. The same
-  // config the app's own expectation-sensor control builds (every sensor gets the L8 entry's
-  // years, window and cloud cover).
-  const probeConfig = Object.assign({}, appConfig, {
-    buildConfig(c, aoi) {
-      const boxes = {};
-      appConfig.SENSORS.forEach((s) => { boxes[s] = expectationSensors.includes(s); });
-      return appConfig.buildConfig(Object.assign({}, c, { expectation_first: expectationFirst,
-                                                          expectation_sensors: boxes }), aoi);
-    },
-  });
   const { ui, created } = makeUi();
   global.ui = ui;
   const handle = require(path.join(ROOT, 'gee', 'app.js')).main(
-    bulcd, probeConfig, require(path.join(ROOT, 'gee', 'outputs.js')), require(path.join(ROOT, 'gee', 'inspector.js')),
+    bulcd, appConfig, require(path.join(ROOT, 'gee', 'outputs.js')), require(path.join(ROOT, 'gee', 'inspector.js')),
     require(path.join(ROOT, 'gee', 'aoi.js')), require(path.join(ROOT, 'gee', 'controls.js')));
   const map = created.maps[0];
   const inspector = require(path.join(ROOT, 'gee', 'inspector.js'));
@@ -158,15 +154,24 @@ async function main() {
 
   for (const sensors of SENSOR_SETS) {
     for (const n of YEARS) {
-      expectationSensors = sensors;
-      expectationFirst = LAST_YEAR - n + 1;
-      const name = sensors.join('+') + ' x ' + n + ' yr';
+      const ctl = handle.controls;
+      ctl.monitoring.setValue(String(MONITORING_YEAR));
+      ctl.expectationFirst.setValue(String(LAST_YEAR - n + 1));
+      ctl.expectationLast.setValue(String(LAST_YEAR));
+      appConfig.SENSORS.forEach((s) => ctl.expectationSensors[s].setValue(sensors.includes(s)));
+      if (MON_SENSORS) appConfig.MONITORING_SENSORS.forEach((s) => ctl.sensors[s].setValue(MON_SENSORS.includes(s)));
+      const problem = appConfig.validateControls(ctl.read());
+      if (problem) throw new Error('settings blocked: ' + problem);
+      const name = sensors.join('+') + ' x ' + n + ' yr' + (LAST_YEAR === 2023 ? '' : ' to ' + LAST_YEAR) +
+                   (MONITORING_YEAR === 2026 ? '' : ', monitoring ' + MONITORING_YEAR + (MON_SENSORS ? ' ' +
+                    MON_SENSORS.join('+') : ''));
       const prev = handle.state.run;
       handle.runButton.state.handlers.click();
       await waitFor(() => handle.state.run && handle.state.run !== prev, 'the ' + name + ' run');
       const run = handle.state.run;
       const exp = run.config.evidence.expectation.sensors[sensors[0]];
       const rec = { name, sensors, years: n, expectation: [exp.first_year, exp.last_year - 1],
+                    monitoring_year: MONITORING_YEAR, warnings: appConfig.sensorWarnings(ctl.read()),
                     expectation_sensors: Object.keys(run.config.evidence.expectation.sensors), layers: {} };
       for (const lname of LAYERS) {
         const l = map.state.layers.items.find((x) => x.name === lname);

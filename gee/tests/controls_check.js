@@ -55,11 +55,14 @@ assert.strictEqual(d.decrease_threshold, LEGACY_DEFAULTS.decrease_threshold);
 assert.strictEqual(d.increase_threshold, LEGACY_DEFAULTS.increase_threshold);
 assert.match(appConfig.validateControls(Object.assign({}, d, { increase_threshold: 1.0 })), /increase threshold/);
 
-// Sensors for each period. Default: expectation Landsat 8 only (unchanged), monitoring all three,
-// so the default config's expectation has exactly the one L8 entry it had before.
-assert.deepStrictEqual(d.expectation_sensors, { L8: true, L9: false, S2: false });
-assert.deepStrictEqual(d.sensors, { L8: true, L9: true, S2: true });
+// Sensors for each period. Default: expectation Landsat 8 only (unchanged), monitoring L8/L9/S2
+// (Landsat 7 an opt-in), so the default config has exactly the entries it had before L5/L7 were added.
+assert.deepStrictEqual(d.expectation_sensors, { L5: false, L7: false, L8: true, L9: false, S2: false });
+assert.deepStrictEqual(d.sensors, { L7: false, L8: true, L9: true, S2: true });
 assert.deepStrictEqual(Object.keys(cfg.evidence.expectation.sensors), ['L8']);
+assert.deepStrictEqual(Object.keys(cfg.evidence.target.sensors), ['L8', 'L9', 'S2']);
+assert.deepStrictEqual(Object.keys(controls.expectationSensors), ['L5', 'L7', 'L8', 'L9', 'S2']);
+assert.deepStrictEqual(Object.keys(controls.sensors), ['L7', 'L8', 'L9', 'S2']);  // no Landsat 5 (ended 2011)
 const status2 = () => created.labels.map((l) => l.state.value).join('\n');
 assert.match(status2(), /Warning: The expectation uses Landsat 8 and monitoring uses Landsat 8, Landsat 9 and Sentinel-2/);
 // Any combination, from the widgets: only the ticked sensors, in L8/L9/S2 order, same years/window/cloud cover.
@@ -79,13 +82,57 @@ assert.doesNotMatch(status2(), /expectation uses/);
 // Landsat 9 before 2022 warns about the years it doesn't cover.
 assert.match(status2(), /Landsat 9 has no observations before 2022 .*expectation years 2018-2021; the sensor mix changes/);
 // No expectation sensor blocks the run; none for monitoring too.
-['L8', 'L9', 'S2'].forEach((k) => controls.expectationSensors[k].setValue(false));
+appConfig.SENSORS.forEach((k) => controls.expectationSensors[k].setValue(false));
 assert.strictEqual(appConfig.validateControls(controls.read()), 'Select at least one expectation sensor.');
 assert.match(status2(), /Select at least one expectation sensor\. Run is blocked/);
 controls.expectationSensors.L8.setValue(true);
 controls.expectationSensors.S2.setValue(false);
 assert.deepStrictEqual(controls.read().expectation_sensors, d.expectation_sensors);
 assert.deepStrictEqual(appConfig.buildConfig(controls.read(), AOI), cfg);
+
+// Historical years (docs/findings.md, 2026-11-02): the widgets reach back to 2010 (expectation) and
+// 2015 (monitoring); Landsat 5/7 reach the config; years without data warn, or block when a period
+// has none.
+assert.deepStrictEqual(controls.expectationFirst.items().items.map(Number)[0], 2010);
+assert.deepStrictEqual(controls.monitoring.items().items.map(Number),
+                       [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]);
+controls.monitoring.setValue('2015');
+controls.expectationFirst.setValue('2010');
+controls.expectationLast.setValue('2014');
+assert.match(status2(), /Landsat 8 has no observations before 2013 .*expectation years 2010-2012\./);
+assert.match(status2(), /Landsat 9 has no observations before 2022 .*monitoring year \(2015\)/);
+controls.expectationSensors.L7.setValue(true);
+controls.sensors.L7.setValue(true);
+let h = appConfig.buildConfig(controls.read(), AOI).evidence;
+assert.deepStrictEqual(Object.keys(h.expectation.sensors), ['L7', 'L8']);
+assert.deepStrictEqual([h.expectation.sensors.L7.first_year, h.expectation.sensors.L7.last_year], [2010, 2015]);
+assert.deepStrictEqual(Object.keys(h.target.sensors), ['L7', 'L8', 'L9', 'S2']);
+assert.deepStrictEqual(h.target.sensors.L7, h.target.sensors.L8);
+assert.match(status2(), /Landsat 7 images since 2003 have striped gaps/);
+// Only Landsat 5: no data in 2012-2014 -> blocked, with the reason.
+['L7', 'L8'].forEach((k) => controls.expectationSensors[k].setValue(false));
+controls.expectationSensors.L5.setValue(true);
+controls.expectationFirst.setValue('2012');
+assert.match(appConfig.validateControls(controls.read()),
+             /^No selected expectation sensor has observations in 2012-2014: Landsat 5 has no observations after 2011/);
+assert.match(status2(), /Run is blocked/);
+assert.throws(() => appConfig.buildConfig(controls.read(), AOI), /No selected expectation sensor/);
+// Only Landsat 7 for monitoring 2024: blocked.
+controls.expectationSensors.L5.setValue(false);
+controls.expectationSensors.L8.setValue(true);
+controls.expectationFirst.setValue('2018'); controls.expectationLast.setValue('2023');
+controls.monitoring.setValue('2024');
+['L8', 'L9', 'S2'].forEach((k) => controls.sensors[k].setValue(false));
+assert.match(appConfig.validateControls(controls.read()),
+             /^No selected monitoring sensor has observations in 2024: Landsat 7 has no observations after 2023/);
+// Back to the defaults: the config is exactly the default one again.
+controls.sensors.L7.setValue(false);
+['L8', 'L9', 'S2'].forEach((k) => controls.sensors[k].setValue(true));
+controls.monitoring.setValue('2026');
+assert.deepStrictEqual(controls.read().expectation_sensors, d.expectation_sensors);
+assert.deepStrictEqual(controls.read().sensors, d.sensors);
+assert.deepStrictEqual(appConfig.buildConfig(controls.read(), AOI), cfg);
+console.log('historical years: 2010/2015 limits, Landsat 5/7 in the config, availability warnings and blocks - ok');
 
 // Expectation fit order: a select in Advanced settings, default 1 = the original GUI's
 // constant + unimodal (the modality check above); 2 and 3 add bimodal and trimodal.

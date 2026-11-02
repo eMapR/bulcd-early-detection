@@ -23,6 +23,10 @@
 //      expectation, run through the GUI: configs, the settings description's
 //      warnings, condition, first-detected-season and episode layers over the box,
 //      and the inspector (rows, expectation fit) at pixel 1.
+//   7. Historical years: expectation 2010-2014 with Landsat 5/7/8, monitoring 2015
+//      with Landsat 7/8, set in the GUI and run: configs, warnings, the reference
+//      imagery layer names, condition/timing/episode layers over the box, and the
+//      inspector at pixel 1.
 // usage: node app_extract.js <out.json>
 const fs = require('fs');
 const path = require('path');
@@ -60,6 +64,9 @@ const PM_CONTROLS = Object.assign({}, appConfig.APP_DEFAULTS, {
 const TIMING_BOX_BANDS = ['first_decrease_year', 'first_decrease_doy'];
 // Must match run_app_parity.py EXPECTATION_SENSOR_RUN.
 const EXP_SENSOR_RUN = { expectation_first: 2022, expectation_last: 2023, expectation_sensors: ['L8', 'S2'] };
+// Must match run_app_parity.py HISTORICAL_RUN (docs/findings.md, 2026-11-02).
+const HISTORICAL_RUN = { expectation_first: 2010, expectation_last: 2014, monitoring_year: 2015,
+                         expectation_sensors: ['L5', 'L7', 'L8'], sensors: ['L7', 'L8'] };
 
 async function runGui(handle, what) {
   const prev = handle.state.run;
@@ -105,7 +112,10 @@ async function selectPixels(handle, created, map, pixels, how, thresholds) {
     } else {
       map.state.handlers.click({ lon: p.lon, lat: p.lat });
     }
-    await waitFor(() => created.charts.length >= before + 3 || /No clear|failed/.test(labelText(created)),
+    // The inspector's own two messages only: other labels (e.g. the Landsat 7 note's "corrector
+    // failed" in the settings description) must not end the wait before the charts are drawn.
+    await waitFor(() => created.charts.length >= before + 3 ||
+                        /No clear observations here|Pixel history failed/.test(labelText(created)),
                   'the inspector at ' + p.label);
     const [timeline, fit, prob] = created.charts.slice(before);
     const run = handle.state.run;
@@ -143,6 +153,7 @@ async function main(out) {
   const data = { reference: {}, notebook: {}, variant: {} };
 
   // 1. Legacy reference case, through the app's modules (no GUI).
+  console.error('app_extract: section 1 ' + new Date().toISOString());
   const refConfig = bulcd.withDefaults(REFERENCE_CASE);
   const refResult = bulcd.runBulcd(refConfig);
   data.reference.config = refConfig;
@@ -156,6 +167,7 @@ async function main(out) {
   }
 
   // 2. The GUI: asset area, default settings, Run Early Detection.
+  console.error('app_extract: section 2 ' + new Date().toISOString());
   const handle = app.main(bulcd, appConfig, outputs, inspector, aoi, controlsUi);
   const map = created.maps[0];
   data.gui_labels = created.labels.map((l) => l.state.value).filter(Boolean);
@@ -186,6 +198,7 @@ async function main(out) {
                                             { [REFERENCE_PIXELS[2].label]: 'submit' }, run.thresholds);
 
   // 2b. Detection timing raw (Advanced settings), Run.
+  console.error('app_extract: section 2b ' + new Date().toISOString());
   handle.controls.timingConfirmed.setValue(false);
   const raw = await runGui(handle, 'the raw-timing run');
   data.raw = { label: raw.label, controls: handle.controls.read(),
@@ -194,12 +207,14 @@ async function main(out) {
   handle.controls.timingConfirmed.setValue(true);
 
   // 3. Non-default settings: configs only.
+  console.error('app_extract: section 3 ' + new Date().toISOString());
   data.variant.config = bulcd.withDefaults(appConfig.buildConfig(VARIANT, area.aoi));
   data.variant.timing_years = appConfig.timingYears(VARIANT);
   data.variant.timing_configs = data.variant.timing_years.map((y) =>
     bulcd.withDefaults(appConfig.buildConfig(appConfig.withMonitoringYear(VARIANT, y), area.aoi)));
 
   // 4. Expectation fit orders 2 and 3: chosen in Advanced settings, then Run.
+  console.error('app_extract: section 4 ' + new Date().toISOString());
   data.orders = {};
   for (const order of FIT_ORDERS_RUN) {
     handle.controls.fitOrder.setValue(String(order));
@@ -217,6 +232,7 @@ async function main(out) {
   handle.controls.fitOrder.setValue('1');
 
   // 5. Pine Mountain pixel: the detection timing image and the inspector rows there.
+  console.error('app_extract: section 5 ' + new Date().toISOString());
   const ring = [[PM.lon - PM.half, PM.lat - PM.half], [PM.lon + PM.half, PM.lat - PM.half],
                 [PM.lon + PM.half, PM.lat + PM.half], [PM.lon - PM.half, PM.lat + PM.half],
                 [PM.lon - PM.half, PM.lat - PM.half]];
@@ -241,6 +257,7 @@ async function main(out) {
   };
 
   // 6. Expectation sensors: ticked in Advanced settings, with a short expectation, then Run.
+  console.error('app_extract: section 6 ' + new Date().toISOString());
   handle.controls.expectationFirst.setValue(String(EXP_SENSOR_RUN.expectation_first));
   handle.controls.expectationLast.setValue(String(EXP_SENSOR_RUN.expectation_last));
   appConfig.SENSORS.forEach((s) => handle.controls.expectationSensors[s].setValue(
@@ -253,6 +270,30 @@ async function main(out) {
                                            warnings: appConfig.sensorWarnings(c) };
     o.timing_configs = appConfig.timingYears(c).map((y) =>
       bulcd.withDefaults(appConfig.buildConfig(appConfig.withMonitoringYear(c, y), area.aoi)));
+    o.outcome_box = await boxRegion(r.outcome.select('outcome'));
+    o.timing_box = await boxRegion(r.timing.select(TIMING_BOX_BANDS));
+    o.episodes_box = await boxRegion(r.episodes);
+    o.pixels = await selectPixels(handle, created, map, [REFERENCE_PIXELS[0]], {}, r.thresholds);
+  }
+
+  // 7. Historical years: Landsat 5/7/8 expectation 2010-2014, Landsat 7/8 monitoring 2015, set in the GUI.
+  console.error('app_extract: section 7 ' + new Date().toISOString());
+  {
+    const h = HISTORICAL_RUN, ctl = handle.controls;
+    ctl.monitoring.setValue(String(h.monitoring_year));
+    ctl.expectationFirst.setValue(String(h.expectation_first));
+    ctl.expectationLast.setValue(String(h.expectation_last));
+    appConfig.SENSORS.forEach((s) => ctl.expectationSensors[s].setValue(h.expectation_sensors.indexOf(s) >= 0));
+    appConfig.MONITORING_SENSORS.forEach((s) => ctl.sensors[s].setValue(h.sensors.indexOf(s) >= 0));
+    const c = ctl.read();
+    const r = await runGui(handle, 'the historical run');
+    const o = data.historical = { controls: c, label: r.label, config: r.config, problem: appConfig.validateControls(c),
+                                  description: appConfig.describeControls(c), warnings: appConfig.sensorWarnings(c) };
+    o.timing_configs = appConfig.timingYears(c).map((y) =>
+      bulcd.withDefaults(appConfig.buildConfig(appConfig.withMonitoringYear(c, y), area.aoi)));
+    await waitFor(() => map.state.layers.items.some((l) => /^NBR composite/.test(l.name) && !/loading/.test(l.name)),
+                  'the historical NBR composite stretch');
+    o.layers = map.state.layers.items.map((l) => l.name);
     o.outcome_box = await boxRegion(r.outcome.select('outcome'));
     o.timing_box = await boxRegion(r.timing.select(TIMING_BOX_BANDS));
     o.episodes_box = await boxRegion(r.episodes);

@@ -55,8 +55,26 @@ inspect its NBR/fit and probability history.
      known difference (`docs/findings.md`, 2026-10-13).
    - **Early Detection choices** (the original GUI had no default; the user typed or
      ticked them): expectation years 2018–2023, monitoring year 2026, season Jun 1–Sep
-     30, monitoring sensors L8, L9, S2 (the expectation is always Landsat 8; the
-     original GUI used one sensor selection for both periods), cloud cover 70.
+     30, expectation sensor Landsat 8, monitoring sensors L8, L9, S2 (the original GUI
+     used one sensor selection for both periods), cloud cover 70.
+   - **Years and sensors.** Expectation years 2010–2025, monitoring years 2015–2026.
+     Advanced settings choose each period's sensors: Landsat 5, Landsat 7, Landsat 8,
+     Landsat 9 and Sentinel-2 for the expectation; Landsat 7, 8, 9 and Sentinel-2 for
+     monitoring (Landsat 5 ended in 2011). Before 2013 only Landsat 5 (to 2011) and
+     Landsat 7 have data, so an expectation reaching back past 2013 needs one of them.
+     The settings description warns, without blocking, when:
+     - the periods use different sensors (counting only sensors with data in each period);
+     - a chosen sensor has no or fewer observations in some chosen years (Landsat 5 none
+       after 2011; Landsat 7 none after 2023, fewer in 2022–2023; Landsat 8 none before
+       2013; Landsat 9 none before 2022; Sentinel-2 none before 2016, fewer before 2018);
+     - Landsat 7 is chosen (striped gaps since 2003: fewer clear observations per pixel);
+     - a first-detected season has no data from any monitoring sensor (that season shows
+       no detection);
+     - Sentinel-2 is in an expectation longer than 2 years (Earth Engine memory limit).
+
+     It **blocks** the run when no chosen sensor has data in a period (e.g. Landsat 5
+     alone for 2012–2014, or Landsat 7 alone for monitoring 2024). Findings:
+     `docs/findings.md`, 2026-10-19 and 2026-11-02.
    - **Different from the original:** day step 4 (the original slider starts at 3; it
      was set to 4 for the same-pixel comparison).
 
@@ -70,7 +88,9 @@ inspect its NBR/fit and probability history.
      confirmed (Advanced settings; untick for raw).
 3. **Run Early Detection** recomputes for the chosen area. Layers, bottom to top, in
    the map's Layers control: true color for the monitoring year and the two before;
-   the NBR composite (R/G/B = those years, one stretch, water masked); first detected
+   the NBR composite (R/G/B = those years, one stretch, water masked) - both from
+   Sentinel-2, or from Landsat 5/7/8/9 (named "(Landsat)") when any of the three years
+   is before 2017; first detected
    season (decrease; separate runs for up to three seasons, confirmed definition by
    default); last detection (in that same season, the start of the most recent period
    with P(decrease) above the decrease threshold; colored by its position in the
@@ -166,13 +186,19 @@ compares with the Python app's code on the same settings:
    documented values (first detection Apr 17, last detection Sep 24, 2 episodes):
    - the JS and Python detection timing images;
    - both inspectors' episodes, with identical notes.
+6. **Expectation sensors**: Landsat 8 + Sentinel-2 over 2022–2023, ticked in Advanced
+   settings and run. Configs, warnings, layers over the box and the inspector equal Python.
+7. **Historical years**: expectation 2010–2014 with Landsat 5, 7 and 8, monitoring 2015
+   with Landsat 7 and 8, set in the GUI and run. Configs and warnings equal Python; the
+   imagery layers are Landsat; condition, timing and episode layers over the box and the
+   inspector at pixel 1 equal Python.
 
 The true-color and NBR layers are reference imagery outside BULC-D and aren't
 compared. It uses BULC-D_rebuild's Node environment and Earth Engine token helper
 (setup in `../BULC-D_rebuild/gee/README.md`). From the `bulcd` env:
 
 ```sh
-cd gee/tests && python run_app_parity.py      # ~45 min
+cd gee/tests && python run_app_parity.py      # ~50 min
 ```
 
 `tests/controls_check.js` is a quick offline check of the settings panel (no

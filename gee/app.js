@@ -247,10 +247,14 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
     // Layers, bottom to top (the notebook's order); only the condition layer starts on.
     var imgYears = [c.monitoring_year - 2, c.monitoring_year - 1, c.monitoring_year];
     var window = [c.season_start, c.season_end];
+    // Sentinel-2, or Landsat for all three years when any is before outputs.REFERENCE_S2_FROM.
+    var imgSource = outputs.referenceSource(imgYears);
+    var suffix = imgSource === 'S2' ? '' : ' (' + outputs.REFERENCE_SOURCE_LABELS[imgSource] + ')';
     imgYears.forEach(function (y) {
-      addLayer(outputs.annualTrueColor(geom, y, window).clip(geom), outputs.TRUE_COLOR, 'True color ' + y, false);
+      addLayer(outputs.annualTrueColor(geom, y, window, imgSource).clip(geom), outputs.TRUE_COLOR,
+               'True color ' + y + suffix, false);
     });
-    var nbrName = 'NBR composite R=' + imgYears[0] + ' G=' + imgYears[1] + ' B=' + imgYears[2];
+    var nbrName = 'NBR composite R=' + imgYears[0] + ' G=' + imgYears[1] + ' B=' + imgYears[2] + suffix;
     // Added now so it keeps its place in the layer order; its image and stretch are set once the stretch is known.
     var nbrLayer = addLayer(ee.Image(), {}, nbrName + ' (loading)', false);
     if (timing) {
@@ -270,14 +274,15 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
     var large = area.report.area_km2 > aoi.TESTED_LIVE_KM2;
     var crs = aoi.utmCrs(area.report.centroid[0], area.report.centroid[1]);
     var land = imgYears.map(function (y) {
-      return outputs.annualNbr(geom, y, window, crs, !large).updateMask(outputs.notWater());
+      return outputs.annualNbr(geom, y, window, crs, !large, imgSource).updateMask(outputs.notWater());
     });
     outputs.nbrStretchQuery(land, geom, large ? 120 : 30).evaluate(function (stats, error) {
       if (token !== state.runToken) return;  // a newer run replaced these layers
       var stretch = stats && outputs.nbrStretchFromStats(stats);
       if (error || !stretch) {
         nbrLayer.setName(nbrName + ' (failed to load)');
-        legend.add(ui.Label(nbrName + ': failed to load (' + (error || 'no clear Sentinel-2 data') + ')', ERROR));
+        legend.add(ui.Label(nbrName + ': failed to load (' +
+                            (error || 'no clear ' + outputs.REFERENCE_SOURCE_LABELS[imgSource] + ' data') + ')', ERROR));
         return;
       }
       nbrLayer.setEeObject(ee.Image.cat(land).clip(geom));
