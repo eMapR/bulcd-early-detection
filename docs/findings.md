@@ -1477,3 +1477,49 @@ the episode layers were added.
 grows with the number of seasons and the expectation length, so it is the layer most likely to hit this
 limit next. Leaving it alone was a requirement; if it does hit the limit, the same one-band, single-`min()`
 combination would shrink it.
+
+## 2026-10-19 — Expectation sensors: data availability and Earth Engine's interactive memory limit
+
+**Question.** Both apps now let the user choose the expectation sensors (Landsat 8, Landsat 9,
+Sentinel-2; default Landsat 8 only). Which years have data for each sensor, and which sensor sets and
+expectation lengths still run interactively (map tiles and the pixel inspector)?
+
+**Method.** `experiments/expectation_sensor_probe.js` drives the GEE app (stub `ui`, testsite asset,
+default settings, monitoring 2026). Only the expectation changes: sensors L8, L8+S2 or L8+L9+S2, and 2,
+3, 4, 6 or 8 years ending 2023. For each run it fetches every zoom-13 tile over the testsite for the
+Condition, First detected season, Last detection and Detection episodes layers, as a browser would, and
+runs the inspector query at reference pixel 1. Outputs: `experiments/output/expectation_sensor_probe/`
+(`probe*.json`, `probe*.log`, run 2026-10-19 to 2026-11-02; several combinations repeated).
+
+**Availability** (raw scenes over the testsite, Jun 1 – Sep 30, the probe's `availability` line):
+- Landsat 8: 11–15 scenes every year from 2013.
+- Landsat 9: none before 2022 (first scenes Oct 31, 2021), then 13–16.
+- Sentinel-2: none in 2013–2015, 13 in 2016, 24 in 2017, 48–60 from 2018 (Sentinel-2B joined mid-2017).
+
+**Results (testsite):**
+
+| Expectation sensors | 2 yr | 3 yr | 4 yr | 6 yr | 8 yr |
+|---|---|---|---|---|---|
+| L8 | all ok | — | all ok on repeat (first try: one layer 503) | all ok | all ok |
+| L8+S2 | all ok on repeat (first try: one layer, internal error) | inspector fails; layers ok | inspector and timing layers fail (twice) | inspector and timing layers fail | inspector fails ("Please try again"); one layer fails |
+| L8+L9+S2 | all ok on repeat (first try: inspector ok, three layers 503) | inspector fails; three layers fail | inspector and timing layers fail | inspector and timing layers fail | inspector fails; Condition 503 |
+
+"Timing layers" = First detected season, Last detection, Detection episodes.
+
+- **The pixel inspector is the clear line.** With Sentinel-2 in the expectation it passed at 2 years
+  every time (4 runs) and failed in every recorded run of 3 years or more (9 runs): 8 times with "User
+  memory limit exceeded", once (L8+S2, 8 years) with "Please try again". An interrupted L8+L9+S2 4-year
+  run (log only) failed with "Earth Engine memory capacity exceeded".
+- **Map layers fail intermittently**, mixing the per-request "User memory limit exceeded" with the
+  server-wide 503 "Earth Engine memory capacity exceeded". The same layer can fail at 4 years and draw at
+  8, so the layers give no clean threshold. Condition draws far more reliably than the timing layers.
+- **Landsat 8 alone** ran at every length; its only failures were transient 503s that passed on repeat.
+- The layers' expanded description sizes (`layer_size_check.js` measure) depend on the sensor set, not
+  the expectation length: First detected season 244 M chars with L8, 270 M with L8+S2 and 315 M with
+  L8+L9+S2, all still under the Code Editor limit.
+
+**Decision.** `S2_EXPECTATION_MAX_YEARS = 2` (`config.py` and `gee/config.js`; it was a provisional 6).
+Both apps warn, without blocking, when Sentinel-2 is in an expectation longer than 2 years, with the
+measured failure in the text. One threshold fits both Sentinel-2 sets because the inspector fails from 3
+years with either. The default (Landsat 8 only) is unaffected. The parity test's expectation-sensor run
+(section 6, L8+S2 2022–2023) stays under the limit.

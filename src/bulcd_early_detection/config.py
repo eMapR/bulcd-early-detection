@@ -71,7 +71,7 @@ _SENSOR_GAPS = {
 }
 # Expectation length (years) above which a Sentinel-2 expectation is likely
 # to exceed Earth Engine's interactive memory limit (docs/findings.md, 2026-10-19).
-S2_EXPECTATION_MAX_YEARS = 6
+S2_EXPECTATION_MAX_YEARS = 2
 
 # Expectation fit order N = a constant plus the first N annual harmonics
 # (1, 2 and 3 cycles per year): the legacy modalityDictionary's unimodal,
@@ -135,7 +135,8 @@ def sensor_warnings(expectation_sensors, monitoring_sensors, first_year: int, la
     if "S2" in exp and n > S2_EXPECTATION_MAX_YEARS:
         out.append(f"A {n}-year expectation with Sentinel-2 is likely to exceed Earth Engine's memory limit: in "
                    f"tests, Sentinel-2 expectations longer than {S2_EXPECTATION_MAX_YEARS} years failed "
-                   "MEMORY_FAILURE_PLACEHOLDER. Use fewer expectation years or leave Sentinel-2 out of the "
+                   "with the pixel inspector failing every time (usually \"User memory limit exceeded\") and map "
+                   "layers failing intermittently. Use fewer expectation years or leave Sentinel-2 out of the "
                    "expectation.")
     return out
 

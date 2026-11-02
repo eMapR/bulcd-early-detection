@@ -1,0 +1,261 @@
+{
+ "started": "2026-11-02T17:58:26.641Z",
+ "area": "projects/bulcd-python-rebuild/assets/testsite",
+ "zoom": 13,
+ "tiles": 6,
+ "pixel": {
+  "label": "Pixel 1 (decrease)",
+  "lon": -123.56922,
+  "lat": 44.84283
+ },
+ "availability": {
+  "L8": {
+   "2013": 12,
+   "2014": 12,
+   "2015": 14,
+   "2016": 13,
+   "2017": 13,
+   "2018": 15,
+   "2019": 14,
+   "2020": 14,
+   "2021": 11,
+   "2022": 13,
+   "2023": 14,
+   "2024": 15,
+   "2025": 15,
+   "2026": 14
+  },
+  "L9": {
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 0,
+   "2017": 0,
+   "2018": 0,
+   "2019": 0,
+   "2020": 0,
+   "2021": 0,
+   "2022": 13,
+   "2023": 13,
+   "2024": 13,
+   "2025": 16,
+   "2026": 14
+  },
+  "S2": {
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 13,
+   "2017": 24,
+   "2018": 48,
+   "2019": 48,
+   "2020": 50,
+   "2021": 49,
+   "2022": 49,
+   "2023": 48,
+   "2024": 48,
+   "2025": 59,
+   "2026": 60
+  },
+  "S2_cloud_score_plus": {
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 26,
+   "2017": 24,
+   "2018": 48,
+   "2019": 48,
+   "2020": 50,
+   "2021": 49,
+   "2022": 49,
+   "2023": 47,
+   "2024": 48,
+   "2025": 60,
+   "2026": 61
+  }
+ },
+ "runs": [
+  {
+   "name": "L8+L9+S2 x 2 yr",
+   "sensors": [
+    "L8",
+    "L9",
+    "S2"
+   ],
+   "years": 2,
+   "expectation": [
+    2022,
+    2023
+   ],
+   "expectation_sensors": [
+    "L8",
+    "L9",
+    "S2"
+   ],
+   "layers": {
+    "Condition 2026": {
+     "description_chars": 4500085,
+     "s": 43.897,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 35.342,
+     "tiles": [
+      {
+       "s": 14.249,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 10.882,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 7.474,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 8.209,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 11.353,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 35.342,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 314977081,
+     "s": 65.985,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 40.167,
+     "tiles": [
+      {
+       "s": 40.167,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 22.567,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 16.115,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 13.105,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 8.945,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 12.424,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Last detection (decrease)": {
+     "description_chars": 60887149,
+     "s": 57.127,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 35.839,
+     "tiles": [
+      {
+       "s": 8.835,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 17.33,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 12.623,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 18.049,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 14.136,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 35.839,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 30443545,
+     "s": 39.046,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 17.524,
+     "tiles": [
+      {
+       "s": 5.85,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 17.524,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 3.331,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 3.571,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 4.953,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 2.506,
+       "status": 200,
+       "error": null
+      }
+     ]
+    }
+   },
+   "inspector": {
+    "s": 30.432,
+    "ok": true,
+    "error": null
+   }
+  }
+ ],
+ "finished": "2026-11-02T18:02:27.296Z"
+}
