@@ -1,15 +1,25 @@
 # Project State
 
-Last updated: 2026-11-02
+Last updated: 2026-11-04
 
 Concise current-state/handoff doc. Detailed lessons, experimental
 results, and their explanations live in `docs/findings.md` — read it for
 the "why," not this file.
 
-## Pick up here (2026-11-02, laptop)
+## Pick up here (2026-11-04)
 
-**Current project:** regional batch processing for USFS Region 6 (`docs/regional_plan.md`). Before it,
-at the user's request (2026-11-02), historical years (done below). Next: plan step 2.
+**Next: the seven-ecoregion regional run, on islay** (`docs/regional_plan.md`, "Next run: seven EPA Level III
+ecoregions"). The pipeline (`feature/regional-batch-processing` @ `32b11bf` + uncommitted edits) exists only on
+islay. On islay: fetch this branch for the plan, commit the pipeline branch's edits, build the Coast Range run
+(pilot settings + L8/L9 expectation + full year), show the user the config and task count, then submit. Coast
+Range first; report results and real EECU cost before the other six. The laptop has no islay access.
+
+**Waiting on the user:** cloud-masking options for the GEE app (CFMask default + dilation, cloud score, TDOM).
+Reviewed 2026-11-03, nothing implemented: masking lives in BULC-D_rebuild (`landsatEvidence` in `gee/bulcd.js`,
+`bulcd/inputs.py`), so it needs a bulcd change with parity and a decision record; Landsat cloud score needs the
+TOA collections (or the cheaper QA_PIXEL confidence bits); TDOM needs a transience test so it can't mask real
+change (burns, beaver ponding) and must never mask the newest, uncheckable observation. Four questions to the
+user are open (bulcd change OK, cloud score method, TDOM safeguards, GEE-only scope).
 
 **Done on `legacy-parity-0011-app`:**
 - Pixel inspector (GEE): observations in the years between the expectation and monitoring periods,
@@ -23,8 +33,16 @@ at the user's request (2026-11-02), historical years (done below). Next: plan st
   cross-check in `tests/test_expectation_sensors.py`, `controls_check.js` historical section, live parity
   section 7.
 
+- **GEE app: Export to Google Drive** (2026-11-03, user request; GEE app only, Drive GeoTIFF by user choice).
+  Section 4 of the panel (inspector is now 5): per-dataset checkboxes after a run, Drive folder box, one
+  `Export.image.toDrive` task per dataset + a settings CSV. `outputs.js` `exportDatasets()`/`exportParams()`;
+  check `gee/tests/export_check.js` (passes; `Export` stubbed); parity's expected button list updated.
+  Committed 2026-11-04; not yet deployed or run as a real task in the Code Editor.
+
 **Open / to check:**
-- In the Code Editor (after deploying): a long multi-Landsat expectation (e.g. L5+L7+L8 2010–2023), to see whether
+- Export: in the Code Editor after deploy, run one real export of each dataset and open the GeoTIFFs
+  (confirms `formatOptions.noData` is accepted and the files look right).
+- Deployed edeedc3 to the Code Editor 2026-11-02. In the Code Editor: a long multi-Landsat expectation (e.g. L5+L7+L8 2010–2023), to see whether
   First detected season (343 M chars expanded) still renders. If not, apply the 2026-10-13 one-band/`min()` fix.
 - Then plan step 2: `feature/regional-batch-processing` from `legacy-parity-0011-app` (`docs/regional_plan.md`).
 

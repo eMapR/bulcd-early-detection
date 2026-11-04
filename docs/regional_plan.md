@@ -95,3 +95,57 @@ gee/regional.js  viewer (later): the run's ImageCollection mosaicked, outputs.js
 
 Image properties: `controls_json`, `config_json`, product version, both repos' commits, export date, input as-of
 date, tile id, grid.
+
+## Next run: seven EPA Level III ecoregions (agreed 2026-11-04)
+
+Runs **on islay**, with the pipeline on `feature/regional-batch-processing` (`32b11bf` plus uncommitted edits,
+which exist only on islay; the pilot assets' `provenance_json` records that commit). Planned on the laptop,
+which has neither that branch nor islay access. On islay: fetch `legacy-parity-0011-app` for this plan, commit
+the branch's uncommitted edits first, then work on the branch.
+
+**Regions.** `EPA/Ecoregions/2013/L3`, field `us_l3code`. The parts in Oregon and Washington (R6), *assumed*,
+not yet confirmed with the user (Coast Range and Klamath extend into California, Northern Rockies into Idaho).
+Areas from `TIGER/2018/States` intersections, 2026-11-04:
+
+| `us_l3code` | Ecoregion | km² in OR/WA |
+|---|---|---|
+| 1 | Coast Range | 40,825 |
+| 4 | Cascades | 44,856 |
+| 9 | Eastern Cascades Slopes and Foothills | 35,528 |
+| 11 | Blue Mountains | 63,943 |
+| 15 | Northern Rockies | 21,357 |
+| 77 | North Cascades | 30,302 |
+| 78 | Klamath Mountains/California High North Coast Range | 15,552 |
+
+Excluded by the user: Columbia Plateau (10), Northern Basin and Range (80), Puget Lowland (2), Willamette Valley
+(3), Snake River Plain (12). Total ~252,000 km², ~2,700 tiles of 333 x 333 px.
+
+**Settings: the pilot's (`r6-pilot-coast-range-*` `run_json`/`config_json`), with two changes from the user:**
+1. **Expectation sensors L8 + L9** (pilot: L8 only). Expectation still 2018-2023; L9 contributes 2022-2023.
+2. **Season widened to the full year / year to date** (pilot: Jun 1-Sep 30). Same day-of-year window for the
+   expectation and monitoring, as in BULC-D. Use DOY 1-362 as the 2026-10-28 full-year analysis did
+   (`meeting_2026-10-28/scripts/expectation_compare_fullyear.py`): 2024 and 2025 cover the calendar year,
+   2026 runs to the latest imagery; record the as-of date on each tile.
+
+Unchanged: NBR; monitoring L8 + L9; seasons 2024, 2025, 2026 (each a separate run against the same
+expectation) plus the detection-year stack (floor 2024); Landsat scene filter `CLOUD_COVER` < 70; bulcd's
+standard QA_PIXEL cloud mask; 4-day bins; fit order 1; sensitivity 1.0; thresholds 0.65 decrease / 0.75
+increase; dampening 0.7; posterior leveler 0.9; production transition matrix; timing rule confirmed; no
+forest mask, water masked; EPSG:5070, 30 m, the pilot's grid origin and 333-px tiles; product spec v1
+(uint8/uint16, probabilities x 10,000, masked = no data).
+
+**Order: Coast Range first.** Check results and the real cost, report to the user, then the other six.
+
+**Cost estimate (to be confirmed by Coast Range).** Full year costs more than Jun-Sep: 510 EECU-s per
+tile-season for the full-year 2018-2023 expectation (`meeting_2026-10-28/data/bench_fullyear.json`, config
+A, L8-only expectation) against 135-235 for Jun-Sep. With L9 added, assume ~550-650 per tile-season, about
+1,700-2,000 EECU-s per tile for 3 seasons + stack: **Coast Range ~220-270 EECU-hours, all seven
+~1,300-1,600.** Check the project's EECU quota and concurrent-task limit before submitting. Storage ~460 KB
+per tile product, ~5 GB for all seven.
+
+**Risk: snow is not masked.** bulcd's Landsat mask passes the snow flag (QA bit 5, legacy behavior); with a
+full-year expectation, snow is the main seasonal false-detection risk (`meeting_2026-10-28/README.md`
+full-year supplement; Pine Mountain, `docs/findings.md` 2026-10-13). 2026's spring was almost snow-free, so
+2026 can't reveal it. Coast Range is mostly low; Cascades, North Cascades, Blue Mountains and Northern Rockies
+are where it matters. Decide after Coast Range whether those need a snow mask (a bulcd change) or a shorter
+season.
