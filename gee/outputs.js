@@ -337,6 +337,66 @@ function nbrStretchFromStats(stats) {
   return [Math.min.apply(null, lows), Math.max.apply(null, highs)];
 }
 
+// ---------------------------------------------------------------- export
+// Data (not the colored map layers) a run can export to Google Drive as
+// GeoTIFFs. Masked pixels (water, outside the area, no detection) are written
+// as EXPORT_NODATA, since 0 is a real value in several bands (outcome 0 =
+// decrease).
+var EXPORT_NODATA = -9999;
+
+// Earth Engine allows letters, digits, '_' and '-' (and a few others) in task
+// descriptions and file names, at most 100 characters.
+function exportName(parts) {
+  return parts.join('_').replace(/[^A-Za-z0-9_-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').slice(0, 100);
+}
+
+// The run's datasets, in the app's layer order: [{key, label, image, scale,
+// bands}]. `run`: {result, outcome, timing, episodes, monitoringYear, imgYears,
+// window, imgSource, geom, crs}. Images are clipped to the area and cast to one
+// type per file (GeoTIFF bands must share a type).
+function exportDatasets(run) {
+  var geom = run.geom, list = [];
+  function add(key, label, image, bands, scale) {
+    list.push({key: key, label: label, image: image.select(bands).clip(geom), bands: bands, scale: scale});
+  }
+  var final = run.result.final_probabilities;
+  add('condition', 'Condition ' + run.monitoringYear + ': outcome (0 decrease, 1 unchanged, 2 increase, ' +
+      '3 not analyzed) and final probabilities',
+      ee.Image.cat(run.outcome.select('outcome'), final.select(['decrease', 'unchanged', 'increase']))
+        .rename(['outcome', 'p_decrease', 'p_unchanged', 'p_increase']).toFloat(),
+      ['outcome', 'p_decrease', 'p_unchanged', 'p_increase'], 30);
+  if (run.timing) {
+    add('first_detected', 'First detected season (decrease): year, day of year', run.timing.toFloat(),
+        ['first_decrease_year', 'first_decrease_doy'], 30);
+    add('last_detection_episodes', 'Last detection (year, day of year) and detection episodes (decrease)',
+        run.episodes.toFloat(), ['last_decrease_year', 'last_decrease_doy', 'decrease_episodes'], 30);
+  }
+  var landsat = run.imgSource !== 'S2', src = REFERENCE_SOURCE_LABELS[run.imgSource];
+  run.imgYears.forEach(function (y) {
+    add('true_color_' + y, 'True color ' + y + ' (' + src + ' median, B4 B3 B2' +
+        (landsat ? ' on the Sentinel-2 scale' : '') + ')',
+        annualTrueColor(geom, y, run.window, run.imgSource).toInt16(), ['B4', 'B3', 'B2'], landsat ? 30 : 10);
+  });
+  var nbrBands = run.imgYears.map(function (y) { return 'nbr_' + y; });
+  add('nbr', 'NBR ' + run.imgYears.join(', ') + ' (' + src + ' median, one band per year)',
+      ee.Image.cat(run.imgYears.map(function (y) {
+        return annualNbr(geom, y, run.window, run.crs, false, run.imgSource);
+      })).toFloat(), nbrBands, 30);
+  return list;
+}
+
+// Export.image.toDrive() parameters for one dataset.
+function exportParams(dataset, run, folder, prefix) {
+  var name = exportName([prefix, dataset.key]);
+  return {image: dataset.image, description: name, folder: folder, fileNamePrefix: name, region: run.geom,
+          scale: dataset.scale, crs: run.crs, maxPixels: 1e13, fileFormat: 'GeoTIFF',
+          formatOptions: {cloudOptimized: true, noData: EXPORT_NODATA}};
+}
+
+exports.EXPORT_NODATA = EXPORT_NODATA;
+exports.exportName = exportName;
+exports.exportDatasets = exportDatasets;
+exports.exportParams = exportParams;
 exports.classThresholds = classThresholds;
 exports.DECREASE = DECREASE;
 exports.UNCHANGED = UNCHANGED;

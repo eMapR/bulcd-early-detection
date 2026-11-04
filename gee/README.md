@@ -97,7 +97,19 @@ inspect its NBR/fit and probability history.
    seasons); detection episodes (how many separate times P(decrease) rose above the
    threshold in that season: 1, 2, 3+; no smoothing);
    **condition** (the primary layer, on at 0.85 opacity); the study-area outline.
-4. **Pixel inspector.** Click the map or type a longitude/latitude and press **Submit
+4. **Export to Google Drive.** After a run, one checkbox per dataset (all checked): condition
+   (`outcome` 0 decrease / 1 unchanged / 2 increase / 3 not analyzed, plus final `p_decrease`,
+   `p_unchanged`, `p_increase`); first detected season (`first_decrease_year`, `first_decrease_doy`)
+   and last detection/episodes (`last_decrease_year`, `last_decrease_doy`, `decrease_episodes`) when
+   timing is on; true color for each of the three years (B4 B3 B2, int16; Landsat on the Sentinel-2
+   scale); NBR (one band per year); and the run settings as a CSV (the settings line and the full
+   configuration as JSON). Data values, not the colored layers. GeoTIFFs (cloud-optimized) on the
+   area's UTM grid at 30 m (Sentinel-2 true color at 10 m), clipped to the area, masked pixels
+   -9999. **Export to Drive** creates one task per checked dataset, named
+   `bulcd_<area>_<year>_<YYYYMMDD_HHMM>_<dataset>`, in the chosen Drive folder (default
+   `bulcd_early_detection`); start them from the Code Editor's Tasks tab. Code Editor only:
+   published Earth Engine Apps can't run exports.
+5. **Pixel inspector.** Click the map or type a longitude/latitude and press **Submit
    Pixel**. "Expectation -> Monitoring" (the expectation-period observations the fit
    used, the fitted curve through both periods, and the monitoring observations) with
    a summary of the fit at the pixel. When years separate the expectation from the
@@ -247,4 +259,13 @@ different last digit from one evaluation to the next.
 
 ```sh
 cd gee/tests && node inspector_state_check.js
+```
+
+`tests/export_check.js` checks the Export to Google Drive section (live Earth Engine, ~2 min, no
+tasks started: `Export` is a recording stand-in). After a default run on the test asset it checks
+the dataset list, that Export to Drive creates one task per checked dataset with valid unique names,
+the UTM grid and the nodata value, and that each image has its listed bands and one band type.
+
+```sh
+cd gee/tests && node export_check.js
 ```
