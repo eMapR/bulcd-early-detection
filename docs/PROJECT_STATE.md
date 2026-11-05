@@ -1,12 +1,34 @@
 # Project State
 
-Last updated: 2026-11-04 (consolidation)
+Last updated: 2026-11-05 (R6 seven-ecoregion run started)
 
 Concise current-state/handoff doc. Detailed lessons, experimental
 results, and their explanations live in `docs/findings.md` — read it for
 the "why," not this file.
 
-## Pick up here (2026-11-04, consolidated)
+## Pick up here (2026-11-05): the R6 seven-ecoregion run is processing on islay
+
+Started 2026-11-05 at the user's request ("begin processing now"), commits `74127c6` + `a01e255`.
+- **Driver:** `tools/regional_r6.py drive` runs under nohup on islay (pid in `regional_runs/r6_ecoregions/drive.pid`,
+  output `drive.out`, log `drive.log`, every task in `tasks.json`; the last three are git-ignored). Restart it the
+  same way if it stops; it resumes from `tasks.json`. `python tools/regional_r6.py status` reports progress.
+- **Study area:** EPA L3 codes 1, 11, 77, 9, 4, 15, 78 clipped to OR + WA dissolved (TIGER/2018/States), frozen as
+  `regional/r6_study_area/ecoregions_orwa`. The user's "Columbia Mountains" = code 15 (EPA "Northern Rockies",
+  CEC 6.2.3 "Columbia Mountains/Northern Rockies").
+- **Forest mask:** LCMS 2025-11 CONUS, **year 2023** (the last expectation year), `Land_Cover` classes **1-5** (Trees
+  and every trees mix; 2 is AK-only), frozen as `regional/r6_study_area/forest_lcms2023`, passed to bulcd as
+  `forest_mask_asset` (non-forest = condition 3 "not analyzed"; outside the ecoregion = masked). bulcd applies masks
+  to its results, so the mask saves compute only by dropping tiles with no forest.
+- **Tiles with forest (blocks of 2 x 2):** Coast Range 564 (168), Blue Mountains 730 (201), North Cascades 383 (112),
+  East Cascades 482 (154), Cascades 579 (169), Columbia Mountains 263 (78), Klamath 201 (60); total 3,202 (942).
+  Tasks: 942 x 3 seasons + 942 stacks = 3,768. A tile on an ecoregion boundary is computed in each ecoregion's run.
+- **Settings:** the pilot's + L8/L9 expectation + full year (`01-01`-`12-28`: DOY 1-362, 1-363 in leap 2024).
+- **Order:** Coast Range first; the driver starts the other six once 8 Coast Range season tasks completed and none
+  failed. Up to 3 attempts per task; stops submitting above 85% of the asset quota; deletes nothing.
+- **Storage:** quota 250 GB / 50,000 assets, 2.2 GB / 128 used at the start. Estimate ~2.2 MB per block product
+  (pilot 2 x 2 blocks), 4 products per block: ~8-9 GB, ~3,770 assets.
+
+## Earlier: 2026-11-04 consolidation
 
 **Branch:** `integrate/2026-11-consolidation` joins the two diverged copies (split at `5de4c8d`, 2026-10-21):
 - islay's `feature/regional-batch-processing` @ `95c462f`: regional batch pipeline, steps 3-8b;
