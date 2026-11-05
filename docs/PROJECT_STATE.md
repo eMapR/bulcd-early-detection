@@ -9,8 +9,10 @@ the "why," not this file.
 ## Pick up here (2026-11-04)
 
 **Next: the seven-ecoregion regional run, on islay** (`docs/regional_plan.md`, "Next run: seven EPA Level III
-ecoregions"). The pipeline (`feature/regional-batch-processing` @ `32b11bf` + uncommitted edits) exists only on
-islay. On islay: fetch this branch for the plan, commit the pipeline branch's edits, build the Coast Range run
+ecoregions"). The pipeline (`feature/regional-batch-processing` @ `95c462f`, steps 8/8a/8b committed, tree clean
+as of 2026-11-04; pushed status unchecked) exists only on islay. Islay's `legacy-parity-0011-app` was reset to
+`9f85cad` on 2026-11-04 (its stale `883d92e` duplicated `b3baafd`; kept as branch `backup-883d92e`). On islay:
+build the Coast Range run
 (pilot settings + L8/L9 expectation + full year), show the user the config and task count, then submit. Coast
 Range first; report results and real EECU cost before the other six. The laptop has no islay access.
 

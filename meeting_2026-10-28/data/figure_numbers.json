@@ -1,0 +1,118 @@
+{
+ "slide2_counts_px": {
+  "2024": 19031,
+  "2025": 9326,
+  "2026": 10851
+ },
+ "slide2_total_px": 39208,
+ "slide2_pct": {
+  "2024": 48.538563558457454,
+  "2025": 23.78596204856152,
+  "2026": 27.675474392981023
+ },
+ "slide1_pixel": [
+  -123.53167598188563,
+  44.76580315529917
+ ],
+ "slide3_episodes": [
+  [
+   "2024-04-17",
+   "2024-06-08"
+  ],
+  [
+   "2024-09-24",
+   "None"
+  ]
+ ],
+ "slide5_eecu_per_100km2": [
+  164.7,
+  113.2375,
+  196.3375
+ ],
+ "slide6": {
+  "configs": {
+   "A": {
+    "median_obs": 47.0,
+    "decrease_km2": 35.2872,
+    "increase_km2": 51.6708,
+    "agree_with_A_pct": 100.0
+   },
+   "B": {
+    "median_obs": 19.0,
+    "decrease_km2": 16.3278,
+    "increase_km2": 29.5398,
+    "agree_with_A_pct": 82.06739779039165
+   },
+   "C": {
+    "median_obs": 66.0,
+    "decrease_km2": 23.8716,
+    "increase_km2": 30.3444,
+    "agree_with_A_pct": 91.65905549278686
+   }
+  },
+  "still_decrease_pct_by_detection_year": {
+   "B": [
+    10.204403341915821,
+    62.18099935663736,
+    89.77974380241453
+   ],
+   "C": [
+    42.50958961694078,
+    89.127171348917,
+    92.34171965717445
+   ]
+  },
+  "B_increase_on_2024_detections_km2": 5.5152,
+  "B_decrease_reduction_pct": 53.72883085084676
+ },
+ "spot_check": [
+  {
+   "year": "2026",
+   "window_px": 1600,
+   "land_px": 1600,
+   "tiles_in_window": 4,
+   "condition_match": 1600,
+   "max_abs_diff_p_decrease": 4.996056556702544e-05,
+   "max_abs_diff_p_unchanged": 4.982886314391921e-05,
+   "max_abs_diff_p_increase": 4.989213943481369e-05,
+   "first_detection_doy_match": 1572,
+   "condition_counts": {
+    "0": 429,
+    "1": 1143,
+    "2": 28
+   }
+  },
+  {
+   "year": "2025",
+   "window_px": 1600,
+   "land_px": 1600,
+   "tiles_in_window": 4,
+   "condition_match": 1600,
+   "max_abs_diff_p_decrease": 4.998979568482387e-05,
+   "max_abs_diff_p_unchanged": 4.998979568482387e-05,
+   "max_abs_diff_p_increase": 4.991133809089526e-05,
+   "first_detection_doy_match": 1588,
+   "condition_counts": {
+    "0": 380,
+    "1": 1208,
+    "2": 12
+   }
+  },
+  {
+   "year": "2024",
+   "window_px": 1600,
+   "land_px": 1600,
+   "tiles_in_window": 4,
+   "condition_match": 1600,
+   "max_abs_diff_p_decrease": 4.995744824409787e-05,
+   "max_abs_diff_p_unchanged": 4.9771785736063556e-05,
+   "max_abs_diff_p_increase": 4.96885299682559e-05,
+   "first_detection_doy_match": 1591,
+   "condition_counts": {
+    "0": 404,
+    "1": 1187,
+    "2": 9
+   }
+  }
+ ]
+}

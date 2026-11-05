@@ -1,0 +1,961 @@
+{
+ "slide1": {
+  "row": 599,
+  "col": 273,
+  "x": -2145180.0,
+  "y": 2732580.0,
+  "lon": -123.53167598188563,
+  "lat": 44.76580315529917,
+  "patch_score": 221,
+  "asset": {
+   "condition_2024": 1,
+   "condition_2025": 0,
+   "condition_2026": 0,
+   "first_detection_doy_2024": 0,
+   "first_detection_doy_2025": 172,
+   "first_detection_doy_2026": 176,
+   "p_decrease_2024": 435,
+   "p_decrease_2025": 9145,
+   "p_decrease_2026": 9145,
+   "detection_year": 2025
+  },
+  "seasons": {
+   "2024": [
+    {
+     "date": "2024-06-05",
+     "observed": null,
+     "expected": 0.819198545715312,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.1,
+     "unchanged": 0.7999999999999999,
+     "increase": 0.1
+    },
+    {
+     "date": "2024-06-09",
+     "observed": 0.8435071110725403,
+     "expected": 0.8231306210630438,
+     "zscore": 0.4075298001899297,
+     "supports": "unchanged",
+     "decrease": 0.057708333333333334,
+     "unchanged": 0.8845833333333335,
+     "increase": 0.057708333333333334
+    },
+    {
+     "date": "2024-06-13",
+     "observed": null,
+     "expected": 0.8269929641494635,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.057708333333333334,
+     "unchanged": 0.8845833333333335,
+     "increase": 0.057708333333333334
+    },
+    {
+     "date": "2024-06-17",
+     "observed": 0.8560616374015808,
+     "expected": 0.8307672431484266,
+     "zscore": 0.5058878850630832,
+     "supports": "unchanged",
+     "decrease": 0.04731513471602559,
+     "unchanged": 0.9016053994264548,
+     "increase": 0.05107946585751966
+    },
+    {
+     "date": "2024-06-21",
+     "observed": null,
+     "expected": 0.8344355963417498,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.04731513471602559,
+     "unchanged": 0.9016053994264548,
+     "increase": 0.05107946585751966
+    },
+    {
+     "date": "2024-06-25",
+     "observed": 0.8667460083961487,
+     "expected": 0.8379806126368728,
+     "zscore": 0.5753079151855167,
+     "supports": "unchanged",
+     "decrease": 0.04464431132213573,
+     "unchanged": 0.9065239499950847,
+     "increase": 0.04883173868277965
+    },
+    {
+     "date": "2024-06-29",
+     "observed": null,
+     "expected": 0.8413855152978853,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.04464431132213573,
+     "unchanged": 0.9065239499950847,
+     "increase": 0.04883173868277965
+    },
+    {
+     "date": "2024-07-03",
+     "observed": null,
+     "expected": 0.8446341436466119,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.04464431132213573,
+     "unchanged": 0.9065239499950847,
+     "increase": 0.04883173868277965
+    },
+    {
+     "date": "2024-07-07",
+     "observed": null,
+     "expected": 0.8477111235986085,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.04464431132213573,
+     "unchanged": 0.9065239499950847,
+     "increase": 0.04883173868277965
+    },
+    {
+     "date": "2024-07-11",
+     "observed": 0.8600413799285889,
+     "expected": 0.8506018508941628,
+     "zscore": 0.1887905806885204,
+     "supports": "unchanged",
+     "decrease": 0.04325232779965071,
+     "unchanged": 0.912564989164202,
+     "increase": 0.0441826830361473
+    },
+    {
+     "date": "2024-07-15",
+     "observed": null,
+     "expected": 0.8532926362543695,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.04325232779965071,
+     "unchanged": 0.912564989164202,
+     "increase": 0.0441826830361473
+    },
+    {
+     "date": "2024-07-19",
+     "observed": 0.8616335391998291,
+     "expected": 0.8557707352384362,
+     "zscore": 0.11725607922785874,
+     "supports": "unchanged",
+     "decrease": 0.04289507030125645,
+     "unchanged": 0.9140041869513863,
+     "increase": 0.04310074274735731
+    },
+    {
+     "date": "2024-07-23",
+     "observed": null,
+     "expected": 0.8580243860533975,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.04289507030125645,
+     "unchanged": 0.9140041869513863,
+     "increase": 0.04310074274735731
+    },
+    {
+     "date": "2024-07-27",
+     "observed": 0.8684328198432922,
+     "expected": 0.8600429233309135,
+     "zscore": 0.16779793024757517,
+     "supports": "unchanged",
+     "decrease": 0.04280482354414585,
+     "unchanged": 0.9143449391952556,
+     "increase": 0.042850237260598514
+    },
+    {
+     "date": "2024-07-31",
+     "observed": null,
+     "expected": 0.8618167664942181,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.04280482354414585,
+     "unchanged": 0.9143449391952556,
+     "increase": 0.042850237260598514
+    },
+    {
+     "date": "2024-08-04",
+     "observed": 0.8628700971603394,
+     "expected": 0.8633375208574139,
+     "zscore": -0.009348473941490631,
+     "supports": "unchanged",
+     "decrease": 0.04278223809759413,
+     "unchanged": 0.9144254990027867,
+     "increase": 0.04279226289961929
+    },
+    {
+     "date": "2024-08-08",
+     "observed": null,
+     "expected": 0.8645979684691254,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.04278223809759413,
+     "unchanged": 0.9144254990027867,
+     "increase": 0.04279226289961929
+    },
+    {
+     "date": "2024-08-12",
+     "observed": 0.8584028482437134,
+     "expected": 0.8655921442801252,
+     "zscore": -0.1437859207282366,
+     "supports": "unchanged",
+     "decrease": 0.04277662455080487,
+     "unchanged": 0.9144445381313838,
+     "increase": 0.04277883731781125
+    },
+    {
+     "date": "2024-08-16",
+     "observed": null,
+     "expected": 0.8663153296370687,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.04277662455080487,
+     "unchanged": 0.9144445381313838,
+     "increase": 0.04277883731781125
+    },
+    {
+     "date": "2024-08-20",
+     "observed": null,
+     "expected": 0.8667641020762098,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.04277662455080487,
+     "unchanged": 0.9144445381313838,
+     "increase": 0.04277883731781125
+    },
+    {
+     "date": "2024-08-24",
+     "observed": null,
+     "expected": 0.8669363317066748,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.04277662455080487,
+     "unchanged": 0.9144445381313838,
+     "increase": 0.04277883731781125
+    },
+    {
+     "date": "2024-08-28",
+     "observed": 0.8694582581520081,
+     "expected": 0.8668312031061131,
+     "zscore": 0.052541100917899985,
+     "supports": "unchanged",
+     "decrease": 0.042775237102535835,
+     "unchanged": 0.9144490373802076,
+     "increase": 0.04277572551725666
+    },
+    {
+     "date": "2024-09-01",
+     "observed": null,
+     "expected": 0.8664492155942838,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.042775237102535835,
+     "unchanged": 0.9144490373802076,
+     "increase": 0.04277572551725666
+    },
+    {
+     "date": "2024-09-05",
+     "observed": 0.8706237077713013,
+     "expected": 0.8657921795530104,
+     "zscore": 0.0966305643658183,
+     "supports": "unchanged",
+     "decrease": 0.04277489579554557,
+     "unchanged": 0.9144501006035897,
+     "increase": 0.04277500360086488
+    },
+    {
+     "date": "2024-09-09",
+     "observed": null,
+     "expected": 0.8648632089220673,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.04277489579554557,
+     "unchanged": 0.9144501006035897,
+     "increase": 0.04277500360086488
+    },
+    {
+     "date": "2024-09-13",
+     "observed": 0.8798859119415283,
+     "expected": 0.8636666972412202,
+     "zscore": 0.3243842940061614,
+     "supports": "unchanged",
+     "decrease": 0.04277481217527512,
+     "unchanged": 0.9144503518541458,
+     "increase": 0.04277483597057894
+    },
+    {
+     "date": "2024-09-17",
+     "observed": null,
+     "expected": 0.8622083317924403,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.04277481217527512,
+     "unchanged": 0.9144503518541458,
+     "increase": 0.04277483597057894
+    },
+    {
+     "date": "2024-09-21",
+     "observed": null,
+     "expected": 0.8604950169502139,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.04277481217527512,
+     "unchanged": 0.9144503518541458,
+     "increase": 0.04277483597057894
+    },
+    {
+     "date": "2024-09-25",
+     "observed": null,
+     "expected": 0.8585348727549926,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.04277481217527512,
+     "unchanged": 0.9144503518541458,
+     "increase": 0.04277483597057894
+    },
+    {
+     "date": "2024-09-29",
+     "observed": 0.8908460140228271,
+     "expected": 0.8563371730457537,
+     "zscore": 0.6901768195414681,
+     "supports": "unchanged",
+     "decrease": 0.043459513891874205,
+     "unchanged": 0.9103546856853797,
+     "increase": 0.04618580042274588
+    },
+    {
+     "date": "2024-10-03",
+     "observed": null,
+     "expected": 0.8539123639703565,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.043459513891874205,
+     "unchanged": 0.9103546856853797,
+     "increase": 0.04618580042274588
+    }
+   ],
+   "2025": [
+    {
+     "date": "2025-06-05",
+     "observed": 0.19782111048698425,
+     "expected": 0.8186543543710825,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.3272901660582253,
+     "unchanged": 0.572038370911207,
+     "increase": 0.10067146303056757
+    },
+    {
+     "date": "2025-06-09",
+     "observed": null,
+     "expected": 0.8225105722218229,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.3272901660582253,
+     "unchanged": 0.572038370911207,
+     "increase": 0.10067146303056757
+    },
+    {
+     "date": "2025-06-13",
+     "observed": 0.1860853135585785,
+     "expected": 0.8263062647518867,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.645229046228821,
+     "unchanged": 0.27832262698184046,
+     "increase": 0.0764483267893385
+    },
+    {
+     "date": "2025-06-17",
+     "observed": null,
+     "expected": 0.830023468903879,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.645229046228821,
+     "unchanged": 0.27832262698184046,
+     "increase": 0.0764483267893385
+    },
+    {
+     "date": "2025-06-21",
+     "observed": 0.16425132751464844,
+     "expected": 0.8336445417240972,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.8326555756653179,
+     "unchanged": 0.11231640028101857,
+     "increase": 0.05502802405366347
+    },
+    {
+     "date": "2025-06-25",
+     "observed": null,
+     "expected": 0.8371523465402773,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.8326555756653179,
+     "unchanged": 0.11231640028101857,
+     "increase": 0.05502802405366347
+    },
+    {
+     "date": "2025-06-29",
+     "observed": null,
+     "expected": 0.8405302342700881,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.8326555756653179,
+     "unchanged": 0.11231640028101857,
+     "increase": 0.05502802405366347
+    },
+    {
+     "date": "2025-07-03",
+     "observed": null,
+     "expected": 0.8437622081907171,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.8326555756653179,
+     "unchanged": 0.11231640028101857,
+     "increase": 0.05502802405366347
+    },
+    {
+     "date": "2025-07-07",
+     "observed": 0.15942181646823883,
+     "expected": 0.8468329611041786,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.893722125327152,
+     "unchanged": 0.059919150648281023,
+     "increase": 0.046358724024566915
+    },
+    {
+     "date": "2025-07-11",
+     "observed": null,
+     "expected": 0.8497279183061333,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.893722125327152,
+     "unchanged": 0.059919150648281023,
+     "increase": 0.046358724024566915
+    },
+    {
+     "date": "2025-07-15",
+     "observed": 0.16701757907867432,
+     "expected": 0.8524333794554801,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.9094668657914652,
+     "unchanged": 0.046789176974219186,
+     "increase": 0.04374395723431559
+    },
+    {
+     "date": "2025-07-19",
+     "observed": null,
+     "expected": 0.8549365036309653,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.9094668657914652,
+     "unchanged": 0.046789176974219186,
+     "increase": 0.04374395723431559
+    },
+    {
+     "date": "2025-07-23",
+     "observed": 0.17555326223373413,
+     "expected": 0.8572254448353495,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.9132678999920456,
+     "unchanged": 0.043703515696702805,
+     "increase": 0.04302858431125157
+    },
+    {
+     "date": "2025-07-27",
+     "observed": null,
+     "expected": 0.8592893390746077,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.9132678999920456,
+     "unchanged": 0.043703515696702805,
+     "increase": 0.04302858431125157
+    },
+    {
+     "date": "2025-07-31",
+     "observed": 0.20006123185157776,
+     "expected": 0.8611184190005201,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.9141707129809531,
+     "unchanged": 0.042989203297088434,
+     "increase": 0.042840083721958556
+    },
+    {
+     "date": "2025-08-04",
+     "observed": null,
+     "expected": 0.8627040032571179,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.9141707129809531,
+     "unchanged": 0.042989203297088434,
+     "increase": 0.042840083721958556
+    },
+    {
+     "date": "2025-08-08",
+     "observed": null,
+     "expected": 0.8640385880909282,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.9141707129809531,
+     "unchanged": 0.042989203297088434,
+     "increase": 0.042840083721958556
+    },
+    {
+     "date": "2025-08-12",
+     "observed": null,
+     "expected": 0.8651158391663929,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.9141707129809531,
+     "unchanged": 0.042989203297088434,
+     "increase": 0.042840083721958556
+    },
+    {
+     "date": "2025-08-16",
+     "observed": 0.16111686825752258,
+     "expected": 0.8659306560469526,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.9143843143629038,
+     "unchanged": 0.04282430380614414,
+     "increase": 0.04279138183095202
+    },
+    {
+     "date": "2025-08-20",
+     "observed": null,
+     "expected": 0.8664791784452407,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.9143843143629038,
+     "unchanged": 0.04282430380614414,
+     "increase": 0.04279138183095202
+    },
+    {
+     "date": "2025-08-24",
+     "observed": 0.13819515705108643,
+     "expected": 0.8667588034120013,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.9144348048933737,
+     "unchanged": 0.04278623109826374,
+     "increase": 0.042778964008362654
+    },
+    {
+     "date": "2025-08-28",
+     "observed": null,
+     "expected": 0.8667682061263494,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.9144348048933737,
+     "unchanged": 0.04278623109826374,
+     "increase": 0.042778964008362654
+    },
+    {
+     "date": "2025-09-01",
+     "observed": 0.12477654218673706,
+     "expected": 0.8665073434601722,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.914446737110128,
+     "unchanged": 0.04277743346842528,
+     "increase": 0.04277582942144674
+    },
+    {
+     "date": "2025-09-05",
+     "observed": null,
+     "expected": 0.865977451739304,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.914446737110128,
+     "unchanged": 0.04277743346842528,
+     "increase": 0.04277582942144674
+    },
+    {
+     "date": "2025-09-09",
+     "observed": null,
+     "expected": 0.8651810358889566,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.914446737110128,
+     "unchanged": 0.04277743346842528,
+     "increase": 0.04277582942144674
+    },
+    {
+     "date": "2025-09-13",
+     "observed": null,
+     "expected": 0.8641218814480254,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.914446737110128,
+     "unchanged": 0.04277743346842528,
+     "increase": 0.04277582942144674
+    },
+    {
+     "date": "2025-09-17",
+     "observed": 0.199198380112648,
+     "expected": 0.862805003549925,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.9144495568559269,
+     "unchanged": 0.04277539859897616,
+     "increase": 0.04277504454509699
+    },
+    {
+     "date": "2025-09-21",
+     "observed": null,
+     "expected": 0.861236643372014,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.9144495568559269,
+     "unchanged": 0.04277539859897616,
+     "increase": 0.04277504454509699
+    },
+    {
+     "date": "2025-09-25",
+     "observed": 0.17614112794399261,
+     "expected": 0.8594242205834124,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.9144502231922602,
+     "unchanged": 0.04277492747811746,
+     "increase": 0.04277484932962225
+    },
+    {
+     "date": "2025-09-29",
+     "observed": null,
+     "expected": 0.8573763500264271,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.9144502231922602,
+     "unchanged": 0.04277492747811746,
+     "increase": 0.04277484932962225
+    },
+    {
+     "date": "2025-10-03",
+     "observed": null,
+     "expected": 0.8551027256110059,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.9144502231922602,
+     "unchanged": 0.04277492747811746,
+     "increase": 0.04277484932962225
+    }
+   ],
+   "2026": [
+    {
+     "date": "2026-06-05",
+     "observed": null,
+     "expected": 0.8186543543710825,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.1,
+     "unchanged": 0.7999999999999999,
+     "increase": 0.1
+    },
+    {
+     "date": "2026-06-09",
+     "observed": null,
+     "expected": 0.8225105722218229,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.1,
+     "unchanged": 0.7999999999999999,
+     "increase": 0.1
+    },
+    {
+     "date": "2026-06-13",
+     "observed": -0.15292735397815704,
+     "expected": 0.8263062647518867,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.3272901660582253,
+     "unchanged": 0.572038370911207,
+     "increase": 0.10067146303056757
+    },
+    {
+     "date": "2026-06-17",
+     "observed": -0.1558578461408615,
+     "expected": 0.830023468903879,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.645229046228821,
+     "unchanged": 0.27832262698184046,
+     "increase": 0.0764483267893385
+    },
+    {
+     "date": "2026-06-21",
+     "observed": null,
+     "expected": 0.8336445417240972,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.645229046228821,
+     "unchanged": 0.27832262698184046,
+     "increase": 0.0764483267893385
+    },
+    {
+     "date": "2026-06-25",
+     "observed": -0.12648934125900269,
+     "expected": 0.8371523465402773,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.8326555756653179,
+     "unchanged": 0.11231640028101857,
+     "increase": 0.05502802405366347
+    },
+    {
+     "date": "2026-06-29",
+     "observed": null,
+     "expected": 0.8405302342700881,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.8326555756653179,
+     "unchanged": 0.11231640028101857,
+     "increase": 0.05502802405366347
+    },
+    {
+     "date": "2026-07-03",
+     "observed": null,
+     "expected": 0.8437622081907171,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.8326555756653179,
+     "unchanged": 0.11231640028101857,
+     "increase": 0.05502802405366347
+    },
+    {
+     "date": "2026-07-07",
+     "observed": null,
+     "expected": 0.8468329611041786,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.8326555756653179,
+     "unchanged": 0.11231640028101857,
+     "increase": 0.05502802405366347
+    },
+    {
+     "date": "2026-07-11",
+     "observed": -0.11891767382621765,
+     "expected": 0.8497279183061333,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.893722125327152,
+     "unchanged": 0.059919150648281023,
+     "increase": 0.046358724024566915
+    },
+    {
+     "date": "2026-07-15",
+     "observed": -0.11169446259737015,
+     "expected": 0.8524333794554801,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.9094668657914652,
+     "unchanged": 0.046789176974219186,
+     "increase": 0.04374395723431559
+    },
+    {
+     "date": "2026-07-19",
+     "observed": -0.11376955360174179,
+     "expected": 0.8549365036309653,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.9132678999920456,
+     "unchanged": 0.043703515696702805,
+     "increase": 0.04302858431125157
+    },
+    {
+     "date": "2026-07-23",
+     "observed": null,
+     "expected": 0.8572254448353495,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.9132678999920456,
+     "unchanged": 0.043703515696702805,
+     "increase": 0.04302858431125157
+    },
+    {
+     "date": "2026-07-27",
+     "observed": -0.05356815829873085,
+     "expected": 0.8592893390746077,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.9141707129809531,
+     "unchanged": 0.042989203297088434,
+     "increase": 0.042840083721958556
+    },
+    {
+     "date": "2026-07-31",
+     "observed": 0.009513307362794876,
+     "expected": 0.8611184190005201,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.9143843143629038,
+     "unchanged": 0.04282430380614414,
+     "increase": 0.04279138183095202
+    },
+    {
+     "date": "2026-08-04",
+     "observed": -0.11635001003742218,
+     "expected": 0.8627040032571179,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.9144348048933737,
+     "unchanged": 0.04278623109826374,
+     "increase": 0.042778964008362654
+    },
+    {
+     "date": "2026-08-08",
+     "observed": -0.1182430163025856,
+     "expected": 0.8640385880909282,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.914446737110128,
+     "unchanged": 0.04277743346842528,
+     "increase": 0.04277582942144674
+    },
+    {
+     "date": "2026-08-12",
+     "observed": -0.1126585528254509,
+     "expected": 0.8651158391663929,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.9144495568559269,
+     "unchanged": 0.04277539859897616,
+     "increase": 0.04277504454509699
+    },
+    {
+     "date": "2026-08-16",
+     "observed": null,
+     "expected": 0.8659306560469526,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.9144495568559269,
+     "unchanged": 0.04277539859897616,
+     "increase": 0.04277504454509699
+    },
+    {
+     "date": "2026-08-20",
+     "observed": -0.09949973225593567,
+     "expected": 0.8664791784452407,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.9144502231922602,
+     "unchanged": 0.04277492747811746,
+     "increase": 0.04277484932962225
+    },
+    {
+     "date": "2026-08-24",
+     "observed": null,
+     "expected": 0.8667588034120013,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.9144502231922602,
+     "unchanged": 0.04277492747811746,
+     "increase": 0.04277484932962225
+    },
+    {
+     "date": "2026-08-28",
+     "observed": -0.07490135729312897,
+     "expected": 0.8667682061263494,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.914450380654267,
+     "unchanged": 0.042774818297519876,
+     "increase": 0.04277480104821319
+    },
+    {
+     "date": "2026-09-01",
+     "observed": -0.08956284075975418,
+     "expected": 0.8665073434601722,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.9144504178641045,
+     "unchanged": 0.04277479297162195,
+     "increase": 0.04277478916427362
+    },
+    {
+     "date": "2026-09-05",
+     "observed": null,
+     "expected": 0.865977451739304,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.9144504178641045,
+     "unchanged": 0.04277479297162195,
+     "increase": 0.04277478916427362
+    },
+    {
+     "date": "2026-09-09",
+     "observed": -0.1258346289396286,
+     "expected": 0.8651810358889566,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.9144504266571574,
+     "unchanged": 0.04277478709160917,
+     "increase": 0.042774786251233314
+    },
+    {
+     "date": "2026-09-13",
+     "observed": -0.1276368647813797,
+     "expected": 0.8641218814480254,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.914450428735043,
+     "unchanged": 0.04277478572522438,
+     "increase": 0.042774785539732664
+    },
+    {
+     "date": "2026-09-17",
+     "observed": -0.1160362958908081,
+     "expected": 0.862805003549925,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.9144504292260679,
+     "unchanged": 0.042774785407437385,
+     "increase": 0.042774785366494775
+    },
+    {
+     "date": "2026-09-21",
+     "observed": -0.11977285891771317,
+     "expected": 0.861236643372014,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.9144504293421017,
+     "unchanged": 0.04277478533346758,
+     "increase": 0.04277478532443054
+    },
+    {
+     "date": "2026-09-25",
+     "observed": null,
+     "expected": 0.8594242205834124,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.9144504293421017,
+     "unchanged": 0.04277478533346758,
+     "increase": 0.04277478532443054
+    },
+    {
+     "date": "2026-09-29",
+     "observed": null,
+     "expected": 0.8573763500264271,
+     "zscore": null,
+     "supports": null,
+     "decrease": 0.9144504293421017,
+     "unchanged": 0.04277478533346758,
+     "increase": 0.04277478532443054
+    },
+    {
+     "date": "2026-10-03",
+     "observed": -0.12340003997087479,
+     "expected": 0.8551027256110059,
+     "zscore": -10,
+     "supports": "decrease",
+     "decrease": 0.9144504293695218,
+     "unchanged": 0.04277478531623642,
+     "increase": 0.04277478531424172
+    }
+   ]
+  }
+ }
+}
