@@ -12,4 +12,5 @@ build/
 # Notebook figure/summary copies - regenerated on every run, already embedded in the .ipynb
 notebooks/output/
 .ipynb_checkpoints/
-regional_runs/r6_ecoregions/tasks.tmp
+regional_runs/r6_ecoregions/tasks.*
+regional_runs/r6_ecoregions/drive.log
