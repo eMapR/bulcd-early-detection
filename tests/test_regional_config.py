@@ -201,3 +201,30 @@ def test_regional_config_needs_no_earth_engine():
     code = ("import sys; from bulcd_early_detection.regional import spec, run_config, tiling; "
             "run_config.RegionalRun.load(%r).tiles; print('ee' in sys.modules)" % str(PILOT))
     assert subprocess.check_output([sys.executable, "-c", code], text=True).strip() == "False"
+
+
+def test_blocks_are_aligned_and_hold_whole_tiles():
+    grid = Grid()
+    tiles = [grid.tile(56, 34), grid.tile(57, 35), grid.tile(57, 36)]
+    blocks = grid.blocks(tiles, 2)
+    assert [b.id for b in blocks] == ["r0056c0034_2x2", "r0056c0036_2x2"]
+    assert [t.id for t in blocks[0].tiles] == ["r0056c0034", "r0056c0035", "r0057c0034", "r0057c0035"]
+    b = blocks[0].bounds
+    assert (b[2] - b[0], b[3] - b[1]) == (2 * grid.tile_m, 2 * grid.tile_m)
+
+
+def test_ecoregion_run_round_trips_and_old_runs_are_unchanged():
+    pilot = RegionalRun.load(PILOT)
+    d = pilot.to_dict()
+    assert "block_tiles" not in d and "forest_mask_asset" not in d["advanced"]
+    assert set(d["region"]) == {"name", "bounds"}
+    run = dataclasses.replace(
+        pilot, run_id="eco", block_tiles=2,
+        region=Region("eco", pilot.region.bounds, ecoregion=1, tiles=["r0057c0035", "r0056c0034"]),
+        advanced=dataclasses.replace(pilot.advanced, mask_forest=True, forest_mask_asset="projects/x/assets/f"))
+    again = RegionalRun.from_yaml(run.to_yaml())
+    assert again.to_dict() == run.to_dict()
+    assert [t.id for t in again.tiles] == ["r0056c0034", "r0057c0035"]
+    assert [u.id for u in again.units] == ["r0056c0034_2x2"]
+    config = again.bulcd_config(aoi_coordinates=[[0, 0], [1, 0], [1, 1], [0, 0]])
+    assert config.study_area.mask_non_forest and config.study_area.forest_mask_asset == "projects/x/assets/f"

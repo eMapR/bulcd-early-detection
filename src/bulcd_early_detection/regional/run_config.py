@@ -46,6 +46,9 @@ class AdvancedSettings:
     posterior_leveler: float = LEGACY_DEFAULTS["posterior_leveler"]
     mask_forest: bool = LEGACY_DEFAULTS["mask_forest"]
     mask_water: bool = LEGACY_DEFAULTS["mask_water"]
+    # bulcd StudyAreaConfig.forest_mask_asset (nonzero = forest) when mask_forest is on;
+    # None = bulcd's Hansen treecover2000 >= 10% (the apps' forest mask).
+    forest_mask_asset: str | None = None
     timing_rule: str = "confirmed" if TIMING_CONFIRMED_DEFAULT else "raw"
 
     def __post_init__(self) -> None:
@@ -60,12 +63,18 @@ class AdvancedSettings:
 @dataclass
 class Region:
     """The area to compute: a rectangle in the grid CRS, snapped outward to
-    whole pixels. (Ecoregion polygons come later.)"""
+    whole pixels. Optionally an ecoregion (us_l3code in the frozen ecoregion
+    asset, backends/study_area.py: pixels outside it are masked) and the list
+    of tiles to compute (default: every tile in `bounds`)."""
     name: str
     bounds: tuple[float, float, float, float]   # xmin, ymin, xmax, ymax
+    ecoregion: int | None = None
+    tiles: list[str] | None = None
 
     def __post_init__(self) -> None:
         self.bounds = tuple(float(v) for v in self.bounds)
+        if self.tiles is not None:
+            self.tiles = sorted(self.tiles)
         if not (self.bounds[0] < self.bounds[2] and self.bounds[1] < self.bounds[3]):
             raise ValueError(f"region bounds must be (xmin, ymin, xmax, ymax): {self.bounds}")
 
@@ -79,6 +88,8 @@ class RegionalRun:
     grid: Grid = field(default_factory=Grid)
     product_version: int = spec.PRODUCT_VERSION
     description: str = ""
+    # Tiles per export task, per side (1 = one tile per task; 2 = 2 x 2-tile blocks, docs/findings.md 2026-10-26).
+    block_tiles: int = 1
 
     def __post_init__(self) -> None:
         if not re.fullmatch(r"[a-z0-9][a-z0-9_-]*", self.run_id):
@@ -86,6 +97,8 @@ class RegionalRun:
             raise ValueError("run_id: lowercase letters, digits, '_' and '-' only")
         if self.product_version != spec.PRODUCT_VERSION:
             raise ValueError(f"this code writes product version {spec.PRODUCT_VERSION}, not {self.product_version}")
+        if self.block_tiles < 1:
+            raise ValueError("block_tiles must be >= 1")
         if self.region.bounds != self.grid.snap(self.region.bounds):
             raise ValueError(f"region bounds are not on the {self.grid.scale} m grid: {self.region.bounds} "
                              f"(snapped: {self.grid.snap(self.region.bounds)})")
@@ -96,15 +109,30 @@ class RegionalRun:
 
     @property
     def tiles(self) -> list[Tile]:
-        return self.grid.tiles(self.region.bounds)
+        tiles = self.grid.tiles(self.region.bounds)
+        if self.region.tiles is not None:
+            wanted = set(self.region.tiles)
+            tiles = [t for t in tiles if t.id in wanted]
+            if len(tiles) != len(wanted):
+                raise ValueError("region.tiles lists tiles outside region.bounds")
+        return tiles
+
+    @property
+    def units(self) -> list:
+        """The export units: the tiles, or the block_tiles x block_tiles blocks
+        (aligned on the grid) that contain them."""
+        return self.tiles if self.block_tiles == 1 else self.grid.blocks(self.tiles, self.block_tiles)
 
     def bulcd_config(self, **aoi) -> BULCDConfig:
         """One tile's BULCDConfig (aoi_coordinates= or aoi_asset=), built as the
         interactive app builds it."""
         a = self.advanced
-        return apply_advanced(build_config(self.controls, **aoi), dampening=a.dampening,
+        config = apply_advanced(build_config(self.controls, **aoi), dampening=a.dampening,
                               posterior_leveler=a.posterior_leveler, monitoring_sensors=a.monitoring_sensors,
                               mask_forest=a.mask_forest, mask_water=a.mask_water)
+        if a.forest_mask_asset:
+            config.study_area.forest_mask_asset = a.forest_mask_asset
+        return config
 
     def availability_problem(self) -> str | None:
         """The apps' blocking data-availability check (config.availability_problem())."""
@@ -125,13 +153,19 @@ class RegionalRun:
         controls["expectation_sensors"] = list(controls["expectation_sensors"])
         advanced = dataclasses.asdict(self.advanced)
         advanced["monitoring_sensors"] = list(advanced["monitoring_sensors"])
-        return {"run_id": self.run_id, "description": self.description, "product_version": self.product_version,
-                "region": {"name": self.region.name, "bounds": list(self.region.bounds)},
-                "grid": self.grid.to_dict(), "controls": controls, "advanced": advanced}
+        if advanced["forest_mask_asset"] is None:
+            del advanced["forest_mask_asset"]   # earlier runs' run_json had no such key
+        region = {"name": self.region.name, "bounds": list(self.region.bounds)}
+        region |= {k: v for k, v in (("ecoregion", self.region.ecoregion), ("tiles", self.region.tiles)) if v is not None}
+        d = {"run_id": self.run_id, "description": self.description, "product_version": self.product_version,
+             "region": region, "grid": self.grid.to_dict(), "controls": controls, "advanced": advanced}
+        if self.block_tiles != 1:   # earlier runs' run_json had no such key
+            d["block_tiles"] = self.block_tiles
+        return d
 
     @classmethod
     def from_dict(cls, d: dict) -> RegionalRun:
-        known = {"run_id", "description", "product_version", "region", "grid", "controls", "advanced"}
+        known = {"run_id", "description", "product_version", "region", "grid", "block_tiles", "controls", "advanced"}
         if set(d) - known:
             raise ValueError(f"unknown keys in run config: {sorted(set(d) - known)}")
         controls = dict(d.get("controls", {}))
@@ -141,6 +175,7 @@ class RegionalRun:
                    product_version=d.get("product_version", spec.PRODUCT_VERSION),
                    region=Region(**d["region"]),
                    grid=Grid.from_dict(d["grid"]) if "grid" in d else Grid(),
+                   block_tiles=d.get("block_tiles", 1),
                    controls=app_default_controls(**controls),
                    advanced=AdvancedSettings(**d.get("advanced", {})))
 

@@ -57,6 +57,17 @@ class Grid:
         r1, c1 = self.tile_index(bounds[2] - 1e-6, bounds[1] + 1e-6)
         return [self.tile(r, c) for r in range(r0, r1 + 1) for c in range(c0, c1 + 1)]
 
+    def blocks(self, tiles: list[Tile], side: int) -> list[Block]:
+        """The side x side-tile blocks, aligned on the grid (rows and columns
+        multiples of `side`), that contain any of `tiles`; each block holds all
+        its side x side tiles. Row-major."""
+        keys = sorted({(t.row // side * side, t.col // side * side) for t in tiles})
+        out = []
+        for r0, c0 in keys:
+            members = tuple(self.tile(r, c) for r in range(r0, r0 + side) for c in range(c0, c0 + side))
+            out.append(Block(f"{members[0].id}_{side}x{side}", members))
+        return out
+
     def to_dict(self) -> dict:
         return {"crs": self.crs, "scale": self.scale, "origin": list(self.origin), "tile_px": self.tile_px}
 
@@ -77,6 +88,24 @@ class Tile:
 
     def clip(self, bounds: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
         """The part of `bounds` inside this tile (a region's pixels in it)."""
+        b = self.bounds
+        return (max(b[0], bounds[0]), max(b[1], bounds[1]), min(b[2], bounds[2]), min(b[3], bounds[3]))
+
+
+@dataclass(frozen=True)
+class Block:
+    """Several tiles exported by one task (as one BULC-D run and one asset).
+    Tiling is exact per pixel (docs/findings.md 2026-10-24), so a block's
+    pixels equal its tiles' (2026-10-26 block benchmark)."""
+    id: str
+    tiles: tuple[Tile, ...]
+
+    @property
+    def bounds(self) -> tuple[float, float, float, float]:
+        b = [t.bounds for t in self.tiles]
+        return (min(x[0] for x in b), min(x[1] for x in b), max(x[2] for x in b), max(x[3] for x in b))
+
+    def clip(self, bounds: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
         b = self.bounds
         return (max(b[0], bounds[0]), max(b[1], bounds[1]), min(b[2], bounds[2]), min(b[3], bounds[3]))
 

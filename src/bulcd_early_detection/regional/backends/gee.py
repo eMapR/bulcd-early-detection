@@ -73,8 +73,12 @@ def product_image(run: RegionalRun, config: BULCDConfig, result=None) -> ee.Imag
         filled(episodes.select("decrease_episodes")).toUint8(),
         count(organized.target_collection).toUint16(),
         count(organized.expectation_collection).toUint16(),
-    )
-    return image.rename(list(spec.BAND_NAMES))
+    ).rename(list(spec.BAND_NAMES))
+    if run.region.ecoregion is not None:
+        # Outside the ecoregion (in OR/WA) = masked, as outside the region (spec: masked = no data).
+        from .study_area import region_mask
+        image = image.updateMask(region_mask(run.region.ecoregion))
+    return image
 
 
 def tile_transform(run: RegionalRun, tile: Tile) -> tuple[list[float], str]:
@@ -106,6 +110,10 @@ def tile_properties(run: RegionalRun, tile: Tile, config: BULCDConfig, now: date
         "provenance_json": json.dumps(provenance(), sort_keys=True),
     }
     assert set(props) == set(spec.PROPERTIES), set(props) ^ set(spec.PROPERTIES)
+    if hasattr(tile, "tiles"):   # a block: its tiles (tile_id is the block's ID)
+        props["tile_ids"] = ",".join(t.id for t in tile.tiles)
+    if run.region.ecoregion is not None:
+        props["ecoregion"] = run.region.ecoregion
     return props
 
 
@@ -150,8 +158,8 @@ def export_tile(run: RegionalRun, tile: Tile, asset_root: str = DEFAULT_ASSET_RO
 
 
 def submit(run: RegionalRun, tile_ids: list[str] | None = None, asset_root: str = DEFAULT_ASSET_ROOT) -> list:
-    """Starts one export per tile (all the run's tiles, or `tile_ids`)."""
-    tiles = run.tiles
+    """Starts one export per unit (tile or block: all the run's, or `tile_ids`)."""
+    tiles = run.units
     if tile_ids:
         unknown = set(tile_ids) - {t.id for t in tiles}
         if unknown:
@@ -235,7 +243,7 @@ def export_stack_tile(run: RegionalRun, season_runs: list[RegionalRun], tile: Ti
 
 def submit_stack(run: RegionalRun, season_runs: list[RegionalRun], tile_ids: list[str] | None = None,
                  asset_root: str = DEFAULT_ASSET_ROOT) -> list:
-    tiles = [t for t in run.tiles if not tile_ids or t.id in tile_ids]
+    tiles = [t for t in run.units if not tile_ids or t.id in tile_ids]
     path = stack_collection_id(run, asset_root)
     try:
         ee.data.getAsset(path)
@@ -272,8 +280,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     for w in run.warnings():
         print("Warning:", w)
-    tiles = [t for t in run.tiles if not a.tiles or t.id in a.tiles]
-    print(f"{run.run_id}: {len(tiles)} of {len(run.tiles)} tiles -> {collection_id(run, a.asset_root)}")
+    tiles = [t for t in run.units if not a.tiles or t.id in a.tiles]
+    print(f"{run.run_id}: {len(tiles)} of {len(run.units)} export units ({len(run.tiles)} tiles) -> {collection_id(run, a.asset_root)}")
     for t in tiles:
         print(" ", t.id, tile_transform(run, t))
     if a.dry_run:
