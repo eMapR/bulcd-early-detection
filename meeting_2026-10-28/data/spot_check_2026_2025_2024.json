@@ -1,0 +1,50 @@
+[
+ {
+  "year": "2026",
+  "window_px": 1600,
+  "land_px": 1600,
+  "tiles_in_window": 4,
+  "condition_match": 1600,
+  "max_abs_diff_p_decrease": 4.996056556702544e-05,
+  "max_abs_diff_p_unchanged": 4.982886314391921e-05,
+  "max_abs_diff_p_increase": 4.989213943481369e-05,
+  "first_detection_doy_match": 1572,
+  "condition_counts": {
+   "0": 429,
+   "1": 1143,
+   "2": 28
+  }
+ },
+ {
+  "year": "2025",
+  "window_px": 1600,
+  "land_px": 1600,
+  "tiles_in_window": 4,
+  "condition_match": 1600,
+  "max_abs_diff_p_decrease": 4.998979568482387e-05,
+  "max_abs_diff_p_unchanged": 4.998979568482387e-05,
+  "max_abs_diff_p_increase": 4.991133809089526e-05,
+  "first_detection_doy_match": 1588,
+  "condition_counts": {
+   "0": 380,
+   "1": 1208,
+   "2": 12
+  }
+ },
+ {
+  "year": "2024",
+  "window_px": 1600,
+  "land_px": 1600,
+  "tiles_in_window": 4,
+  "condition_match": 1600,
+  "max_abs_diff_p_decrease": 4.995744824409787e-05,
+  "max_abs_diff_p_unchanged": 4.9771785736063556e-05,
+  "max_abs_diff_p_increase": 4.96885299682559e-05,
+  "first_detection_doy_match": 1591,
+  "condition_counts": {
+   "0": 404,
+   "1": 1187,
+   "2": 9
+  }
+ }
+]
