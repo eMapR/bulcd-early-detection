@@ -12,6 +12,8 @@
 # (README "Runtime environment"). --no-deps: pip never re-resolves or replaces
 # anything conda installed; --no-build-isolation + setuptools below: pip needs
 # no PyPI access at all.
+# BULC-D_rebuild must be on branch legacy-parity-0011 at or after commit 8e9c5d5
+# (decision 0011; README "Relationship to BULC-D_rebuild").
 name: bulcd
 channels:
   - conda-forge

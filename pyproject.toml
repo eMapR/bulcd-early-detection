@@ -21,8 +21,12 @@ regional = ["pyyaml", "pyproj"]
 # ../BULC-D_rebuild`), skip this extra: `pip install -e .` alone leaves
 # that install alone, while `pip install -e ".[engine]"` would try to
 # reinstall bulcd from GitHub and overwrite it.
+# Pinned to BULC-D_rebuild 8e9c5d5 (branch legacy-parity-0011): decision 0011
+# (legacy S2 scene behavior and fracDOY time axis by default) plus gee/bulcd.js.
+# Its main branch does not contain decision 0011. A local checkout should be at
+# or after this commit; tests/test_bulcd_dependency.py checks.
 engine = [
-    "bulcd @ git+ssh://git@github.com/eMapR/BULC-D_rebuild.git@main",
+    "bulcd @ git+ssh://git@github.com/eMapR/BULC-D_rebuild.git@8e9c5d52e21b5ec57ccc2ad3328b5e7ce0b21bbb",
 ]
 
 [tool.setuptools.packages.find]

@@ -189,13 +189,25 @@ run `pip install -e .`. Instead:
 
 - **From-scratch environment (CI, a new machine, no local
   `BULC-D_rebuild` checkout):** use the `engine` extra to pull `bulcd`
-  straight from GitHub instead (`main` branch, over SSH - you'll need
-  SSH access to that repo):
+  straight from GitHub instead (pinned to commit `8e9c5d5`, over SSH -
+  you'll need SSH access to that repo):
 
   ```sh
   pip install -e ".[engine]"
   ```
 
-`tests/test_bulcd_dependency.py` is a smoke test that just confirms the
-`bulcd` package (and the specific entry points this project expects to
-call into, like `bulcd.engine.run_bulcd`) is importable.
+**Engine version: decision 0011 (`8e9c5d5`).** Early Detection, both
+apps and the regional products are validated against BULC-D_rebuild
+commit `8e9c5d5` (branch `legacy-parity-0011`): decision 0011 (legacy
+Sentinel-2 scene behavior and fracDOY time axis by default) and the GEE
+port `gee/bulcd.js`. That commit is not on BULC-D_rebuild's `main`. The
+`engine` extra pins it; a sibling checkout should be on
+`legacy-parity-0011` at or after `8e9c5d5` (`git -C ../BULC-D_rebuild
+checkout legacy-parity-0011`). `tools/build_gee_deploy.py` copies
+`gee/bulcd.js` from that checkout, and each regional product records the
+checkout's commit (`regional/provenance.py`).
+
+`tests/test_bulcd_dependency.py` confirms the `bulcd` package (and the
+specific entry points this project expects to call into, like
+`bulcd.engine.run_bulcd`) is importable, and that it includes decision
+0011.
