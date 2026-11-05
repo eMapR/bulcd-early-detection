@@ -17,8 +17,9 @@ from pathlib import Path
 
 from bulcd.config.schema import BULCDConfig
 
-from ..config import (LEGACY_DEFAULTS, MONITORING_SENSORS, SENSORS, TIMING_CONFIRMED_DEFAULT, MonitoringControls,
-                      apply_advanced, build_config, fit_order_warning, sensor_warnings)
+from ..config import (DEFAULT_MONITORING_SENSORS, LEGACY_DEFAULTS, MONITORING_SENSORS, TIMING_CONFIRMED_DEFAULT,
+                      MonitoringControls, apply_advanced, availability_problem, build_config, fit_order_warning,
+                      sensor_warnings)
 from . import spec
 from .tiling import Grid, Tile
 
@@ -37,8 +38,10 @@ def app_default_controls(**changes) -> MonitoringControls:
 @dataclass
 class AdvancedSettings:
     """The apps' Advanced settings (config.apply_advanced), plus the detection
-    timing rule. Defaults: the apps'."""
-    monitoring_sensors: tuple[str, ...] = MONITORING_SENSORS
+    timing rule. Defaults: the apps'. Monitoring sensors default to the apps'
+    default boxes (DEFAULT_MONITORING_SENSORS: no Landsat 7, which is an
+    opt-in for historical years and must be listed explicitly)."""
+    monitoring_sensors: tuple[str, ...] = DEFAULT_MONITORING_SENSORS
     dampening: float = LEGACY_DEFAULTS["dampening"]
     posterior_leveler: float = LEGACY_DEFAULTS["posterior_leveler"]
     mask_forest: bool = LEGACY_DEFAULTS["mask_forest"]
@@ -46,9 +49,10 @@ class AdvancedSettings:
     timing_rule: str = "confirmed" if TIMING_CONFIRMED_DEFAULT else "raw"
 
     def __post_init__(self) -> None:
-        self.monitoring_sensors = tuple(c for c in SENSORS if c in self.monitoring_sensors)
-        if not self.monitoring_sensors:
-            raise ValueError(f"monitoring_sensors must be a non-empty subset of {SENSORS}")
+        chosen = tuple(self.monitoring_sensors)
+        self.monitoring_sensors = tuple(c for c in MONITORING_SENSORS if c in chosen)
+        if not self.monitoring_sensors or len(self.monitoring_sensors) != len(set(chosen)):
+            raise ValueError(f"monitoring_sensors must be a non-empty subset of {MONITORING_SENSORS}: {chosen}")
         if self.timing_rule not in spec.TIMING_RULES:
             raise ValueError(f"timing_rule must be one of {spec.TIMING_RULES}")
 
@@ -85,6 +89,10 @@ class RegionalRun:
         if self.region.bounds != self.grid.snap(self.region.bounds):
             raise ValueError(f"region bounds are not on the {self.grid.scale} m grid: {self.region.bounds} "
                              f"(snapped: {self.grid.snap(self.region.bounds)})")
+        # The apps block a run with no data in a period (config.availability_problem()).
+        problem = self.availability_problem()
+        if problem:
+            raise ValueError(problem)
 
     @property
     def tiles(self) -> list[Tile]:
@@ -98,11 +106,17 @@ class RegionalRun:
                               posterior_leveler=a.posterior_leveler, monitoring_sensors=a.monitoring_sensors,
                               mask_forest=a.mask_forest, mask_water=a.mask_water)
 
+    def availability_problem(self) -> str | None:
+        """The apps' blocking data-availability check (config.availability_problem())."""
+        c = self.controls
+        return availability_problem(c.expectation_sensors, self.advanced.monitoring_sensors, c.baseline_first_year,
+                                    c.baseline_last_year, c.monitoring_year)
+
     def warnings(self) -> list[str]:
         """The apps' warnings for these settings (none blocks a run)."""
         c = self.controls
         out = sensor_warnings(c.expectation_sensors, self.advanced.monitoring_sensors, c.baseline_first_year,
-                              c.baseline_last_year)
+                              c.baseline_last_year, monitoring_year=c.monitoring_year)
         w = fit_order_warning(c.fit_order, c.window_days)
         return out + ([w] if w else [])
 

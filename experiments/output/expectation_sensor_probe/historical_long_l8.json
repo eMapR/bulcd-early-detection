@@ -1,0 +1,323 @@
+{
+ "started": "2026-11-02T18:46:24.725Z",
+ "area": "projects/bulcd-python-rebuild/assets/testsite",
+ "zoom": 13,
+ "tiles": 6,
+ "pixel": {
+  "label": "Pixel 1 (decrease)",
+  "lon": -123.56922,
+  "lat": 44.84283
+ },
+ "availability": {
+  "L5": {
+   "2008": 13,
+   "2009": 14,
+   "2010": 10,
+   "2011": 12,
+   "2012": 0,
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 0,
+   "2017": 0,
+   "2018": 0,
+   "2019": 0,
+   "2020": 0,
+   "2021": 0,
+   "2022": 0,
+   "2023": 0,
+   "2024": 0,
+   "2025": 0,
+   "2026": 0
+  },
+  "L7": {
+   "2008": 12,
+   "2009": 13,
+   "2010": 12,
+   "2011": 14,
+   "2012": 13,
+   "2013": 13,
+   "2014": 12,
+   "2015": 15,
+   "2016": 13,
+   "2017": 14,
+   "2018": 15,
+   "2019": 15,
+   "2020": 13,
+   "2021": 13,
+   "2022": 10,
+   "2023": 10,
+   "2024": 0,
+   "2025": 0,
+   "2026": 0
+  },
+  "L8": {
+   "2008": 0,
+   "2009": 0,
+   "2010": 0,
+   "2011": 0,
+   "2012": 0,
+   "2013": 12,
+   "2014": 12,
+   "2015": 14,
+   "2016": 13,
+   "2017": 13,
+   "2018": 15,
+   "2019": 14,
+   "2020": 14,
+   "2021": 11,
+   "2022": 13,
+   "2023": 14,
+   "2024": 15,
+   "2025": 15,
+   "2026": 14
+  },
+  "L9": {
+   "2008": 0,
+   "2009": 0,
+   "2010": 0,
+   "2011": 0,
+   "2012": 0,
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 0,
+   "2017": 0,
+   "2018": 0,
+   "2019": 0,
+   "2020": 0,
+   "2021": 0,
+   "2022": 13,
+   "2023": 13,
+   "2024": 13,
+   "2025": 16,
+   "2026": 14
+  },
+  "S2": {
+   "2008": 0,
+   "2009": 0,
+   "2010": 0,
+   "2011": 0,
+   "2012": 0,
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 13,
+   "2017": 24,
+   "2018": 48,
+   "2019": 48,
+   "2020": 50,
+   "2021": 49,
+   "2022": 49,
+   "2023": 48,
+   "2024": 48,
+   "2025": 59,
+   "2026": 60
+  },
+  "S2_cloud_score_plus": {
+   "2008": 0,
+   "2009": 0,
+   "2010": 0,
+   "2011": 0,
+   "2012": 0,
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 26,
+   "2017": 24,
+   "2018": 48,
+   "2019": 48,
+   "2020": 50,
+   "2021": 49,
+   "2022": 49,
+   "2023": 47,
+   "2024": 48,
+   "2025": 60,
+   "2026": 61
+  }
+ },
+ "runs": [
+  {
+   "name": "L8 x 11 yr",
+   "sensors": [
+    "L8"
+   ],
+   "years": 11,
+   "expectation": [
+    2013,
+    2023
+   ],
+   "monitoring_year": 2026,
+   "warnings": [
+    "The expectation uses Landsat 8 and monitoring uses Landsat 8, Landsat 9 and Sentinel-2. Differences between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but not in the expectation produced false decreases at stable sites that disappeared when both periods used the same sensors."
+   ],
+   "expectation_sensors": [
+    "L8"
+   ],
+   "layers": {
+    "Condition 2026": {
+     "description_chars": 3485605,
+     "s": 32.022,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 22.075,
+     "tiles": [
+      {
+       "s": 16.985,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 20.42,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 19.363,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 22.075,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 7.826,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 7.343,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 243963481,
+     "s": 63.425,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 37.918,
+     "tiles": [
+      {
+       "s": 32.999,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 18.515,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 37.918,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 34.299,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 19.774,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 30.576,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Last detection (decrease)": {
+     "description_chars": 47191669,
+     "s": 82.763,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 60.04,
+     "tiles": [
+      {
+       "s": 12.645,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 17.575,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 9.215,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 10.076,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 23.464,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 60.04,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 23595805,
+     "s": 36.586,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 22.948,
+     "tiles": [
+      {
+       "s": 3.46,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 18.263,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 3.036,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 22.948,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 6.174,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 3.33,
+       "status": 200,
+       "error": null
+      }
+     ]
+    }
+   },
+   "inspector": {
+    "s": 17.054,
+    "ok": true,
+    "error": null
+   }
+  }
+ ],
+ "finished": "2026-11-02T18:50:21.191Z"
+}

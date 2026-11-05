@@ -103,15 +103,17 @@ def scene_row(area, frame, bbox, token: str, scenes: list[tuple[str, str]], supt
 
 
 def annual_true_color_row(area, frame, bbox, token: str, years: list[int], window: tuple[str, str], suptitle: str = "",
-                          save_to=None, dimensions=900, marker: tuple[float, float] | None = None):
+                          save_to=None, dimensions=900, marker: tuple[float, float] | None = None, source: str = "S2"):
     """Annual true-color composites side by side: same extent, window,
-    processing and stretch every year (outputs.annual_true_color)."""
-    pngs = [render.download_png(_marked(render.image_layer(area, outputs.annual_true_color(area.geometry, y, window),
+    processing, source and stretch every year (outputs.annual_true_color)."""
+    pngs = [render.download_png(_marked(render.image_layer(area, outputs.annual_true_color(area.geometry, y, window,
+                                                                                           source),
                                                            render.TRUE_COLOR, True), marker), frame, token, dimensions)
             for y in years]
     first = datetime.date.fromisoformat(f"2001-{window[0]}")
     last = datetime.date.fromisoformat(f"2001-{window[1]}")
-    subtitles = [f"Sentinel-2 clear-sky median, {first:%b %-d} – {last:%b %-d} {y}" for y in years]
+    name = outputs.REFERENCE_SOURCE_LABELS[source]
+    subtitles = [f"{name} clear-sky median, {first:%b %-d} – {last:%b %-d} {y}" for y in years]
     return render.show_map_row(pngs, [str(y) for y in years], subtitles, bbox, suptitle, save_to)
 
 
@@ -144,11 +146,11 @@ def detection_year_table(timing, region, years: list[int]) -> str:
 
 
 def nbr_rgb_map(area, frame, bbox, title: str, token: str, years: list[int], window=("07-01", "09-15"), save_to=None,
-                marker: tuple[float, float] | None = None):
+                marker: tuple[float, float] | None = None, source: str = "S2"):
     """Temporal NBR composite (R, G, B = years), one fixed stretch; returns
     the stretch used."""
     large = outputs.aoi_size_report(area)["area_km2"] > outputs.TESTED_LIVE_KM2
-    nbrs = [outputs.annual_nbr(area.geometry, y, window, reproject=not large) for y in years]
+    nbrs = [outputs.annual_nbr(area.geometry, y, window, reproject=not large, source=source) for y in years]
     land = [n.updateMask(render._not_water()) for n in nbrs]   # stretch from land only, matching the display
     low, high = outputs.nbr_stretch(land, area.geometry, scale=120 if large else outputs.SCALE)
     png = render.download_png(_marked(render.nbr_rgb_layer(nbrs, area, frame, low, high), marker), frame, token)

@@ -1,7 +1,8 @@
 """Sensor selection for each period (no Earth Engine calls): the expectation
-defaults to Landsat 8 only (the config is unchanged), any L8/L9/S2 combination
+defaults to Landsat 8 only (the config is unchanged), any sensor combination
 reaches the config and every timing run, and the sensor warnings
-(docs/findings.md, 2026-10-19), with the same text in the GEE app."""
+(docs/findings.md, 2026-10-19 and 2026-11-02), with the same text in the GEE
+app. Historical years and Landsat 5/7: tests/test_historical_years.py."""
 
 import json
 import shutil
@@ -11,8 +12,9 @@ from unittest import mock
 
 import pytest
 
-from bulcd_early_detection.config import (BASELINE_SENSORS, S2_EXPECTATION_MAX_YEARS, SENSORS, MonitoringControls,
-                                          build_config, sensor_warnings)
+from bulcd_early_detection.config import (BASELINE_SENSORS, MONITORING_SENSORS, S2_EXPECTATION_MAX_YEARS, SENSORS,
+                                          MonitoringControls, availability_problem, build_config, sensor_warnings,
+                                          with_monitoring_sensors)
 
 GEE_TESTS = Path(__file__).parents[1] / "gee" / "tests"
 MONITORING = ("L8", "L9", "S2")
@@ -40,7 +42,7 @@ def test_any_combination_reaches_the_config_in_sensor_order():
     assert (exp["L8"].first_year, exp["L8"].last_year, exp["L8"].first_doy, exp["L8"].last_doy) == (2018, 2026, 152, 273)
 
 
-@pytest.mark.parametrize("bad", [(), ("L5",), ("L8", "MO")])
+@pytest.mark.parametrize("bad", [(), ("L4",), ("L8", "MO")])
 def test_expectation_sensors_must_be_a_nonempty_subset(bad):
     with pytest.raises(ValueError, match="expectation_sensors"):
         MonitoringControls(expectation_sensors=bad)
@@ -77,9 +79,9 @@ def test_memory_warning_follows_the_probe_limit():
     over = sensor_warnings(("L8", "S2"), ("L8", "S2"), first - 1, 2023)
     assert [x for x in over if "memory limit" in x] == [
         "A 3-year expectation with Sentinel-2 is likely to exceed Earth Engine's memory limit: in tests, Sentinel-2 "
-        "expectations longer than 2 years failed in the pixel inspector (\"User memory limit exceeded\"), and the "
-        "detection-timing layers often failed as well. Use fewer expectation years or leave Sentinel-2 out of the "
-        "expectation."]
+        "expectations longer than 2 years failed with the pixel inspector failing every time (usually \"User memory "
+        "limit exceeded\") and map layers failing intermittently. Use fewer expectation years or leave Sentinel-2 "
+        "out of the expectation."]
     # Sentinel-2 alone in the expectation warns too.
     assert any("memory limit" in x for x in sensor_warnings(("S2",), ("S2",), 2021, 2023))
     # Landsat only: no memory warning at any length.
@@ -90,25 +92,43 @@ def test_python_and_gee_sensor_configs_and_warnings_match():
     node = shutil.which("node")
     if node is None:
         pytest.skip("node not on PATH")
-    combos = [("L8",), ("L9",), ("S2",), ("L8", "S2"), ("L8", "L9"), ("L8", "L9", "S2")]
-    cases = [(e, m, y0, y1) for e in combos for m in (("L8", "L9", "S2"), ("L8",), ("L8", "S2"))
-             for y0, y1 in ((2018, 2023), (2016, 2023), (2022, 2023), (2021, 2021), (2016, 2025))]
-    script = ("const c = require('../config.js'), cases = %s; const box = (xs) => ({L8: xs.includes('L8'), "
-              "L9: xs.includes('L9'), S2: xs.includes('S2')}); console.log(JSON.stringify(cases.map(([e, m, y0, y1]) => "
+    combos = [("L8",), ("L9",), ("S2",), ("L8", "S2"), ("L8", "L9"), ("L8", "L9", "S2"),
+              ("L5",), ("L7",), ("L5", "L7"), ("L7", "L8"), ("L5", "L7", "L8")]
+    monitoring = (("L8", "L9", "S2"), ("L8",), ("L8", "S2"), ("L7",), ("L7", "L8"), ("L9",))
+    years = ((2018, 2023, 2026), (2016, 2023, 2026), (2022, 2023, 2026), (2021, 2021, 2026), (2016, 2025, 2026),
+             (2010, 2014, 2015), (2013, 2014, 2015), (2010, 2011, 2015), (2012, 2014, 2016), (2018, 2019, 2023),
+             (2010, 2023, 2024), (2015, 2021, 2022))
+    cases = [(e, m, y0, y1, my, t) for e in combos for m in monitoring for y0, y1, my in years for t in (True, False)]
+    script = ("const c = require('../config.js'), cases = %s; const box = (xs) => { const b = {}; "
+              "c.SENSORS.forEach((s) => { b[s] = xs.includes(s); }); return b; }; "
+              "console.log(JSON.stringify(cases.map(([e, m, y0, y1, my, t]) => "
               "{ const x = Object.assign({}, c.APP_DEFAULTS, {expectation_sensors: box(e), sensors: box(m), "
-              "expectation_first: y0, expectation_last: y1, monitoring_year: 2026}); "
-              "return [Object.keys(c.buildConfig(x, {aoi_asset: 'x'}).evidence.expectation.sensors), "
-              "c.sensorWarnings(x)]; })))" % json.dumps(cases))
+              "expectation_first: y0, expectation_last: y1, monitoring_year: my, timing: t}); "
+              "const problem = c.availabilityProblem(x); if (problem) return [null, null, null, c.sensorWarnings(x), "
+              "problem, c.timingYears(x)]; const cfg = c.buildConfig(x, {aoi_asset: 'x'}).evidence; "
+              "return [Object.keys(cfg.expectation.sensors), Object.keys(cfg.target.sensors).filter((k) => "
+              "cfg.target.sensors[k].enabled), Object.keys(cfg.target.sensors), c.sensorWarnings(x), problem, "
+              "c.timingYears(x)]; })))"
+              % json.dumps(cases))
     gee = json.loads(subprocess.check_output([node, "-e", script], cwd=GEE_TESTS))
-    for (e, m, y0, y1), (keys, warnings) in zip(cases, gee):
-        controls = MonitoringControls(baseline_first_year=y0, baseline_last_year=y1, expectation_sensors=e)
-        assert list(build_config(controls, aoi_asset="x").evidence.expectation.sensors) == keys, (e, y0, y1)
-        assert sensor_warnings(e, m, y0, y1) == warnings, (e, m, y0, y1)
+    for (e, m, y0, y1, my, t), (keys, target, all_target, warnings, problem, timing) in zip(cases, gee):
+        case = (e, m, y0, y1, my, t)
+        controls = MonitoringControls(monitoring_year=my, baseline_first_year=y0, baseline_last_year=y1,
+                                      expectation_sensors=e)
+        config = build_config(controls, aoi_asset="x")
+        with_monitoring_sensors(config, m)   # EarlyDetectionApp.build()'s monitoring boxes
+        if keys is not None:   # buildConfig() refuses a blocked run
+            assert list(config.evidence.expectation.sensors) == keys, case
+            assert [k for k, v in config.evidence.target.sensors.items() if v.enabled] == target, case
+            assert list(config.evidence.target.sensors) == all_target, case
+        assert sensor_warnings(e, m, y0, y1, my, timing if t else None) == warnings, case
+        assert availability_problem(e, m, y0, y1, my) == problem, case
 
 
 def test_app_widgets_default_and_follow_into_every_run(app):
-    assert {s: b.value for s, b in app.expectation_sensors.items()} == {"L8": True, "L9": False, "S2": False}
-    assert {s: b.value for s, b in app.sensors.items()} == {"L8": True, "L9": True, "S2": True}
+    assert {s: b.value for s, b in app.expectation_sensors.items()} == {"L5": False, "L7": False, "L8": True,
+                                                                         "L9": False, "S2": False}
+    assert {s: b.value for s, b in app.sensors.items()} == {"L7": False, "L8": True, "L9": True, "S2": True}
     assert list(app.build(app.controls(), aoi_asset="x").evidence.expectation.sensors) == ["L8"]
     assert "The expectation uses Landsat 8 and monitoring uses" in app.relationship.value
     app.expectation_sensors["S2"].value = True
@@ -133,4 +153,4 @@ def test_app_blocks_a_period_without_sensors(app):
             for s, b in boxes.items():
                 b.value = before[s]
         assert not app.run_btn.disabled
-    assert set(SENSORS) == set(MONITORING)
+    assert set(MONITORING_SENSORS) == set(SENSORS) - {"L5"}

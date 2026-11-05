@@ -160,7 +160,8 @@ function makeControls(appConfig, onChange) {
 
   describe();
   return {panel: panel, read: read, fitOrder: fitOrder, timingConfirmed: timingConfirmed, expectationFirst: expFirst,
-          expectationLast: expLast, expectationSensors: expSensors, sensors: sensors};
+          expectationLast: expLast, monitoring: monitoring, timing: timing, expectationSensors: expSensors,
+          sensors: sensors};
 }
 
 exports.makeControls = makeControls;

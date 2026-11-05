@@ -61,6 +61,50 @@ function expectationQuery(bulcd, result, config, lon, lat) {
   });
 }
 
+// The years between the expectation and the target year (e.g. 2024-2025 for a
+// 2018-2023 expectation and a 2026 target), with the target's sensors and
+// season. Shown on the timeline only: not used in the fit or the detection.
+// null when the periods are adjacent. Year bounds are bulcd's (last exclusive).
+function gapPeriod(config) {
+  var exp = config.evidence.expectation.sensors, target = config.evidence.target.sensors;
+  var first = -Infinity, last = Infinity, sensors = {}, k;
+  for (k in exp) if (exp[k].enabled) first = Math.max(first, exp[k].last_year);
+  for (k in target) if (target[k].enabled) last = Math.min(last, target[k].first_year);
+  if (!(first < last)) return null;
+  for (k in target) {
+    if (!target[k].enabled) continue;
+    sensors[k] = JSON.parse(JSON.stringify(target[k]));
+    sensors[k].first_year = first;
+    sensors[k].last_year = last;
+  }
+  return {sensors: sensors};
+}
+
+// The gap years' binned observations and the fitted curve at their dates, in
+// expectationQuery()'s form (expectationRows() reads it); null without a gap.
+// A separate request from the inspector's, so a failure here drops only this.
+function gapQuery(bulcd, result, config, lon, lat) {
+  var period = gapPeriod(config);
+  if (!period) return null;
+  var point = ee.Geometry.Point([lon, lat]);
+  var fit = result.organized.expectation_fit, band = config.reduction.band;
+  var withFit = bulcd.assembleEvidenceCollection(config, period).map(bulcd.addHarmonicTerms).map(function (image) {
+    return bulcd.addFittedBand(image, fit.coefficients, fit.regressor_names);
+  });
+  return ee.Dictionary({observations: withFit.select([band, 'fitted']).getRegion(point, 30, utmCrsFor(lon, lat))});
+}
+
+// One line on the gap years for the inspector notes; [] without a gap.
+function gapSummary(config, gapRows) {
+  var period = gapPeriod(config);
+  if (!period) return [];
+  var k = Object.keys(period.sensors)[0], first = period.sensors[k].first_year, last = period.sensors[k].last_year - 1;
+  var used = gapRows.filter(function (r) { return r.observed !== null; }).length;
+  return ['Between the periods (' + (first === last ? first : first + '-' + last) + '): ' + used +
+          ' clear observations with the monitoring sensors and season, shown for context only (not used in ' +
+          'the fit or the detection).'];
+}
+
 // getRegion rows -> {time: {column: value}} (pixel._table).
 function byTime(region) {
   var header = region[0], t = header.indexOf('time'), out = {};
@@ -263,23 +307,35 @@ function targetFitTable(rows, band) {
 
 // "Expectation -> Monitoring": the fitted curve through both periods, the
 // expectation observations it was fit to, and each monitoring observation
-// colored by the class its evidence favors. A blank row between the periods
-// breaks the line across any gap.
-function timelineTable(expRows, rows, band) {
+// colored by the class its evidence favors, plus any gap years' observations
+// (gapRows, optional; gapPeriod()). A blank row after each period breaks the
+// line across the off-season.
+function timelineTable(expRows, rows, band, gapRows) {
   var cols = [{label: 'Date', type: 'date'}, {label: 'fitted expectation', type: 'number'},
               {label: 'expectation ' + band.toUpperCase() + ' (used in the fit)', type: 'number'}];
   CLASSES.forEach(function (c) { cols.push({label: 'monitoring favors ' + c, type: 'number'}); });
-  var out = expRows.map(function (r) {
-    return {c: [cell(chartDate(r.date)), cell(r.expected), cell(r.observed), cell(null), cell(null), cell(null)]};
-  });
-  if (expRows.length) {
-    var last = expRows[expRows.length - 1].date.split('-');
+  cols.push({label: 'between periods (not used)', type: 'number'});
+  var out = [];
+  function blankAfter(periodRows) {
+    if (!periodRows.length) return;
+    var last = periodRows[periodRows.length - 1].date.split('-');
     out.push({c: [cell(new Date(Number(last[0]), Number(last[1]) - 1, Number(last[2]) + 1)), cell(null), cell(null),
-                  cell(null), cell(null), cell(null)]});
+                  cell(null), cell(null), cell(null), cell(null)]});
   }
+  expRows.forEach(function (r) {
+    out.push({c: [cell(chartDate(r.date)), cell(r.expected), cell(r.observed), cell(null), cell(null), cell(null),
+                  cell(null)]});
+  });
+  blankAfter(expRows);
+  (gapRows || []).forEach(function (r) {
+    out.push({c: [cell(chartDate(r.date)), cell(r.expected), cell(null), cell(null), cell(null), cell(null),
+                  cell(r.observed)]});
+  });
+  blankAfter(gapRows || []);
   rows.forEach(function (r) {
     var c = [cell(chartDate(r.date)), cell(r.expected), cell(null)];
     CLASSES.forEach(function (k) { c.push(cell(r.supports === k ? r.observed : null)); });
+    c.push(cell(null));
     out.push({c: c});
   });
   return {cols: cols, rows: out};
@@ -335,11 +391,12 @@ function targetFitChart(rows, band) {
                   options({title: 'Target Year vs. Fit', vAxis: {title: band.toUpperCase()}, series: series}));
 }
 
-function timelineChart(expRows, rows, band) {
+function timelineChart(expRows, rows, band, gapRows) {
   var series = {0: {color: EXPECTED_COLOR, lineWidth: 2, pointSize: 0},
                 1: {color: '#222222', lineWidth: 0, pointSize: 4}};
   CLASSES.forEach(function (c, i) { series[2 + i] = {color: CLASS_COLORS[c], lineWidth: 0, pointSize: 5}; });
-  return ui.Chart(timelineTable(expRows, rows, band), 'LineChart',
+  series[5] = {color: OBSERVED_COLOR, lineWidth: 0, pointSize: 4};
+  return ui.Chart(timelineTable(expRows, rows, band, gapRows), 'LineChart',
                   options({title: 'Expectation -> Monitoring: observations and fit',
                            hAxis: {format: 'MMM yyyy', gridlines: {color: 'transparent'}},
                            vAxis: {title: band.toUpperCase()}, series: series}));
@@ -366,6 +423,9 @@ exports.historyRows = historyRows;
 exports.expectationQuery = expectationQuery;
 exports.expectationRows = expectationRows;
 exports.expectationSummary = expectationSummary;
+exports.gapPeriod = gapPeriod;
+exports.gapQuery = gapQuery;
+exports.gapSummary = gapSummary;
 exports.timelineTable = timelineTable;
 exports.timelineChart = timelineChart;
 exports.hasObservations = hasObservations;

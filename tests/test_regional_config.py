@@ -2,6 +2,7 @@
 step 3). No Earth Engine calls: the grid values checked here against Earth
 Engine are recorded in docs/findings.md, 2026-10-22."""
 
+import dataclasses
 import subprocess
 import sys
 from pathlib import Path
@@ -13,7 +14,7 @@ pytest.importorskip("pyproj")
 pytest.importorskip("yaml")
 
 from bulcd_early_detection import outputs
-from bulcd_early_detection.config import LEGACY_DEFAULTS, MONITORING_SENSORS
+from bulcd_early_detection.config import DEFAULT_MONITORING_SENSORS, LEGACY_DEFAULTS
 from bulcd_early_detection.regional import spec
 from bulcd_early_detection.regional.run_config import AdvancedSettings, Region, RegionalRun, app_default_controls
 from bulcd_early_detection.regional.tiling import Grid, lonlat_ring, tiles_around, to_grid_xy
@@ -127,7 +128,8 @@ def test_defaults_are_the_apps():
     assert c.thresholds == {"decrease": 0.65, "increase": 0.75}
     assert c.expectation_sensors == ("L8",)
     a = AdvancedSettings()
-    assert a.monitoring_sensors == MONITORING_SENSORS
+    # The apps' default boxes: Landsat 7 (a historical-years opt-in) is never on by default.
+    assert a.monitoring_sensors == DEFAULT_MONITORING_SENSORS == ("L8", "L9", "S2")
     assert (a.dampening, a.posterior_leveler, a.mask_forest, a.mask_water) == \
            (LEGACY_DEFAULTS["dampening"], LEGACY_DEFAULTS["posterior_leveler"], False, True)
     assert a.timing_rule == "confirmed"
@@ -169,6 +171,10 @@ def test_run_config_is_the_interactive_apps_config(app):
     ({"product_version": 2}, "product version"),
     ({"extra": 1}, "unknown keys"),
     ({"advanced": {"monitoring_sensors": []}}, "monitoring_sensors"),
+    ({"advanced": {"monitoring_sensors": ["L5", "L8"]}}, "monitoring_sensors"),   # Landsat 5 can't monitor
+    ({"advanced": {"monitoring_sensors": ["L8", "LX"]}}, "monitoring_sensors"),
+    ({"advanced": {"monitoring_sensors": ["L9"]}, "controls": {**RegionalRun.load(PILOT).to_dict()["controls"],
+      "monitoring_year": 2021, "baseline_last_year": 2020}}, "No selected monitoring sensor"),
     ({"advanced": {"timing_rule": "late"}}, "timing_rule"),
     ({"controls": {"baseline_last_year": 2026}}, "baseline must end"),
 ])
@@ -176,6 +182,19 @@ def test_invalid_run_configs(change, message):
     d = RegionalRun.load(PILOT).to_dict() | change
     with pytest.raises((ValueError, TypeError), match=message):
         RegionalRun.from_dict(d)
+
+
+def test_landsat_7_only_when_listed():
+    """A run file without monitoring_sensors gets the apps' defaults (no Landsat 7);
+    listing L7 adds it as in the app (config.with_monitoring_sensors())."""
+    d = RegionalRun.load(PILOT).to_dict()
+    del d["advanced"]["monitoring_sensors"]
+    target = RegionalRun.from_dict(d).bulcd_config(aoi_asset="x").evidence.target.sensors
+    assert {c: s.enabled for c, s in target.items()} == {"L8": True, "L9": True, "S2": True}
+    d["advanced"]["monitoring_sensors"] = ["L7", "L8"]
+    target = RegionalRun.from_dict(d).bulcd_config(aoi_asset="x").evidence.target.sensors
+    assert {c: s.enabled for c, s in target.items()} == {"L7": True, "L8": True, "L9": False, "S2": False}
+    assert dataclasses.replace(target["L7"]) == target["L8"]   # same years, window and cloud filter
 
 
 def test_regional_config_needs_no_earth_engine():

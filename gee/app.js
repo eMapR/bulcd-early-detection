@@ -16,6 +16,7 @@ var OUTLINE_COLOR = 'ffd400';
 var AREA_SOURCES = {draw: 'Draw on the map', asset: 'Earth Engine asset'};
 // Starting view (the notebook's default map center).
 var MAP_CENTER = {lon: -123.552, lat: 44.834, zoom: 12};
+var EXPORT_FOLDER = 'bulcd_early_detection';
 
 var H2 = {fontSize: '16px', fontWeight: 'bold', margin: '12px 8px 4px'};
 var SMALL = {fontSize: '12px'};
@@ -124,8 +125,23 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
   var legend = ui.Panel();
   panel.add(legend);
 
-  // 4. Pixel inspector
-  panel.add(ui.Label('4. Pixel inspector', H2));
+  // 4. Export
+  panel.add(ui.Label('4. Export to Google Drive', H2));
+  panel.add(ui.Label('Exports the run\'s data (not the colored layers) as GeoTIFFs on a 30 m UTM grid ' +
+                     '(Sentinel-2 true color at 10 m), clipped to the area; masked pixels are ' +
+                     outputs.EXPORT_NODATA + '. Each file becomes a task: start it from the Tasks tab ' +
+                     '(top right of the Code Editor).', SMALL));
+  var exportChoices = ui.Panel();
+  exportChoices.add(ui.Label('Run the analysis first; its datasets are listed here.', SMALL));
+  var folderBox = ui.Textbox({value: EXPORT_FOLDER, placeholder: 'Google Drive folder', style: {width: '260px'}});
+  var exportButton = ui.Button('Export to Drive');
+  var exportStatus = ui.Label('', INFO);
+  panel.add(exportChoices);
+  panel.add(ui.Panel([ui.Label('Drive folder', {width: '70px'}), folderBox], ui.Panel.Layout.flow('horizontal')));
+  panel.add(exportButton).add(exportStatus);
+
+  // 5. Pixel inspector
+  panel.add(ui.Label('5. Pixel inspector', H2));
   panel.add(ui.Label('After a run, click the map, or enter a coordinate (decimal degrees) and press Submit Pixel. ' +
                      'A click fills the boxes, so after changing settings and running again, Submit Pixel ' +
                      'inspects the same 30 m pixel.', SMALL));
@@ -194,6 +210,9 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
     resultLayers = [];
     legend.clear();
     state.runToken++;
+    state.exports = null;
+    exportChoices.clear();
+    setMessage(exportStatus, '');
   }
 
   // Stores the run the inspector reads, and tells the user how to compare.
@@ -247,10 +266,14 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
     // Layers, bottom to top (the notebook's order); only the condition layer starts on.
     var imgYears = [c.monitoring_year - 2, c.monitoring_year - 1, c.monitoring_year];
     var window = [c.season_start, c.season_end];
+    // Sentinel-2, or Landsat for all three years when any is before outputs.REFERENCE_S2_FROM.
+    var imgSource = outputs.referenceSource(imgYears);
+    var suffix = imgSource === 'S2' ? '' : ' (' + outputs.REFERENCE_SOURCE_LABELS[imgSource] + ')';
     imgYears.forEach(function (y) {
-      addLayer(outputs.annualTrueColor(geom, y, window).clip(geom), outputs.TRUE_COLOR, 'True color ' + y, false);
+      addLayer(outputs.annualTrueColor(geom, y, window, imgSource).clip(geom), outputs.TRUE_COLOR,
+               'True color ' + y + suffix, false);
     });
-    var nbrName = 'NBR composite R=' + imgYears[0] + ' G=' + imgYears[1] + ' B=' + imgYears[2];
+    var nbrName = 'NBR composite R=' + imgYears[0] + ' G=' + imgYears[1] + ' B=' + imgYears[2] + suffix;
     // Added now so it keeps its place in the layer order; its image and stretch are set once the stretch is known.
     var nbrLayer = addLayer(ee.Image(), {}, nbrName + ' (loading)', false);
     if (timing) {
@@ -270,14 +293,15 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
     var large = area.report.area_km2 > aoi.TESTED_LIVE_KM2;
     var crs = aoi.utmCrs(area.report.centroid[0], area.report.centroid[1]);
     var land = imgYears.map(function (y) {
-      return outputs.annualNbr(geom, y, window, crs, !large).updateMask(outputs.notWater());
+      return outputs.annualNbr(geom, y, window, crs, !large, imgSource).updateMask(outputs.notWater());
     });
     outputs.nbrStretchQuery(land, geom, large ? 120 : 30).evaluate(function (stats, error) {
       if (token !== state.runToken) return;  // a newer run replaced these layers
       var stretch = stats && outputs.nbrStretchFromStats(stats);
       if (error || !stretch) {
         nbrLayer.setName(nbrName + ' (failed to load)');
-        legend.add(ui.Label(nbrName + ': failed to load (' + (error || 'no clear Sentinel-2 data') + ')', ERROR));
+        legend.add(ui.Label(nbrName + ': failed to load (' +
+                            (error || 'no clear ' + outputs.REFERENCE_SOURCE_LABELS[imgSource] + ' data') + ')', ERROR));
         return;
       }
       nbrLayer.setEeObject(ee.Image.cat(land).clip(geom));
@@ -312,7 +336,62 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
     }
     setRun({result: result, config: full, thresholds: thresholds, label: runLabel(c), outcome: outcome,
             timing: timing, episodes: episodes});
+    setExports(c, area, full, outputs.exportDatasets({
+      result: result, outcome: outcome, timing: timing, episodes: episodes, monitoringYear: c.monitoring_year,
+      imgYears: imgYears, window: window, imgSource: imgSource, geom: geom, crs: crs}), crs);
   }
+
+  // ---------------------------------------------------------------- export
+  // One checkbox per dataset of the latest run (all checked), plus its settings as a CSV.
+  function setExports(c, area, config, datasets, crs) {
+    var d = new Date(), pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    var stamp = d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '_' + pad(d.getHours()) + pad(d.getMinutes());
+    var prefix = outputs.exportName(['bulcd', area.aoi.aoi_asset ? area.name : 'drawn', c.monitoring_year, stamp]);
+    var settings = ee.FeatureCollection([ee.Feature(null, {run: runLabel(c), crs: crs, nodata: outputs.EXPORT_NODATA,
+                                                           config_json: JSON.stringify(config)})]);
+    var items = datasets.map(function (ds) {
+      return {label: ds.label + ' [' + ds.bands.join(', ') + ']', dataset: ds};
+    });
+    items.push({label: 'Run settings (CSV: the settings line and the full configuration as JSON)', settings: settings});
+    exportChoices.clear();
+    items.forEach(function (item) {
+      item.box = ui.Checkbox({label: item.label, value: true, style: {fontSize: '12px'}});
+      exportChoices.add(item.box);
+    });
+    state.exports = {prefix: prefix, crs: crs, geom: area.geometry, items: items, runToken: state.runToken};
+    setMessage(exportStatus, 'Files will be named ' + prefix + '_<dataset>.');
+  }
+
+  exportButton.onClick(function () {
+    var ex = state.exports;
+    if (!ex || ex.runToken !== state.runToken) return setMessage(exportStatus, 'Run the analysis first.', true);
+    if (typeof Export === 'undefined') {
+      return setMessage(exportStatus, 'Exports need the Code Editor (Export is not available here).', true);
+    }
+    var folder = folderBox.getValue().trim() || EXPORT_FOLDER;
+    var chosen = ex.items.filter(function (item) { return item.box.getValue(); });
+    if (!chosen.length) return setMessage(exportStatus, 'Check at least one dataset.', true);
+    var names = [];
+    try {
+      chosen.forEach(function (item) {
+        if (item.settings) {
+          var name = outputs.exportName([ex.prefix, 'settings']);
+          Export.table.toDrive({collection: item.settings, description: name, folder: folder, fileNamePrefix: name,
+                                fileFormat: 'CSV'});
+          names.push(name);
+        } else {
+          var params = outputs.exportParams(item.dataset, ex, folder, ex.prefix);
+          Export.image.toDrive(params);
+          names.push(params.description);
+        }
+      });
+    } catch (e) {
+      return setMessage(exportStatus, 'Export failed: ' + (e.message || e), true);
+    }
+    setMessage(exportStatus, 'Created ' + names.length + ' export task' + (names.length > 1 ? 's' : '') +
+               ' for Drive folder "' + folder + '":\n' + names.join('\n') +
+               '\nOpen the Tasks tab (top right) and press Run on each.');
+  });
 
   runButton.onClick(function () {
     var c = controls.read(), problem = appConfig.validateControls(c);
@@ -344,14 +423,25 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
     showMarker(lon, lat);
     results.clear();
     setMessage(inspectStatus, 'Loading the pixel history at ' + lat.toFixed(5) + ', ' + lon.toFixed(5) + '...');
+    // The gap years (between the periods) are a separate request, so a failure
+    // there drops only their points; the charts draw once both have answered.
+    var gap = inspector.gapQuery(bulcd, run.result, run.config, lon, lat);
+    var answers = {gap: gap ? undefined : null}, pending = gap ? 2 : 1;
+    function answered() {
+      if (--pending === 0) show(answers.both, answers.error, answers.gap, answers.gapError);
+    }
     ee.Dictionary({history: inspector.historyQuery(run.result, run.config, lon, lat),
                    expectation: inspector.expectationQuery(bulcd, run.result, run.config, lon, lat)})
-      .evaluate(function (both, error) {
+      .evaluate(function (both, error) { answers.both = both; answers.error = error; answered(); });
+    if (gap) gap.evaluate(function (g, error) { answers.gap = g; answers.gapError = error; answered(); });
+
+    function show(both, error, gapTables, gapError) {
       if (mine !== state.request) return;
       if (error) return setMessage(inspectStatus, 'Pixel history failed: ' + error + '\nTry again or another pixel.',
                                    true);
       var rows = inspector.historyRows(both.history, run.config);
       var expRows = inspector.expectationRows(both.expectation, run.config);
+      var gapRows = gapTables ? inspector.expectationRows(gapTables, run.config) : [];
       if (!inspector.hasObservations(rows)) {
         return setMessage(inspectStatus, 'No clear observations here: outside the study area, masked (water or ' +
                                          'non-forest), or always cloudy. Try another pixel.', true);
@@ -359,10 +449,16 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
       setMessage(inspectStatus, 'Pixel at ' + lat.toFixed(5) + ' N, ' + Math.abs(lon).toFixed(5) +
                  (lon < 0 ? ' W' : ' E') + '\nCoordinate: ' + lon + ', ' + lat +
                  ' (lon, lat); sampled on the 30 m result grid\nRun: ' + run.label);
-      results.add(inspector.timelineChart(expRows, rows, run.config.reduction.band));
+      results.add(inspector.timelineChart(expRows, rows, run.config.reduction.band, gapRows));
       inspector.expectationSummary(both.expectation, expRows, run.config).forEach(function (line) {
         results.add(ui.Label(line, SMALL));
       });
+      if (gapError) {
+        results.add(ui.Label('The observations between the periods could not be loaded (' + gapError +
+                             '); the chart shows the two periods only.', SMALL));
+      } else {
+        inspector.gapSummary(run.config, gapRows).forEach(function (line) { results.add(ui.Label(line, SMALL)); });
+      }
       results.add(inspector.targetFitChart(rows, run.config.reduction.band));
       results.add(inspector.probabilityChart(rows, run.thresholds.decrease, run.thresholds.increase));
       inspector.crossingNotes(rows, run.thresholds.decrease, run.thresholds.increase).forEach(function (note) {
@@ -371,7 +467,7 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
       inspector.episodeNotes(rows, run.thresholds.decrease).forEach(function (note) {
         results.add(ui.Label('Monitoring season: ' + note, SMALL));
       });
-    });
+    }
   }
 
   map.onClick(function (coords) {
@@ -395,7 +491,8 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
   ui.root.clear();
   ui.root.add(ui.SplitPanel(panel, map));
   return {map: map, state: state, controls: controls, source: source, assetBox: assetBox, useArea: useArea,
-          runButton: runButton, lonBox: lonBox, latBox: latBox, submit: submit, AREA_SOURCES: AREA_SOURCES};
+          runButton: runButton, lonBox: lonBox, latBox: latBox, submit: submit, AREA_SOURCES: AREA_SOURCES,
+          exportButton: exportButton, folderBox: folderBox, exportChoices: exportChoices, exportStatus: exportStatus};
 }
 
 if (typeof exports !== 'undefined') exports.main = main;

@@ -1,0 +1,23 @@
+/Users/clarype/miniconda3/envs/bulcd/lib/python3.11/site-packages/google/api_core/_python_version_support.py:254: FutureWarning: You are using a Python version (3.11.15) which Google will stop supporting in new releases of google.api_core once it reaches its end of life (2027-10-24). Please upgrade to the latest Python version, or at least Python 3.12, to continue receiving updates for google.api_core past that date.
+  warnings.warn(message, FutureWarning)
+interior_forest_quiet   L8 13-14 -> L8      ok        2s  dec=0.0  inc=0.0  ref=  
+interior_forest_quiet   L7 -> L7            ok        8s  dec=0.0  inc=0.0  ref=  
+interior_forest_quiet   L7 -> L8            ok       10s  dec=0.0  inc=0.0  ref=  
+interior_forest_quiet   L7 -> L7+L8         ok        9s  dec=0.0  inc=0.0  ref=  
+interior_forest_quiet   L7+L8 -> L7+L8      ok       12s  dec=0.0  inc=0.0  ref=  
+interior_forest_quiet   L5+L7 -> L8         ok       21s  dec=0.0  inc=0.0  ref=  
+interior_forest_quiet   L5+L7+L8 -> L7+L8   ok        9s  dec=0.0  inc=0.0  ref=  
+stockton_interior       L8 13-14 -> L8      ok        4s  dec=0.0009  inc=0.0  ref=  
+stockton_interior       L7 -> L7            ok        8s  dec=0.0009  inc=0.0009  ref=  
+stockton_interior       L7 -> L8            ok        4s  dec=0.0  inc=0.0027  ref=  
+stockton_interior       L7 -> L7+L8         ok        9s  dec=0.0  inc=0.0009  ref=  
+stockton_interior       L7+L8 -> L7+L8      ok       12s  dec=0.0  inc=0.0  ref=  
+stockton_interior       L5+L7 -> L8         ok       10s  dec=0.0018  inc=0.0027  ref=  
+stockton_interior       L5+L7+L8 -> L7+L8   ok        9s  dec=0.0  inc=0.0  ref=  
+testsite                L8 13-14 -> L8      ok        6s  dec=0.0486  inc=1.6983  ref=0.574  
+testsite                L7 -> L7            ok       12s  dec=0.0558  inc=1.6281  ref=0.387  
+testsite                L7 -> L8            ok        5s  dec=0.0711  inc=1.3896  ref=0.405  
+testsite                L7 -> L7+L8         ok       10s  dec=0.0486  inc=1.3338  ref=0.5  
+testsite                L7+L8 -> L7+L8      ok        8s  dec=0.0441  inc=1.0674  ref=0.571  
+testsite                L5+L7 -> L8         ok        8s  dec=0.0639  inc=1.6524  ref=0.423  
+testsite                L5+L7+L8 -> L7+L8   ok       15s  dec=0.0423  inc=1.2897  ref=0.574  

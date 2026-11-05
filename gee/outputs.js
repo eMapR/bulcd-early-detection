@@ -261,14 +261,54 @@ function clearS2(region, year, window, csThreshold) {
 // render.py TRUE_COLOR.
 var TRUE_COLOR = {bands: ['B4', 'B3', 'B2'], min: [0, 0, 0], max: [1400, 1400, 1400], gamma: 1.3};
 
-function annualTrueColor(region, year, window) {
-  return clearS2(region, year, window).select(['B4', 'B3', 'B2']).median();
+// Reference imagery source: Sentinel-2 when every year shown is from
+// REFERENCE_S2_FROM on, else Landsat for all of them, so one composite never
+// mixes sources (outputs.py REFERENCE_S2_FROM, reference_source()).
+var REFERENCE_S2_FROM = 2017;
+var REFERENCE_SOURCE_LABELS = {S2: 'Sentinel-2', Landsat: 'Landsat'};
+// Landsat Collection 2 Level 2 SR bands named as Sentinel-2's (outputs.py _LANDSAT_REFERENCE).
+var LANDSAT_REFERENCE = {
+  'LANDSAT/LT05/C02/T1_L2': ['SR_B1', 'SR_B2', 'SR_B3', 'SR_B4', 'SR_B7'],
+  'LANDSAT/LE07/C02/T1_L2': ['SR_B1', 'SR_B2', 'SR_B3', 'SR_B4', 'SR_B7'],
+  'LANDSAT/LC08/C02/T1_L2': ['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B7'],
+  'LANDSAT/LC09/C02/T1_L2': ['SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B7']
+};
+var S2_NAMES = ['B2', 'B3', 'B4', 'B8', 'B12'];  // blue, green, red, NIR, SWIR2
+
+function referenceSource(years) {
+  return Math.min.apply(null, years) >= REFERENCE_S2_FROM ? 'S2' : 'Landsat';
+}
+
+// Landsat 5/7/8/9 SR for one year's MM-DD window, QA_PIXEL-masked, with
+// Sentinel-2 band names and scale (outputs.py _clear_landsat()).
+function clearLandsat(region, year, window) {
+  var out = null;
+  Object.keys(LANDSAT_REFERENCE).forEach(function (id) {
+    var bands = LANDSAT_REFERENCE[id];
+    var col = ee.ImageCollection(id).filterBounds(region)
+      .filterDate(year + '-' + window[0], year + '-' + window[1])
+      .map(function (image) {
+        var clear = image.select('QA_PIXEL').bitwiseAnd(31).eq(0);
+        return image.select(bands, S2_NAMES).multiply(0.275).add(-2000).updateMask(clear);
+      });
+    out = out ? out.merge(col) : col;
+  });
+  return out;
+}
+
+function clearImagery(region, year, window, source) {
+  return source === 'Landsat' ? clearLandsat(region, year, window) : clearS2(region, year, window);
+}
+
+// outputs.py annual_true_color(); source 'S2' (default) or 'Landsat'.
+function annualTrueColor(region, year, window, source) {
+  return clearImagery(region, year, window, source).select(['B4', 'B3', 'B2']).median();
 }
 
 // Sentinel-2 NBR median for one year, on a fixed 30 m UTM grid unless
 // `reproject` is false (large areas). outputs.py annual_nbr().
-function annualNbr(region, year, window, crs, reproject) {
-  var nbr = clearS2(region, year, window).map(function (i) { return i.normalizedDifference(['B8', 'B12']); })
+function annualNbr(region, year, window, crs, reproject, source) {
+  var nbr = clearImagery(region, year, window, source).map(function (i) { return i.normalizedDifference(['B8', 'B12']); })
     .median().rename('nbr_' + year);
   return reproject ? nbr.reproject({crs: crs, scale: 30}) : nbr;
 }
@@ -297,6 +337,66 @@ function nbrStretchFromStats(stats) {
   return [Math.min.apply(null, lows), Math.max.apply(null, highs)];
 }
 
+// ---------------------------------------------------------------- export
+// Data (not the colored map layers) a run can export to Google Drive as
+// GeoTIFFs. Masked pixels (water, outside the area, no detection) are written
+// as EXPORT_NODATA, since 0 is a real value in several bands (outcome 0 =
+// decrease).
+var EXPORT_NODATA = -9999;
+
+// Earth Engine allows letters, digits, '_' and '-' (and a few others) in task
+// descriptions and file names, at most 100 characters.
+function exportName(parts) {
+  return parts.join('_').replace(/[^A-Za-z0-9_-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').slice(0, 100);
+}
+
+// The run's datasets, in the app's layer order: [{key, label, image, scale,
+// bands}]. `run`: {result, outcome, timing, episodes, monitoringYear, imgYears,
+// window, imgSource, geom, crs}. Images are clipped to the area and cast to one
+// type per file (GeoTIFF bands must share a type).
+function exportDatasets(run) {
+  var geom = run.geom, list = [];
+  function add(key, label, image, bands, scale) {
+    list.push({key: key, label: label, image: image.select(bands).clip(geom), bands: bands, scale: scale});
+  }
+  var final = run.result.final_probabilities;
+  add('condition', 'Condition ' + run.monitoringYear + ': outcome (0 decrease, 1 unchanged, 2 increase, ' +
+      '3 not analyzed) and final probabilities',
+      ee.Image.cat(run.outcome.select('outcome'), final.select(['decrease', 'unchanged', 'increase']))
+        .rename(['outcome', 'p_decrease', 'p_unchanged', 'p_increase']).toFloat(),
+      ['outcome', 'p_decrease', 'p_unchanged', 'p_increase'], 30);
+  if (run.timing) {
+    add('first_detected', 'First detected season (decrease): year, day of year', run.timing.toFloat(),
+        ['first_decrease_year', 'first_decrease_doy'], 30);
+    add('last_detection_episodes', 'Last detection (year, day of year) and detection episodes (decrease)',
+        run.episodes.toFloat(), ['last_decrease_year', 'last_decrease_doy', 'decrease_episodes'], 30);
+  }
+  var landsat = run.imgSource !== 'S2', src = REFERENCE_SOURCE_LABELS[run.imgSource];
+  run.imgYears.forEach(function (y) {
+    add('true_color_' + y, 'True color ' + y + ' (' + src + ' median, B4 B3 B2' +
+        (landsat ? ' on the Sentinel-2 scale' : '') + ')',
+        annualTrueColor(geom, y, run.window, run.imgSource).toInt16(), ['B4', 'B3', 'B2'], landsat ? 30 : 10);
+  });
+  var nbrBands = run.imgYears.map(function (y) { return 'nbr_' + y; });
+  add('nbr', 'NBR ' + run.imgYears.join(', ') + ' (' + src + ' median, one band per year)',
+      ee.Image.cat(run.imgYears.map(function (y) {
+        return annualNbr(geom, y, run.window, run.crs, false, run.imgSource);
+      })).toFloat(), nbrBands, 30);
+  return list;
+}
+
+// Export.image.toDrive() parameters for one dataset.
+function exportParams(dataset, run, folder, prefix) {
+  var name = exportName([prefix, dataset.key]);
+  return {image: dataset.image, description: name, folder: folder, fileNamePrefix: name, region: run.geom,
+          scale: dataset.scale, crs: run.crs, maxPixels: 1e13, fileFormat: 'GeoTIFF',
+          formatOptions: {cloudOptimized: true, noData: EXPORT_NODATA}};
+}
+
+exports.EXPORT_NODATA = EXPORT_NODATA;
+exports.exportName = exportName;
+exports.exportDatasets = exportDatasets;
+exports.exportParams = exportParams;
 exports.classThresholds = classThresholds;
 exports.DECREASE = DECREASE;
 exports.UNCHANGED = UNCHANGED;
@@ -328,6 +428,9 @@ exports.YEAR_COLORS = YEAR_COLORS;
 exports.timingVis = timingVis;
 exports.TRUE_COLOR = TRUE_COLOR;
 exports.annualTrueColor = annualTrueColor;
+exports.referenceSource = referenceSource;
+exports.REFERENCE_S2_FROM = REFERENCE_S2_FROM;
+exports.REFERENCE_SOURCE_LABELS = REFERENCE_SOURCE_LABELS;
 exports.annualNbr = annualNbr;
 exports.notWater = notWater;
 exports.nbrStretchQuery = nbrStretchQuery;

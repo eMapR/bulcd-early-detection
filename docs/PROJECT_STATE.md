@@ -1,12 +1,45 @@
 # Project State
 
-Last updated: 2026-10-26 (later)
+Last updated: 2026-11-04 (consolidation)
 
 Concise current-state/handoff doc. Detailed lessons, experimental
 results, and their explanations live in `docs/findings.md` — read it for
 the "why," not this file.
 
-## Pick up here (2026-10-21, islay server)
+## Pick up here (2026-11-04, consolidated)
+
+**Branch:** `integrate/2026-11-consolidation` joins the two diverged copies (split at `5de4c8d`, 2026-10-21):
+- islay's `feature/regional-batch-processing` @ `95c462f`: regional batch pipeline, steps 3-8b;
+- the laptop's `legacy-parity-0011-app` @ `9f85cad`: historical years and Landsat 5/7, GEE Export to Drive,
+  GEE inspector between-period observations, the finished expectation-sensor probe, the seven-ecoregion plan;
+- the laptop's `backup/mac-uncommitted-2026-11-04` @ `ac53461`: the 2026-10-28 meeting analysis
+  (`meeting_2026-10-28/`: scripts, data, figures v1-v7, README).
+
+What the merge settled (behavior) is in `docs/findings.md`, 2026-11-04. Not merged to `main`; GEE app not
+redeployed. The engine is pinned to BULC-D_rebuild `8e9c5d5` (decision 0011) in the `engine` extra.
+Islay's local `legacy-parity-0011-app` was reset to `9f85cad` on 2026-11-04 (its stale `883d92e` duplicated
+`b3baafd`; kept as branch `backup-883d92e`).
+
+**Next: the seven-ecoregion regional run, on islay** (`docs/regional_plan.md`, "Next run: seven EPA Level III
+ecoregions"). Build the Coast Range run (pilot settings + L8/L9 expectation + full year), show the user the
+config and task count, then submit. Coast Range first; report results and real EECU cost before the other
+six. Decide first whether to use 2 x 2-tile export blocks (step 8b).
+
+**Standing instructions (islay, 2026-10-26):** report 8a + 8b results to the user before any full Region 6
+processing; keep the benchmark assets (`regional_bench/`) until the performance evaluation is finished.
+
+**Waiting on the user:** cloud-masking options for the GEE app (CFMask default + dilation, cloud score, TDOM).
+Reviewed 2026-11-03, nothing implemented: masking lives in BULC-D_rebuild (`landsatEvidence` in `gee/bulcd.js`,
+`bulcd/inputs.py`), so it needs a bulcd change with parity and a decision record; Landsat cloud score needs the
+TOA collections (or the cheaper QA_PIXEL confidence bits); TDOM needs a transience test so it can't mask real
+change (burns, beaver ponding) and must never mask the newest, uncheckable observation. Four questions to the
+user are open (bulcd change OK, cloud score method, TDOM safeguards, GEE-only scope).
+
+**Note on the meeting README:** `meeting_2026-10-28/README.md` says the islay regional validation could not be
+retrieved (the branch was unpushed). It is now in this repo: steps 7, 8 and 8a below and in `docs/findings.md`.
+The README is left as the meeting record.
+
+### Regional pipeline, steps 1-8c (islay, 2026-10-21 to 10-26)
 
 **Current project:** regional batch processing for USFS Region 6. The agreed plan, decisions and order of work
 are in `docs/regional_plan.md`.
@@ -108,6 +141,44 @@ don't redeploy the GEE app yet.
   for, so they failed with `invalid_scope`.
 - **Long runs** (probe, parity ~45 min) go in tmux.
 - **GEE Code Editor deploy after committing:** `python tools/build_gee_deploy.py clarype`.
+
+### Laptop work (2026-11-02 to 11-04)
+
+**Done on `legacy-parity-0011-app`:**
+- Pixel inspector (GEE): observations in the years between the expectation and monitoring periods,
+  context only (commit "GEE pixel inspector: plot observations between...").
+- **Step 1, expectation sensors: finished.** Probe complete (`experiments/output/expectation_sensor_probe/`),
+  `S2_EXPECTATION_MAX_YEARS = 2` with the measured failure in the warning, live parity passed,
+  `docs/findings.md` 2026-10-19 entry. Results reported to the user 2026-11-02.
+- **Historical years: done** (`docs/findings.md`, 2026-11-02). Expectation 2010–2025, monitoring 2015–2026,
+  Landsat 5/7 sensors, data-availability warnings/blocks (`SENSOR_GAPS`), Landsat reference imagery before
+  2017, in both apps. Defaults and the default config unchanged. Tests: `tests/test_historical_years.py`,
+  cross-check in `tests/test_expectation_sensors.py`, `controls_check.js` historical section, live parity
+  section 7.
+
+- **GEE app: Export to Google Drive** (2026-11-03, user request; GEE app only, Drive GeoTIFF by user choice).
+  Section 4 of the panel (inspector is now 5): per-dataset checkboxes after a run, Drive folder box, one
+  `Export.image.toDrive` task per dataset + a settings CSV. `outputs.js` `exportDatasets()`/`exportParams()`;
+  check `gee/tests/export_check.js` (passes; `Export` stubbed); parity's expected button list updated.
+  Committed 2026-11-04; not yet deployed or run as a real task in the Code Editor.
+
+**Open / to check:**
+- Export: in the Code Editor after deploy, run one real export of each dataset and open the GeoTIFFs
+  (confirms `formatOptions.noData` is accepted and the files look right).
+- Deployed edeedc3 to the Code Editor 2026-11-02. In the Code Editor: a long multi-Landsat expectation (e.g. L5+L7+L8 2010–2023), to see whether
+  First detected season (343 M chars expanded) still renders. If not, apply the 2026-10-13 one-band/`min()` fix.
+- ~~Then plan step 2~~: done on islay (2026-10-22); see the regional section above.
+
+**Environment (laptop):** see memory/README. Python `/Users/clarype/miniconda3/envs/bulcd/bin/python`; node from
+`/Users/clarype/miniconda3/envs/bulcd-gee/bin` (prepend to PATH, or node-backed tests skip). Live parity:
+`cd gee/tests && python run_app_parity.py` (~50 min). GEE deploy after committing:
+`python tools/build_gee_deploy.py clarype`.
+
+**New machine:** both repos as siblings, `bulcd-early-detection` on `integrate/2026-11-consolidation` (was
+`legacy-parity-0011-app`) and
+`BULC-D_rebuild` on `legacy-parity-0011`; `pip install -e ../BULC-D_rebuild && pip install -e ".[dev,notebook,regional]"`
+(Python 3.11; ipyleaflet needed for test collection); `cd ../BULC-D_rebuild/gee && npm install` for node;
+Earth Engine credentials for project `bulcd-python-rebuild`.
 
 ## Architecture
 

@@ -1,0 +1,881 @@
+{
+ "started": "2026-11-02T18:40:36.104Z",
+ "area": "projects/bulcd-python-rebuild/assets/testsite",
+ "zoom": 13,
+ "tiles": 6,
+ "pixel": {
+  "label": "Pixel 1 (decrease)",
+  "lon": -123.56922,
+  "lat": 44.84283
+ },
+ "availability": {
+  "L5": {
+   "2008": 13,
+   "2009": 14,
+   "2010": 10,
+   "2011": 12,
+   "2012": 0,
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 0,
+   "2017": 0,
+   "2018": 0,
+   "2019": 0,
+   "2020": 0,
+   "2021": 0,
+   "2022": 0,
+   "2023": 0,
+   "2024": 0,
+   "2025": 0,
+   "2026": 0
+  },
+  "L7": {
+   "2008": 12,
+   "2009": 13,
+   "2010": 12,
+   "2011": 14,
+   "2012": 13,
+   "2013": 13,
+   "2014": 12,
+   "2015": 15,
+   "2016": 13,
+   "2017": 14,
+   "2018": 15,
+   "2019": 15,
+   "2020": 13,
+   "2021": 13,
+   "2022": 10,
+   "2023": 10,
+   "2024": 0,
+   "2025": 0,
+   "2026": 0
+  },
+  "L8": {
+   "2008": 0,
+   "2009": 0,
+   "2010": 0,
+   "2011": 0,
+   "2012": 0,
+   "2013": 12,
+   "2014": 12,
+   "2015": 14,
+   "2016": 13,
+   "2017": 13,
+   "2018": 15,
+   "2019": 14,
+   "2020": 14,
+   "2021": 11,
+   "2022": 13,
+   "2023": 14,
+   "2024": 15,
+   "2025": 15,
+   "2026": 14
+  },
+  "L9": {
+   "2008": 0,
+   "2009": 0,
+   "2010": 0,
+   "2011": 0,
+   "2012": 0,
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 0,
+   "2017": 0,
+   "2018": 0,
+   "2019": 0,
+   "2020": 0,
+   "2021": 0,
+   "2022": 13,
+   "2023": 13,
+   "2024": 13,
+   "2025": 16,
+   "2026": 14
+  },
+  "S2": {
+   "2008": 0,
+   "2009": 0,
+   "2010": 0,
+   "2011": 0,
+   "2012": 0,
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 13,
+   "2017": 24,
+   "2018": 48,
+   "2019": 48,
+   "2020": 50,
+   "2021": 49,
+   "2022": 49,
+   "2023": 48,
+   "2024": 48,
+   "2025": 59,
+   "2026": 60
+  },
+  "S2_cloud_score_plus": {
+   "2008": 0,
+   "2009": 0,
+   "2010": 0,
+   "2011": 0,
+   "2012": 0,
+   "2013": 0,
+   "2014": 0,
+   "2015": 0,
+   "2016": 26,
+   "2017": 24,
+   "2018": 48,
+   "2019": 48,
+   "2020": 50,
+   "2021": 49,
+   "2022": 49,
+   "2023": 47,
+   "2024": 48,
+   "2025": 60,
+   "2026": 61
+  }
+ },
+ "runs": [
+  {
+   "name": "L7 x 5 yr to 2014, monitoring 2015 L7+L8",
+   "sensors": [
+    "L7"
+   ],
+   "years": 5,
+   "expectation": [
+    2010,
+    2014
+   ],
+   "monitoring_year": 2015,
+   "warnings": [
+    "The expectation uses Landsat 7 and monitoring uses Landsat 7 and Landsat 8. Differences between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but not in the expectation produced false decreases at stable sites that disappeared when both periods used the same sensors.",
+    "Landsat 7 images since 2003 have striped gaps (its scan-line corrector failed; about a fifth of each scene is missing), so it gives fewer clear observations per pixel than Landsat 8: about 75-95% as many in tests."
+   ],
+   "expectation_sensors": [
+    "L7"
+   ],
+   "layers": {
+    "Condition 2015": {
+     "description_chars": 3452977,
+     "s": 16.45,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 13.585,
+     "tiles": [
+      {
+       "s": 5.583,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 13.585,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 6.246,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 6.144,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 9.01,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 12.286,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 92069295,
+     "s": 17.039,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 13.681,
+     "tiles": [
+      {
+       "s": 4.273,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 13.681,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 5.174,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 7.152,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 4.962,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 5.272,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Last detection (decrease)": {
+     "description_chars": 15588187,
+     "s": 16.214,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 13.819,
+     "tiles": [
+      {
+       "s": 13.819,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 2.989,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 4.296,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 2.922,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 5.868,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 12.272,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 7794064,
+     "s": 28.671,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 25.492,
+     "tiles": [
+      {
+       "s": 3.999,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 8.408,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 1.065,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 0.669,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 25.492,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 0.809,
+       "status": 200,
+       "error": null
+      }
+     ]
+    }
+   },
+   "inspector": {
+    "s": 19.22,
+    "ok": true,
+    "error": null
+   }
+  },
+  {
+   "name": "L5+L7 x 5 yr to 2014, monitoring 2015 L7+L8",
+   "sensors": [
+    "L5",
+    "L7"
+   ],
+   "years": 5,
+   "expectation": [
+    2010,
+    2014
+   ],
+   "monitoring_year": 2015,
+   "warnings": [
+    "The expectation uses Landsat 5 and Landsat 7 and monitoring uses Landsat 7 and Landsat 8. Landsat 5 and 7 (TM/ETM+) and Landsat 8 and 9 (OLI) measure slightly different wavelengths, and BULC-D does not adjust for it. In tests the NBR difference between them was small (median 0.013 or less) and caused no false change in stable forest, but decreases agreed best with real change when Landsat 8 was in both periods.",
+    "Landsat 5 has no observations after 2011 (it stopped imaging in November 2011), which affects expectation years 2012-2014; the sensor mix changes partway through the expectation.",
+    "Landsat 7 images since 2003 have striped gaps (its scan-line corrector failed; about a fifth of each scene is missing), so it gives fewer clear observations per pixel than Landsat 8: about 75-95% as many in tests."
+   ],
+   "expectation_sensors": [
+    "L5",
+    "L7"
+   ],
+   "layers": {
+    "Condition 2015": {
+     "description_chars": 4160917,
+     "s": 15.637,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 10.291,
+     "tiles": [
+      {
+       "s": 5.373,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 8.515,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 10.109,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 10.291,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 5.202,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 5.038,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 110947695,
+     "s": 18.548,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 15.711,
+     "tiles": [
+      {
+       "s": 15.711,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 15.113,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 8.204,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 2.056,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 2.325,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 2.874,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Last detection (decrease)": {
+     "description_chars": 18773917,
+     "s": 25.454,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 19.55,
+     "tiles": [
+      {
+       "s": 13.084,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 2.597,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 8.362,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 3.503,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 19.55,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 12.449,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 9386929,
+     "s": 15.026,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 9.424,
+     "tiles": [
+      {
+       "s": 2.089,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 0.648,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 0.649,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 9.424,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 2.085,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 1.166,
+       "status": 200,
+       "error": null
+      }
+     ]
+    }
+   },
+   "inspector": {
+    "s": 11.516,
+    "ok": true,
+    "error": null
+   }
+  },
+  {
+   "name": "L7+L8 x 5 yr to 2014, monitoring 2015 L7+L8",
+   "sensors": [
+    "L7",
+    "L8"
+   ],
+   "years": 5,
+   "expectation": [
+    2010,
+    2014
+   ],
+   "monitoring_year": 2015,
+   "warnings": [
+    "Landsat 8 has no observations before 2013 (its first scenes are from April 2013), which affects expectation years 2010-2012; the sensor mix changes partway through the expectation.",
+    "Landsat 7 images since 2003 have striped gaps (its scan-line corrector failed; about a fifth of each scene is missing), so it gives fewer clear observations per pixel than Landsat 8: about 75-95% as many in tests."
+   ],
+   "expectation_sensors": [
+    "L7",
+    "L8"
+   ],
+   "layers": {
+    "Condition 2015": {
+     "description_chars": 4091365,
+     "s": 20.52,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 14.081,
+     "tiles": [
+      {
+       "s": 8.736,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 14.081,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 7.574,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 6.422,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 9.256,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 5.28,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 109092975,
+     "s": 16.08,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 9.229,
+     "tiles": [
+      {
+       "s": 3.034,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 5.629,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 9.229,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 2.001,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 6.263,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 5.752,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Last detection (decrease)": {
+     "description_chars": 18460933,
+     "s": 10.716,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 5.796,
+     "tiles": [
+      {
+       "s": 4.591,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 5.637,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 2.584,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 4.324,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 5.743,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 5.796,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 9230437,
+     "s": 21.976,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 17.147,
+     "tiles": [
+      {
+       "s": 0.675,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 8.827,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 9.018,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 17.147,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 0.893,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 7.081,
+       "status": 200,
+       "error": null
+      }
+     ]
+    }
+   },
+   "inspector": {
+    "s": 19.088,
+    "ok": true,
+    "error": null
+   }
+  },
+  {
+   "name": "L5+L7+L8 x 5 yr to 2014, monitoring 2015 L7+L8",
+   "sensors": [
+    "L5",
+    "L7",
+    "L8"
+   ],
+   "years": 5,
+   "expectation": [
+    2010,
+    2014
+   ],
+   "monitoring_year": 2015,
+   "warnings": [
+    "The expectation uses Landsat 5, Landsat 7 and Landsat 8 and monitoring uses Landsat 7 and Landsat 8. Landsat 5 and 7 (TM/ETM+) and Landsat 8 and 9 (OLI) measure slightly different wavelengths, and BULC-D does not adjust for it. In tests the NBR difference between them was small (median 0.013 or less) and caused no false change in stable forest, but decreases agreed best with real change when Landsat 8 was in both periods.",
+    "Landsat 5 has no observations after 2011 (it stopped imaging in November 2011), which affects expectation years 2012-2014; the sensor mix changes partway through the expectation.",
+    "Landsat 8 has no observations before 2013 (its first scenes are from April 2013), which affects expectation years 2010-2012; the sensor mix changes partway through the expectation.",
+    "Landsat 7 images since 2003 have striped gaps (its scan-line corrector failed; about a fifth of each scene is missing), so it gives fewer clear observations per pixel than Landsat 8: about 75-95% as many in tests."
+   ],
+   "expectation_sensors": [
+    "L5",
+    "L7",
+    "L8"
+   ],
+   "layers": {
+    "Condition 2015": {
+     "description_chars": 4799305,
+     "s": 16.054,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 11.341,
+     "tiles": [
+      {
+       "s": 11.341,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 4.733,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 5.274,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 10.009,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 7.14,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 10.516,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "First detected season (decrease)": {
+     "description_chars": 127971375,
+     "s": 13.148,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 9.664,
+     "tiles": [
+      {
+       "s": 4.71,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 9.664,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 2.798,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 6.447,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 4.724,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 8.931,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Last detection (decrease)": {
+     "description_chars": 21646663,
+     "s": 17.175,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 13.316,
+     "tiles": [
+      {
+       "s": 6.247,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 3.393,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 8.328,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 4.276,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 7.727,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 13.316,
+       "status": 200,
+       "error": null
+      }
+     ]
+    },
+    "Detection episodes (decrease)": {
+     "description_chars": 10823302,
+     "s": 11.164,
+     "ok": true,
+     "error": null,
+     "max_tile_s": 4.411,
+     "tiles": [
+      {
+       "s": 2.181,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 0.61,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 1.993,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 2.555,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 4.411,
+       "status": 200,
+       "error": null
+      },
+      {
+       "s": 1.941,
+       "status": 200,
+       "error": null
+      }
+     ]
+    }
+   },
+   "inspector": {
+    "s": 11.114,
+    "ok": true,
+    "error": null
+   }
+  }
+ ],
+ "finished": "2026-11-02T18:46:23.174Z"
+}

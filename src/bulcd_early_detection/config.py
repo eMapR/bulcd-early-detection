@@ -53,13 +53,22 @@ PRODUCTION_TRANSITION_MATRIX = [
 CLOUD_COVER_THRESHOLD = 70
 
 # Sensors either period can use, in display order (gee/config.js SENSORS).
-SENSORS = ("L8", "L9", "S2")
+SENSORS = ("L5", "L7", "L8", "L9", "S2")
 # Default expectation (baseline) sensors: L8 only, unchanged since the
 # validated L8+S2 multi-year baseline hit Earth Engine's "User memory limit
 # exceeded" inside organize_inputs()'s harmonic fit (docs/findings.md,
 # 2026-09-18). MonitoringControls.expectation_sensors selects others.
 BASELINE_SENSORS = ("L8",)
-MONITORING_SENSORS = ("L8", "L9", "S2")
+# Monitoring can't use Landsat 5: it stopped imaging in 2011, before the
+# earliest monitoring year (MONITORING_YEARS).
+MONITORING_SENSORS = ("L7", "L8", "L9", "S2")
+# Monitoring sensors on by default (Landsat 7 is an opt-in for historical years).
+DEFAULT_MONITORING_SENSORS = ("L8", "L9", "S2")
+# The widgets' year limits (gee/config.js RANGES): expectation years from
+# 2010 (Landsat 5/7 before Landsat 8), monitoring years from 2015 (the first
+# year a 2-year Landsat 8 expectation fits before; docs/findings.md, 2026-11-02).
+EXPECTATION_YEARS = (2010, 2025)
+MONITORING_YEARS = tuple(range(2015, 2027))
 # Algorithm defaults: the original BULC-D GUI's, as in the GEE app (gee/config.js
 # APP_DEFAULTS; read from the legacy source, see gee/tests/legacy_gui.js).
 # The expectation years, monitoring year, season and sensors had no default
@@ -74,15 +83,32 @@ TIMING_CONFIRMED_DEFAULT = True
 # Starting probabilities 0.1 decrease / 0.8 unchanged / 0.1 increase
 # (initializingLeveler 0.7 on "unchanged"). Fixed; not a control.
 INITIALIZING_LEVELER = 0.7
-# First year with a full season of data, and what is missing before it
-# (docs/findings.md, 2026-10-19: Jun-Sep scenes over the testsite).
-SENSOR_FULL_FROM = {"L8": 2014, "L9": 2022, "S2": 2018}
-_SENSOR_GAPS = {
-    "L8": "no observations before 2014 (its first scenes are from April 2013)",
-    "L9": "no observations before 2022 (its first scenes are from Oct 31, 2021)",
-    "S2": ("fewer observations before 2018 (one satellite until Sentinel-2B joined in mid-2017: about a quarter "
-           "to half as many scenes in tests)"),
+# Years each sensor has no or fewer observations in, for the default Jun-Sep
+# season: (first year, last year, inclusive; None = open-ended, "none" or
+# "fewer", what is missing). From scene and clear-observation counts over the
+# testsite and two Apostle Islands forests (docs/findings.md, 2026-10-19 and
+# 2026-11-02). gee/config.js SENSOR_GAPS holds the same table.
+SENSOR_GAPS = {
+    "L5": [(2012, None, "none", "no observations after 2011 (it stopped imaging in November 2011)")],
+    "L7": [(2024, None, "none", "no observations after 2023 (none from 2024 in tests)"),
+           (2022, 2023, "fewer", "fewer observations in 2022-2023 (its orbit was lowered in 2022: about two "
+                                 "thirds to three quarters as many scenes in tests)")],
+    "L8": [(None, 2012, "none", "no observations before 2013 (its first scenes are from April 2013)")],
+    "L9": [(None, 2021, "none", "no observations before 2022 (its first scenes are from Oct 31, 2021)")],
+    "S2": [(None, 2015, "none", "no observations before 2016 (none in Earth Engine's surface-reflectance "
+                                "collection at the testsite in tests)"),
+           (2016, 2017, "fewer", "fewer observations before 2018 (one satellite until Sentinel-2B joined in "
+                                 "mid-2017: about a quarter to half as many scenes in tests)")],
 }
+# Said whenever a sensor is chosen for either period.
+SENSOR_NOTES = {
+    "L7": ("Landsat 7 images since 2003 have striped gaps (its scan-line corrector failed; about a fifth of each "
+           "scene is missing), so it gives fewer clear observations per pixel than Landsat 8: about 75-95% as many "
+           "in tests."),
+}
+# Landsat 5 and 7 (TM/ETM+) vs Landsat 8 and 9 (OLI): different instruments.
+_TM_ETM = ("L5", "L7")
+
 # Expectation length (years) above which a Sentinel-2 expectation is likely
 # to exceed Earth Engine's interactive memory limit: with L8+S2 or L8+L9+S2, the
 # pixel inspector failed at every length over 2 years (docs/findings.md, 2026-10-19).
@@ -125,33 +151,99 @@ def _sensor_list(codes) -> str:
     return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
 
 
-def sensor_warnings(expectation_sensors, monitoring_sensors, first_year: int, last_year: int) -> list[str]:
+def _years_label(first: int, last: int) -> str:
+    return f"year {first}" if first == last else f"years {first}-{last}"
+
+
+def _gaps_within(code: str, first_year: int, last_year: int):
+    """(kind, text, overlap first, overlap last) for each of `code`'s gaps
+    that overlaps first_year..last_year."""
+    out = []
+    for g0, g1, kind, text in SENSOR_GAPS.get(code, []):
+        a, b = max(first_year, g0 if g0 is not None else first_year), min(last_year, g1 if g1 is not None else last_year)
+        if a <= b:
+            out.append((kind, text, a, b))
+    return out
+
+
+def has_data(code: str, first_year: int, last_year: int) -> bool:
+    """Whether `code` has observations in at least one of first_year..last_year."""
+    covered = sum(b - a + 1 for kind, _, a, b in _gaps_within(code, first_year, last_year) if kind == "none")
+    return covered < last_year - first_year + 1
+
+
+def availability_problem(expectation_sensors, monitoring_sensors, first_year: int, last_year: int,
+                         monitoring_year: int) -> str | None:
+    """The data-availability problem that blocks a run, or None: no chosen
+    expectation sensor has observations in any expectation year, or no chosen
+    monitoring sensor has observations in the monitoring year. Same text as
+    gee/config.js availabilityProblem()."""
+    for label, codes, y0, y1 in (("expectation", expectation_sensors, first_year, last_year),
+                                 ("monitoring", monitoring_sensors, monitoring_year, monitoring_year)):
+        codes = [c for c in SENSORS if c in codes]
+        if codes and not any(has_data(c, y0, y1) for c in codes):
+            reasons = "; ".join(f"{_SENSOR_NAMES[c]} has {t}" for c in codes
+                                for k, t, _, _ in _gaps_within(c, y0, y1) if k == "none")
+            when = str(y0) if y0 == y1 else f"{y0}-{y1}"
+            return f"No selected {label} sensor has observations in {when}: {reasons}. Choose other sensors or years."
+    return None
+
+
+def sensor_warnings(expectation_sensors, monitoring_sensors, first_year: int, last_year: int,
+                    monitoring_year: int | None = None, timing_years=None) -> list[str]:
     """Warnings about the sensor choice (none blocks a run). Same text as
     gee/config.js sensorWarnings().
-      - the two periods use different sensors;
+      - the two periods use different sensors (among those with observations
+        in each period);
       - an expectation sensor has no or fewer data in some expectation years;
+      - a monitoring sensor has no or fewer data in the monitoring year
+        (`monitoring_year`; skipped when None);
+      - a first-detected-season year (`timing_years`, optional) in which no
+        monitoring sensor has data: its run has nothing to evaluate and ends
+        with no detection (docs/findings.md, 2026-11-02);
+      - notes on a chosen sensor (Landsat 7's striped gaps);
       - a Sentinel-2 expectation long enough to likely exceed Earth Engine's
         interactive memory limit."""
     exp, mon = [c for c in SENSORS if c in expectation_sensors], [c for c in SENSORS if c in monitoring_sensors]
     out = []
-    if exp and mon and exp != mon:
-        out.append(f"The expectation uses {_sensor_list(exp)} and monitoring uses {_sensor_list(mon)}. Differences "
-                   "between sensors can register as change: in earlier tests, Sentinel-2 in monitoring but not in "
-                   "the expectation produced false decreases at stable sites that disappeared when both periods "
-                   "used the same sensors.")
+    exp_used = [c for c in exp if has_data(c, first_year, last_year)]
+    mon_used = [c for c in mon if monitoring_year is None or has_data(c, monitoring_year, monitoring_year)]
+    if exp_used and mon_used and exp_used != mon_used:
+        differ = set(exp_used) ^ set(mon_used)
+        text = f"The expectation uses {_sensor_list(exp_used)} and monitoring uses {_sensor_list(mon_used)}. "
+        if "S2" not in differ and differ & set(_TM_ETM):
+            text += ("Landsat 5 and 7 (TM/ETM+) and Landsat 8 and 9 (OLI) measure slightly different wavelengths, "
+                     "and BULC-D does not adjust for it. In tests the NBR difference between them was small "
+                     "(median 0.013 or less) and caused no false change in stable forest, but decreases agreed best "
+                     "with real change when Landsat 8 was in both periods.")
+        else:
+            text += ("Differences between sensors can register as change: in earlier tests, Sentinel-2 in "
+                     "monitoring but not in the expectation produced false decreases at stable sites that "
+                     "disappeared when both periods used the same sensors.")
+        out.append(text)
     for c in exp:
-        full = SENSOR_FULL_FROM[c]
-        if first_year < full:
-            end = min(last_year, full - 1)
-            years = f"year {first_year}" if end == first_year else f"years {first_year}-{end}"
-            out.append(f"{_SENSOR_NAMES[c]} has {_SENSOR_GAPS[c]}, which affects expectation {years}"
+        for _, text, a, b in _gaps_within(c, first_year, last_year):
+            out.append(f"{_SENSOR_NAMES[c]} has {text}, which affects expectation {_years_label(a, b)}"
                        + ("; the sensor mix changes partway through the expectation." if len(exp) > 1 else "."))
+    if monitoring_year is not None:
+        for c in mon:
+            for _, text, _, _ in _gaps_within(c, monitoring_year, monitoring_year):
+                out.append(f"{_SENSOR_NAMES[c]} has {text}, which affects the monitoring year ({monitoring_year}).")
+    empty = [y for y in (timing_years or []) if y != monitoring_year and not any(has_data(c, y, y) for c in mon)]
+    if empty:
+        out.append(f"No selected monitoring sensor has observations in {', '.join(map(str, empty))}, so the "
+                   f"first-detected-season run for {'that season' if len(empty) == 1 else 'those seasons'} has "
+                   "nothing to evaluate and shows no detection there.")
+    for c in SENSORS:
+        if c in SENSOR_NOTES and (c in exp or c in mon):
+            out.append(SENSOR_NOTES[c])
     n = last_year - first_year + 1
     if "S2" in exp and n > S2_EXPECTATION_MAX_YEARS:
         out.append(f"A {n}-year expectation with Sentinel-2 is likely to exceed Earth Engine's memory limit: in "
-                   f"tests, Sentinel-2 expectations longer than {S2_EXPECTATION_MAX_YEARS} years failed in the pixel "
-                   "inspector (\"User memory limit exceeded\"), and the detection-timing layers often failed as well. "
-                   "Use fewer expectation years or leave Sentinel-2 out of the expectation.")
+                   f"tests, Sentinel-2 expectations longer than {S2_EXPECTATION_MAX_YEARS} years failed "
+                   "with the pixel inspector failing every time (usually \"User memory limit exceeded\") and map "
+                   "layers failing intermittently. Use fewer expectation years or leave Sentinel-2 out of the "
+                   "expectation.")
     return out
 
 
@@ -276,15 +368,17 @@ def build_config(
             for name in names
         }
 
+    # The default monitoring sensors, all on (EarlyDetectionApp.build() applies
+    # the user's choice: with_monitoring_sensors()).
+    monitoring = sensors(DEFAULT_MONITORING_SENSORS, controls.monitoring_year, controls.monitoring_year)
+
     return BULCDConfig(
         study_area=StudyAreaConfig(aoi_coordinates=aoi_coordinates, aoi_asset=aoi_asset),
         evidence=EvidenceConfig(
             expectation=EvidencePeriodConfig(
                 sensors=sensors([c for c in SENSORS if c in controls.expectation_sensors], controls.baseline_first_year, controls.baseline_last_year)
             ),
-            target=EvidencePeriodConfig(
-                sensors=sensors(MONITORING_SENSORS, controls.monitoring_year, controls.monitoring_year)
-            ),
+            target=EvidencePeriodConfig(sensors=monitoring),
         ),
         reduction=ReductionConfig(band="nbr"),
         modality=modality_for_order(controls.fit_order),
@@ -295,18 +389,37 @@ def build_config(
     )
 
 
+def with_monitoring_sensors(config: BULCDConfig, chosen) -> BULCDConfig:
+    """`config` (from build_config()) with the monitoring sensors switched to
+    `chosen`, in place: the default sensors stay listed, enabled or not (as
+    before Landsat 7 was added), and an opt-in sensor (Landsat 7) is added,
+    with the same years, window and cloud prefilter, only when chosen. Same as
+    gee/config.js buildConfig()."""
+    target = config.evidence.target.sensors
+    template = next(iter(target.values()))
+    out = {}
+    for code in MONITORING_SENSORS:
+        if code in target:
+            out[code] = target[code]
+            out[code].enabled = code in chosen
+        elif code in chosen:
+            out[code] = dataclasses.replace(template, enabled=True)
+    config.evidence.target.sensors = out
+    return config
+
+
 def apply_advanced(config: BULCDConfig, *, dampening: float, posterior_leveler: float, monitoring_sensors,
                    mask_forest: bool, mask_water: bool) -> BULCDConfig:
     """build_config() plus the apps' Advanced settings, in place: dampening,
     posterior leveler, the fixed starting odds (INITIALIZING_LEVELER), which
-    monitoring sensors are enabled (the others stay in the config, disabled,
-    as the GUI's unticked boxes leave them) and the masks. The interactive app's
+    monitoring sensors are enabled (with_monitoring_sensors(): the default ones
+    stay in the config, disabled, as the GUI's unticked boxes leave them; an
+    opt-in Landsat 7 is added only when chosen) and the masks. The interactive app's
     build() and the regional runs both use it. Returns `config`."""
     config.bulc_advanced_params.dampening_factor = dampening
     config.bulc_advanced_params.posterior_leveler = posterior_leveler
     config.bulc_advanced_params.initializing_leveler = INITIALIZING_LEVELER
-    for code, sensor in config.evidence.target.sensors.items():
-        sensor.enabled = code in monitoring_sensors
+    with_monitoring_sensors(config, monitoring_sensors)
     config.study_area.mask_non_forest = mask_forest
     config.study_area.mask_water = mask_water
     return config

@@ -1481,6 +1481,13 @@ combination would shrink it.
 
 ## 2026-10-19 — Expectation sensors: availability, interactive memory limits, and the Sentinel-2 warning
 
+*(Islay copy of this entry. The laptop finished the same probe independently; its version follows as the
+next entry. The two copies were consolidated on 2026-11-04 — see that entry. Islay's repeat-run outputs are
+now `probe_finish2_islay`, `probe_repeat_islay` and `probe_repeat_l8_islay` in
+`experiments/output/expectation_sensor_probe/`; the unsuffixed files are the laptop's. Superseded here: the
+`SENSOR_FULL_FROM` / `_SENSOR_GAPS` tables, replaced by `SENSOR_GAPS` (2026-11-02 entry), and the quoted
+warning text, which now uses the laptop's wording. The 2-year limit and the decision are the same in both.)*
+
 Both apps now let the user choose the expectation sensors (L8 by default, any L8/L9/S2 combination). This
 entry is the evidence behind the availability and memory warnings that control shows. The probe began on
 the laptop and finished 2026-10-21 on the islay server.
@@ -1574,6 +1581,55 @@ L8+S2, expectation 2022-2023, chosen in the GUI's Advanced settings) passed 2026
 match; condition, first detected season, last detection and episodes match Python with 0 differing values
 over the box; the inspector rows and expectation fit (62 bins, 43 observations) match at pixel 1.
 
+## 2026-10-19 (laptop run, finished 2026-11-02) — Expectation sensors: data availability and Earth Engine's interactive memory limit
+
+*(Laptop copy of the previous entry. Its outputs are the unsuffixed `probe*.json`/`.log` files. Both runs
+reach the same 2-year Sentinel-2 limit; the run counts differ because they are separate runs.)*
+
+**Question.** Both apps now let the user choose the expectation sensors (Landsat 8, Landsat 9,
+Sentinel-2; default Landsat 8 only). Which years have data for each sensor, and which sensor sets and
+expectation lengths still run interactively (map tiles and the pixel inspector)?
+
+**Method.** `experiments/expectation_sensor_probe.js` drives the GEE app (stub `ui`, testsite asset,
+default settings, monitoring 2026). Only the expectation changes: sensors L8, L8+S2 or L8+L9+S2, and 2,
+3, 4, 6 or 8 years ending 2023. For each run it fetches every zoom-13 tile over the testsite for the
+Condition, First detected season, Last detection and Detection episodes layers, as a browser would, and
+runs the inspector query at reference pixel 1. Outputs: `experiments/output/expectation_sensor_probe/`
+(`probe*.json`, `probe*.log`, run 2026-10-19 to 2026-11-02; several combinations repeated).
+
+**Availability** (raw scenes over the testsite, Jun 1 – Sep 30, the probe's `availability` line):
+- Landsat 8: 11–15 scenes every year from 2013.
+- Landsat 9: none before 2022 (first scenes Oct 31, 2021), then 13–16.
+- Sentinel-2: none in 2013–2015, 13 in 2016, 24 in 2017, 48–60 from 2018 (Sentinel-2B joined mid-2017).
+
+**Results (testsite):**
+
+| Expectation sensors | 2 yr | 3 yr | 4 yr | 6 yr | 8 yr |
+|---|---|---|---|---|---|
+| L8 | all ok | — | all ok on repeat (first try: one layer 503) | all ok | all ok |
+| L8+S2 | all ok on repeat (first try: one layer, internal error) | inspector fails; layers ok | inspector and timing layers fail (twice) | inspector and timing layers fail | inspector fails ("Please try again"); one layer fails |
+| L8+L9+S2 | all ok on repeat (first try: inspector ok, three layers 503) | inspector fails; three layers fail | inspector and timing layers fail | inspector and timing layers fail | inspector fails; Condition 503 |
+
+"Timing layers" = First detected season, Last detection, Detection episodes.
+
+- **The pixel inspector is the clear line.** With Sentinel-2 in the expectation it passed at 2 years
+  every time (4 runs) and failed in every recorded run of 3 years or more (9 runs): 8 times with "User
+  memory limit exceeded", once (L8+S2, 8 years) with "Please try again". An interrupted L8+L9+S2 4-year
+  run (log only) failed with "Earth Engine memory capacity exceeded".
+- **Map layers fail intermittently**, mixing the per-request "User memory limit exceeded" with the
+  server-wide 503 "Earth Engine memory capacity exceeded". The same layer can fail at 4 years and draw at
+  8, so the layers give no clean threshold. Condition draws far more reliably than the timing layers.
+- **Landsat 8 alone** ran at every length; its only failures were transient 503s that passed on repeat.
+- The layers' expanded description sizes (`layer_size_check.js` measure) depend on the sensor set, not
+  the expectation length: First detected season 244 M chars with L8, 270 M with L8+S2 and 315 M with
+  L8+L9+S2. The Code Editor's limit lies between 244 M (renders) and 427 M (failed; 2026-10-13 entry);
+  270 M and 315 M have not been tried in the Code Editor.
+
+**Decision.** `S2_EXPECTATION_MAX_YEARS = 2` (`config.py` and `gee/config.js`; it was a provisional 6).
+Both apps warn, without blocking, when Sentinel-2 is in an expectation longer than 2 years, with the
+measured failure in the text. One threshold fits both Sentinel-2 sets because the inspector fails from 3
+years with either. The default (Landsat 8 only) is unaffected. The parity test's expectation-sensor run
+(section 6, L8+S2 2022–2023) stays under the limit.
 
 ## 2026-10-22 — The regional grid: EPSG:5070, 30 m, on the NLCD/LCMS pixel grid
 
@@ -1878,3 +1934,146 @@ block's exact pixels (`experiments/regional_block_benchmark.py`; `experiments/ou
 - **Implication:** with 2 × 2 blocks and 3 slots, one season of the 1,863 Region 6 tiles is about 10-11 h of task
   time and about 59 EECU-hours, against about 22 h and 85 EECU-hours as single tiles. This excludes global queue
   waits and the extra area of blocks at the forest edges.
+
+## 2026-11-02 — Historical years: monitoring from 2015, expectation from 2010, Landsat 5 and 7
+
+**Change (user request).** Both apps now offer expectation years 2010–2025 and monitoring years
+2015–2026 (were 2016–2025 and 2024–2026). Landsat 5 and 7 are expectation sensors, and Landsat 7 is a
+monitoring sensor; Landsat 5 stopped imaging in 2011, so it cannot monitor. The defaults and the
+default config are unchanged: Landsat 7 joins the monitoring config only when ticked. bulcd already
+handled both sensors (collections, TM/ETM+ band mapping, the legacy L5/L7 cloud mask), so nothing in
+BULC-D_rebuild changed. This entry answers whether the historical years work properly, not only whether
+they appear in the menus.
+
+**1. Data availability** (`experiments/historical_sensor_availability.py` →
+`experiments/output/historical_sensors/availability.json`). Jun 1 – Sep 30 scenes per year over the
+testsite (Oregon) and two Apostle Islands forests (Wisconsin), plus median clear observations per pixel
+after bulcd's masking and 4-day binning:
+
+| Sensor | Scenes per season | Clear observations per pixel |
+|---|---|---|
+| Landsat 5 | 2008–2011: 10–23; none from 2012 | 5–11 |
+| Landsat 7 | 2008–2021: 12–23; 2022–2023: 10–16 (about two thirds to three quarters as many); none from 2024 | 3–10 (testsite 2010: 2.7) |
+| Landsat 8 | from 2013: 11–22 (first scenes April 2013, so a Jun–Sep 2013 season is complete) | 5–11 |
+
+- Landsat 7 gives 75–95% as many clear observations as Landsat 8 in the same years (2013–2016), from
+  its striped gaps (scan-line corrector failure, 2003).
+- Sentinel-2 surface reflectance has no scenes at the testsite before 2016 (from the probe's
+  availability line; not counted at the Wisconsin sites).
+- These become `SENSOR_GAPS` in `config.py` and `gee/config.js`. The old "Landsat 8: no observations before
+  2014" was wrong for a Jun–Sep season and is now 2013. It could not trigger under the old year limits.
+
+**2. Cross-sensor NBR offset.** bulcd applies no TM/ETM+ → OLI harmonization, so the offset reaches
+the z-scores as is. Measured per pixel as the season-median NBR difference between sensors in the same
+year, over the same pixels, water masked:
+
+| Pair, years | Median difference (three sites) | 10th–90th percentile |
+|---|---|---|
+| L7 − L8, 2013–2016 | −0.007 to +0.013 | about −0.025 to +0.029 |
+| L5 − L7, 2010–2011 | −0.014 to +0.006 | about −0.036 to +0.041 |
+
+This is small against the 0.05 floor of the z-score denominator, and against forest NBR of about 0.7–0.8.
+
+**3. Does it cause false change?** (`experiments/historical_sensor_consistency.py` →
+`.../consistency.csv`, the design of `sensor_consistency.py`). Monitoring 2015, default controls; only
+the sensors change:
+
+| Variant (expectation 2010–2014 unless noted) | Stable forests: decrease / increase km² | Testsite: decrease km² | Testsite: share of decrease with an L8 2014→2015 NBR drop ≥ 0.1 |
+|---|---|---|---|
+| L8 2013–14 → L8 (the only option before) | 0 / 0; 0.0009 / 0 | 0.049 | 0.57 |
+| L7 → L7 | 0 / 0; 0.0009 / 0.0009 | 0.056 | 0.39 |
+| L7 → L8 | 0 / 0; 0 / 0.0027 | 0.071 | 0.41 |
+| L7 → L7+L8 | 0 / 0; 0 / 0.0009 | 0.049 | 0.50 |
+| L7+L8 → L7+L8 | 0 / 0; 0 / 0 | 0.044 | 0.57 |
+| L5+L7 → L8 | 0 / 0; 0.0018 / 0.0027 | 0.064 | 0.42 |
+| L5+L7+L8 → L7+L8 | 0 / 0; 0 / 0 | 0.042 | 0.57 |
+
+(1 pixel = 0.0009 km²; each stable forest is 3.1 km².)
+- **No false change at the stable forests** with any mix: at most 3 pixels.
+- **At the testsite**, variants with Landsat 8 in both periods map the least decrease, and the most of it
+  is confirmed by an independent single-sensor NBR drop (0.57). An expectation without Landsat 8
+  against Landsat 8 monitoring maps more decrease, less of it confirmed (0.41–0.42). L7 → L7 is also low
+  (0.39), so that gap is not only the sensor offset. Sparser Landsat 7 expectations and the 1-year
+  reference (it only confirms 2014→2015 drops) contribute.
+- **Increase** at the testsite (1.1–1.7 km²) appears in every variant. It is probably regrowth on
+  harvests within the 2010–2014 expectation (not checked against imagery).
+- **Recommendation**, carried into the warning text: include Landsat 8 in both periods when the years
+  allow it (2013 on).
+
+**4. Earth Engine limits** (`experiments/expectation_sensor_probe.js` with the new `PROBE_LAST`,
+`PROBE_MONITORING` and `PROBE_MON_SENSORS`, set through the GUI's widgets; outputs `historical_*.json`/
+`.log`). Testsite, all four map layers' tiles at zoom 13 plus the inspector:
+
+| Expectation | Monitoring | Inspector | Layers | First detected season, expanded |
+|---|---|---|---|---|
+| L8 2013–2014 | 2015, L7+L8 | ok 8 s | all ok | 90 M chars (one season) |
+| L7, L5+L7, L7+L8, L5+L7+L8 2010–2014 | 2015, L7+L8 | ok 11–19 s | all ok | 92–128 M |
+| L8 2013–2023 (11 yr) | 2026, L8+L9+S2 | ok 17 s | all ok | 244 M |
+| L7+L8 2010–2023 (14 yr) | 2026 | ok 76 s | all ok | 294 M |
+| L5+L7+L8 2010–2023 (14 yr) | 2026 | ok 42 s | all ok | 343 M |
+
+- **Landsat-only expectations ran at every tested length**, up to 14 years with three sensors. No
+  memory failures, unlike Sentinel-2 (2026-10-19 entry).
+- **Not verified:** the Code Editor's description limit. It lies between 244 M (renders) and 427 M (failed);
+  294 M and 343 M have not been tried in the Code Editor. If the First detected season layer fails there
+  with "Description length exceeds maximum" for long multi-Landsat expectations, the fix is the one noted
+  on 2026-10-13: one band per season, combined with a single `min()`.
+
+**5. Other behavior found and handled:**
+- **A season with no data from the chosen sensors doesn't fail.** It ends at the starting odds and maps
+  no detection, which could be read as "no change". Example: Landsat 9 alone for a 2021 timing season,
+  checked live: final probabilities exactly 1/3 each, no first-detection pixels. So the apps:
+  - **block** a run when no chosen sensor has any data in the expectation years or the monitoring year;
+  - **warn** when a first-detected-season year has none;
+  - **warn** when a chosen sensor lacks data in some chosen years.
+- **The sensor-mismatch warning** now compares only sensors with data in each period. For example,
+  Landsat 9 and Sentinel-2 ticked for monitoring 2015 add nothing, so they no longer trigger it. A
+  Landsat-only difference gets its own text with the measured result.
+- **The reference imagery** (true color, NBR composite) used Sentinel-2 only, so it was empty before
+  2016. It now uses Landsat 5/7/8/9 (QA-masked, on Sentinel-2's band names and scale) for all three years
+  when any of them is before 2017, so one composite never mixes sources. Layer names say "(Landsat)".
+  Checked live: testsite medians are on the same scale as Sentinel-2's, and 2012, when only Landsat 7
+  flew, has data. Monitoring years 2019+ still use Sentinel-2 exactly as before.
+
+**Tests.**
+- Offline:
+  - `tests/test_historical_years.py`;
+  - `tests/test_expectation_sensors.py`: Python and GEE configs, warnings, blocking problems and timing
+    years agree for 1,584 sensor × year combinations;
+  - `gee/tests/controls_check.js`: historical section through the GUI widgets.
+- Live:
+  - parity section 7: L5+L7+L8 expectation 2010–2014, L7+L8 monitoring 2015, set in the GUI; condition,
+    timing, episodes and inspector equal Python;
+  - a headless Python-app run with the same settings: all 8 layers loaded, 158 s.
+
+**Limitations.**
+- The availability table is per year, built from Jun–Sep seasons at three forested sites. A season outside
+  Jun–Sep can have less: before April 2013 there is no Landsat 8, and before Nov 2021 no Landsat 9.
+- The offset and false-change tests cover NBR in forest at three sites. Other cover types and regions were
+  not tested.
+
+## 2026-11-04 — Consolidation of the islay and laptop copies
+
+The islay copy (`feature/regional-batch-processing`, regional steps 3–8b) and the laptop copy
+(`legacy-parity-0011-app`: historical years, Landsat 5/7, GEE Export to Drive, inspector between-period
+observations; and `backup/mac-uncommitted-2026-11-04`: the 2026-10-28 meeting analysis) split at `5de4c8d`
+and were merged on `integrate/2026-11-consolidation`. Behavior points settled in the merge:
+
+- **One monitoring-sensor path.** `config.apply_advanced()` (islay; used by the Python app's `build()` and
+  every regional run) now sets the monitoring sensors through `config.with_monitoring_sensors()` (laptop),
+  so an opt-in Landsat 7 is added when chosen instead of being silently ignored. For L8/L9/S2 choices the
+  config is unchanged: the 12 pilot tile configs (3 seasons × 4 tiles), the pilot run files and their
+  warnings are identical to `95c462f`, and the app's default, Landsat 7 and historical-year configs are
+  identical to `9f85cad`.
+- **Regional runs never enable Landsat 7 by default.** `AdvancedSettings.monitoring_sensors` defaults to
+  `DEFAULT_MONITORING_SENSORS` (L8, L9, S2; the apps' default boxes), not `MONITORING_SENSORS` (which now
+  includes L7). L7 must be listed in the run file. Unknown or non-monitoring sensors (e.g. L5) are now
+  rejected instead of dropped silently.
+- **Regional runs block on missing data** as the apps do (`config.availability_problem()`, raised when the
+  run file is loaded), and their warnings now include the monitoring-year checks (`sensor_warnings(...,
+  monitoring_year=)`). The pilot's warnings are unchanged.
+- **Sentinel-2 memory warning text:** the laptop's wording (from its finished probe) in both apps; same
+  2-year limit.
+- **Engine pin:** the `engine` extra now pins `bulcd` to BULC-D_rebuild `8e9c5d5` (decision 0011). It
+  pointed at `main`, which does not contain decision 0011. `tests/test_bulcd_dependency.py` checks the
+  installed engine has it.

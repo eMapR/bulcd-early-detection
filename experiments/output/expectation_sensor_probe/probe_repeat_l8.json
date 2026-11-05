@@ -1,5 +1,5 @@
 {
- "started": "2026-10-21T22:53:28.216Z",
+ "started": "2026-11-02T18:14:44.969Z",
  "area": "projects/bulcd-python-rebuild/assets/testsite",
  "zoom": 13,
  "tiles": 6,
@@ -91,38 +91,38 @@
    "layers": {
     "Condition 2026": {
      "description_chars": 3485605,
-     "s": 16.974,
+     "s": 19.05,
      "ok": true,
      "error": null,
-     "max_tile_s": 11.803,
+     "max_tile_s": 13.457,
      "tiles": [
       {
-       "s": 11.803,
+       "s": 13.457,
        "status": 200,
        "error": null
       },
       {
-       "s": 8.085,
+       "s": 10.866,
        "status": 200,
        "error": null
       },
       {
-       "s": 10.06,
+       "s": 10.969,
        "status": 200,
        "error": null
       },
       {
-       "s": 8.764,
+       "s": 4.918,
        "status": 200,
        "error": null
       },
       {
-       "s": 9.019,
+       "s": 4.919,
        "status": 200,
        "error": null
       },
       {
-       "s": 8.652,
+       "s": 5.897,
        "status": 200,
        "error": null
       }
@@ -130,38 +130,38 @@
     },
     "First detected season (decrease)": {
      "description_chars": 243963481,
-     "s": 46.124,
+     "s": 33.007,
      "ok": true,
      "error": null,
-     "max_tile_s": 31.356,
+     "max_tile_s": 18.758,
      "tiles": [
       {
-       "s": 13.156,
+       "s": 13.225,
        "status": 200,
        "error": null
       },
       {
-       "s": 8.24,
+       "s": 18.758,
        "status": 200,
        "error": null
       },
       {
-       "s": 19.853,
+       "s": 11.746,
        "status": 200,
        "error": null
       },
       {
-       "s": 24.033,
+       "s": 13.662,
        "status": 200,
        "error": null
       },
       {
-       "s": 11.081,
+       "s": 8.95,
        "status": 200,
        "error": null
       },
       {
-       "s": 31.356,
+       "s": 12.017,
        "status": 200,
        "error": null
       }
@@ -169,38 +169,38 @@
     },
     "Last detection (decrease)": {
      "description_chars": 47191669,
-     "s": 163.255,
+     "s": 34.325,
      "ok": true,
      "error": null,
-     "max_tile_s": 145.818,
+     "max_tile_s": 19.422,
      "tiles": [
       {
-       "s": 20.324,
+       "s": 19.422,
        "status": 200,
        "error": null
       },
       {
-       "s": 26.87,
+       "s": 14.417,
        "status": 200,
        "error": null
       },
       {
-       "s": 19.815,
+       "s": 17.082,
        "status": 200,
        "error": null
       },
       {
-       "s": 22.123,
+       "s": 18.776,
        "status": 200,
        "error": null
       },
       {
-       "s": 145.818,
+       "s": 15.07,
        "status": 200,
        "error": null
       },
       {
-       "s": 21.291,
+       "s": 15.567,
        "status": 200,
        "error": null
       }
@@ -208,38 +208,38 @@
     },
     "Detection episodes (decrease)": {
      "description_chars": 23595805,
-     "s": 44.167,
+     "s": 82.771,
      "ok": true,
      "error": null,
-     "max_tile_s": 28.311,
+     "max_tile_s": 67.96,
      "tiles": [
       {
-       "s": 16.404,
+       "s": 14.949,
        "status": 200,
        "error": null
       },
       {
-       "s": 18.12,
+       "s": 3.102,
        "status": 200,
        "error": null
       },
       {
-       "s": 20.222,
+       "s": 18.704,
        "status": 200,
        "error": null
       },
       {
-       "s": 28.311,
+       "s": 3.751,
        "status": 200,
        "error": null
       },
       {
-       "s": 21.243,
+       "s": 67.96,
        "status": 200,
        "error": null
       },
       {
-       "s": 11.948,
+       "s": 5.234,
        "status": 200,
        "error": null
       }
@@ -247,11 +247,11 @@
     }
    },
    "inspector": {
-    "s": 17.604,
+    "s": 19.363,
     "ok": true,
     "error": null
    }
   }
  ],
- "finished": "2026-10-21T22:58:27.195Z"
+ "finished": "2026-11-02T18:17:57.016Z"
 }

@@ -1,0 +1,126 @@
+/Users/clarype/miniconda3/envs/bulcd/lib/python3.11/site-packages/google/api_core/_python_version_support.py:254: FutureWarning: You are using a Python version (3.11.15) which Google will stop supporting in new releases of google.api_core once it reaches its end of life (2027-10-24). Please upgrade to the latest Python version, or at least Python 3.12, to continue receiving updates for google.api_core past that date.
+  warnings.warn(message, FutureWarning)
+testsite scenes {"L5": {"2008": 13, "2009": 14, "2010": 10, "2011": 12, "2012": 0, "2013": 0, "2014": 0, "2015": 0, "2016": 0, "2017": 0, "2018": 0, "2019": 0, "2020": 0, "2021": 0, "2022": 0, "2023": 0, "2024": 0, "2025": 0, "2026": 0}, "L7": {"2008": 12, "2009": 13, "2010": 12, "2011": 14, "2012": 13, "2013": 13, "2014": 12, "2015": 15, "2016": 13, "2017": 14, "2018": 15, "2019": 15, "2020": 13, "2021": 13, "2022": 10, "2023": 10, "2024": 0, "2025": 0, "2026": 0}, "L8": {"2008": 0, "2009": 0, "2010": 0, "2011": 0, "2012": 0, "2013": 12, "2014": 12, "2015": 14, "2016": 13, "2017": 13, "2018": 15, "2019": 14, "2020": 14, "2021": 11, "2022": 13, "2023": 14, "2024": 15, "2025": 15, "2026": 14}}
+testsite clear_obs L5 2008 9.990055400556221
+testsite clear_obs L5 2009 8.064026501765188
+testsite clear_obs L5 2010 5.000000000000002
+testsite clear_obs L5 2011 5.000000000000005
+testsite clear_obs L7 2008 5.9999999999999964
+testsite clear_obs L7 2009 6.999999999999995
+testsite clear_obs L7 2010 2.663277499916078
+testsite clear_obs L7 2011 4.771077423422884
+testsite clear_obs L7 2012 6.463686174453217
+testsite clear_obs L7 2013 4.999999999999993
+testsite clear_obs L7 2014 4.657888818900072
+testsite clear_obs L7 2015 9.000000000000007
+testsite clear_obs L7 2016 5.091643742849028
+testsite clear_obs L7 2017 4.445136889636598
+testsite clear_obs L7 2018 4.554576829581786
+testsite clear_obs L7 2019 6.547739915729925
+testsite clear_obs L7 2020 4.072786745957087
+testsite clear_obs L7 2021 4.362200370646769
+testsite clear_obs L7 2022 2.9999999999999973
+testsite clear_obs L7 2023 4.384517658620842
+testsite clear_obs L8 2013 8
+testsite clear_obs L8 2014 5.272710165736202
+testsite clear_obs L8 2015 9.342962679208478
+testsite clear_obs L8 2016 9.450353545144484
+testsite clear_obs L8 2017 5.000000000000004
+testsite clear_obs L8 2018 9.000000000000005
+testsite clear_obs L8 2019 6.5372083548336
+testsite clear_obs L8 2020 6.9612742865052395
+testsite clear_obs L8 2021 6.999999999999991
+testsite clear_obs L8 2022 8
+testsite clear_obs L8 2023 9.000000000000004
+testsite clear_obs L8 2024 11
+testsite clear_obs L8 2025 9
+testsite clear_obs L8 2026 10.000000000000004
+testsite L7-L8 2013 {"d_count": 41676, "d_p10": -0.006823254959464796, "d_p50": 0.006829181263062071, "d_p90": 0.022431282731782735, "ref_count": 41676, "ref_p10": 0.6660896836255213, "ref_p50": 0.8105325812118336, "ref_p90": 0.8456489965015103}
+testsite L7-L8 2014 {"d_count": 41676, "d_p10": -0.025303702637292265, "d_p50": 0.001955824597495134, "d_p90": 0.02135200706323576, "ref_count": 41676, "ref_p10": 0.7091278276631147, "ref_p50": 0.8144742300852483, "ref_p90": 0.8495816427172126}
+testsite L7-L8 2015 {"d_count": 41676, "d_p10": -0.012641841220631962, "d_p50": 0.0009837574039859992, "d_p90": 0.01851927583340234, "ref_count": 41676, "ref_p10": 0.7013089129194159, "ref_p50": 0.8105636471224175, "ref_p90": 0.8496280954145327}
+testsite L7-L8 2016 {"d_count": 41676, "d_p10": -0.008769626790282346, "d_p50": 0.008799502836574987, "d_p90": 0.026360980882611518, "ref_count": 41676, "ref_p10": 0.6972778410398005, "ref_p50": 0.8106130826797074, "ref_p90": 0.8456349545400852}
+testsite L5-L7 2010 {"d_count": 41676, "d_p10": -0.021404582882064097, "d_p50": 0.005849158516854401, "d_p90": 0.041088640208763884, "ref_count": 41676, "ref_p10": 0.62927794001208, "ref_p50": 0.8086773230587763, "ref_p90": 0.8630029390938597}
+testsite L5-L7 2011 {"d_count": 41676, "d_p10": -0.03608263650490124, "d_p50": -0.0048726086286035785, "d_p90": 0.020514532452750204, "ref_count": 41676, "ref_p10": 0.6522983965333755, "ref_p50": 0.8164409095559478, "ref_p90": 0.8630718507982218}
+interior_forest_quiet scenes {"L5": {"2008": 20, "2009": 22, "2010": 23, "2011": 17, "2012": 0, "2013": 0, "2014": 0, "2015": 0, "2016": 0, "2017": 0, "2018": 0, "2019": 0, "2020": 0, "2021": 0, "2022": 0, "2023": 0, "2024": 0, "2025": 0, "2026": 0}, "L7": {"2008": 23, "2009": 17, "2010": 20, "2011": 20, "2012": 22, "2013": 18, "2014": 16, "2015": 21, "2016": 19, "2017": 21, "2018": 21, "2019": 18, "2020": 19, "2021": 22, "2022": 15, "2023": 16, "2024": 0, "2025": 0, "2026": 0}, "L8": {"2008": 0, "2009": 0, "2010": 0, "2011": 0, "2012": 0, "2013": 16, "2014": 20, "2015": 15, "2016": 19, "2017": 19, "2018": 17, "2019": 19, "2020": 19, "2021": 16, "2022": 21, "2023": 20, "2024": 18, "2025": 14, "2026": 22}}
+interior_forest_quiet clear_obs L5 2008 8
+interior_forest_quiet clear_obs L5 2009 11
+interior_forest_quiet clear_obs L5 2010 9.000000000000007
+interior_forest_quiet clear_obs L5 2011 7
+interior_forest_quiet clear_obs L7 2008 7.000000000000033
+interior_forest_quiet clear_obs L7 2009 6.00000000000001
+interior_forest_quiet clear_obs L7 2010 5.000000000000014
+interior_forest_quiet clear_obs L7 2011 7.000000000000032
+interior_forest_quiet clear_obs L7 2012 10.000000000000025
+interior_forest_quiet clear_obs L7 2013 6.000000000000019
+interior_forest_quiet clear_obs L7 2014 6.000000000000002
+interior_forest_quiet clear_obs L7 2015 8
+interior_forest_quiet clear_obs L7 2016 6.000000000000013
+interior_forest_quiet clear_obs L7 2017 7.000000000000012
+interior_forest_quiet clear_obs L7 2018 7.000000000000003
+interior_forest_quiet clear_obs L7 2019 3.0000000000000058
+interior_forest_quiet clear_obs L7 2020 8
+interior_forest_quiet clear_obs L7 2021 5.999999999999998
+interior_forest_quiet clear_obs L7 2022 7.000000000000016
+interior_forest_quiet clear_obs L7 2023 7.000000000000015
+interior_forest_quiet clear_obs L8 2013 6.999999999999987
+interior_forest_quiet clear_obs L8 2014 7
+interior_forest_quiet clear_obs L8 2015 6.999999999999986
+interior_forest_quiet clear_obs L8 2016 6.0000000000000036
+interior_forest_quiet clear_obs L8 2017 10
+interior_forest_quiet clear_obs L8 2018 6
+interior_forest_quiet clear_obs L8 2019 9.000000000000004
+interior_forest_quiet clear_obs L8 2020 10.000000000000018
+interior_forest_quiet clear_obs L8 2021 5.999999999999997
+interior_forest_quiet clear_obs L8 2022 8
+interior_forest_quiet clear_obs L8 2023 7
+interior_forest_quiet clear_obs L8 2024 7
+interior_forest_quiet clear_obs L8 2025 6
+interior_forest_quiet clear_obs L8 2026 10
+interior_forest_quiet L7-L8 2013 {"d_count": 4982, "d_p10": -0.002204701839959492, "d_p50": 0.009519695148839463, "d_p90": 0.021226454145339625, "ref_count": 4982, "ref_p10": 0.7244918906944877, "ref_p50": 0.7371977313992061, "ref_p90": 0.7479187655448913}
+interior_forest_quiet L7-L8 2014 {"d_count": 4982, "d_p10": -0.01508160148348127, "d_p50": 0.0005142852972269427, "d_p90": 0.0131951356178161, "ref_count": 4982, "ref_p10": 0.7374216026056403, "ref_p50": 0.7479277360089394, "ref_p90": 0.7559787296643783}
+interior_forest_quiet L7-L8 2015 {"d_count": 4982, "d_p10": -0.018776459586374257, "d_p50": -0.006589862352357723, "d_p90": 0.004644007865862719, "ref_count": 4982, "ref_p10": 0.7383933615040135, "ref_p50": 0.7501347490197108, "ref_p90": 0.7606083132461984}
+interior_forest_quiet L7-L8 2016 {"d_count": 4982, "d_p10": -0.009511717625202672, "d_p50": 0.000735390143672366, "d_p90": 0.010009669173847545, "ref_count": 4982, "ref_p10": 0.7326442038635224, "ref_p50": 0.7473150708008024, "ref_p90": 0.7575451827475003}
+interior_forest_quiet L5-L7 2010 {"d_count": 4982, "d_p10": -0.014160058417626102, "d_p50": 0.0005012404745254982, "d_p90": 0.01321288902006108, "ref_count": 4982, "ref_p10": 0.7084955137694835, "ref_p50": 0.7250292935511515, "ref_p90": 0.7416686382611303}
+interior_forest_quiet L5-L7 2011 {"d_count": 4982, "d_p10": -0.018297405353152465, "d_p50": -0.0061131278531950965, "d_p90": 0.0065983212182409365, "ref_count": 4982, "ref_p10": 0.7273014338722101, "ref_p50": 0.7424309956371523, "ref_p90": 0.7561351592476303}
+stockton_interior scenes {"L5": {"2008": 20, "2009": 22, "2010": 23, "2011": 17, "2012": 0, "2013": 0, "2014": 0, "2015": 0, "2016": 0, "2017": 0, "2018": 0, "2019": 0, "2020": 0, "2021": 0, "2022": 0, "2023": 0, "2024": 0, "2025": 0, "2026": 0}, "L7": {"2008": 23, "2009": 17, "2010": 20, "2011": 20, "2012": 22, "2013": 18, "2014": 16, "2015": 21, "2016": 19, "2017": 21, "2018": 21, "2019": 18, "2020": 19, "2021": 22, "2022": 13, "2023": 13, "2024": 0, "2025": 0, "2026": 0}, "L8": {"2008": 0, "2009": 0, "2010": 0, "2011": 0, "2012": 0, "2013": 16, "2014": 20, "2015": 15, "2016": 19, "2017": 19, "2018": 17, "2019": 19, "2020": 19, "2021": 16, "2022": 21, "2023": 20, "2024": 18, "2025": 14, "2026": 22}}
+stockton_interior clear_obs L5 2008 7
+stockton_interior clear_obs L5 2009 10.000000000000012
+stockton_interior clear_obs L5 2010 9.000000000000002
+stockton_interior clear_obs L5 2011 6.999999999999982
+stockton_interior clear_obs L7 2008 7.000000000000009
+stockton_interior clear_obs L7 2009 6.000000000000014
+stockton_interior clear_obs L7 2010 6.000000000000008
+stockton_interior clear_obs L7 2011 6.000000000000013
+stockton_interior clear_obs L7 2012 9.00000000000001
+stockton_interior clear_obs L7 2013 5.000000000000009
+stockton_interior clear_obs L7 2014 5.000000000000004
+stockton_interior clear_obs L7 2015 8
+stockton_interior clear_obs L7 2016 5.000000000000003
+stockton_interior clear_obs L7 2017 7.000000000000006
+stockton_interior clear_obs L7 2018 6.000000000000012
+stockton_interior clear_obs L7 2019 3.000000000000005
+stockton_interior clear_obs L7 2020 8
+stockton_interior clear_obs L7 2021 5.000000000000008
+stockton_interior clear_obs L7 2022 8
+stockton_interior clear_obs L7 2023 6.000000000000018
+stockton_interior clear_obs L8 2013 6.999999999999983
+stockton_interior clear_obs L8 2014 6.999999999999975
+stockton_interior clear_obs L8 2015 6
+stockton_interior clear_obs L8 2016 8
+stockton_interior clear_obs L8 2017 9
+stockton_interior clear_obs L8 2018 7
+stockton_interior clear_obs L8 2019 9.99999999999999
+stockton_interior clear_obs L8 2020 10.999999999999885
+stockton_interior clear_obs L8 2021 6
+stockton_interior clear_obs L8 2022 8
+stockton_interior clear_obs L8 2023 8
+stockton_interior clear_obs L8 2024 8
+stockton_interior clear_obs L8 2025 6
+stockton_interior clear_obs L8 2026 10.000000000000004
+stockton_interior L7-L8 2013 {"d_count": 4982, "d_p10": -0.0043911578033560055, "d_p50": 0.013190724561916525, "d_p90": 0.0287477031246471, "ref_count": 4982, "ref_p10": 0.7143928388146361, "ref_p50": 0.730986437495675, "ref_p90": 0.7436248334027751}
+stockton_interior L7-L8 2014 {"d_count": 4982, "d_p10": -0.012180507070008917, "d_p50": 0.0024177169218390585, "d_p90": 0.015144432591483492, "ref_count": 4982, "ref_p10": 0.7275961158406764, "ref_p50": 0.7392655003006526, "ref_p90": 0.7489670422347706}
+stockton_interior L7-L8 2015 {"d_count": 4982, "d_p10": -0.014132145511425522, "d_p50": -0.0034319249260581328, "d_p90": 0.006307229633241612, "ref_count": 4982, "ref_p10": 0.7315409347013692, "ref_p50": 0.7431370057504952, "ref_p90": 0.752876424199388}
+stockton_interior L7-L8 2016 {"d_count": 4982, "d_p10": -0.01412897092413331, "d_p50": -0.004371517573230536, "d_p90": 0.005339632617824799, "ref_count": 4982, "ref_p10": 0.736810746325202, "ref_p50": 0.7466081282308503, "ref_p90": 0.7573186060568032}
+stockton_interior L5-L7 2010 {"d_count": 4982, "d_p10": -0.015217984495997986, "d_p50": -0.001480378779053907, "d_p90": 0.011253214411119594, "ref_count": 4982, "ref_p10": 0.6781409857034486, "ref_p50": 0.6968194213349763, "ref_p90": 0.7201951232071595}
+stockton_interior L5-L7 2011 {"d_count": 4982, "d_p10": -0.028821197648183847, "d_p50": -0.014136460567865465, "d_p90": -0.00047887727624102935, "ref_count": 4982, "ref_p10": 0.7334877951087572, "ref_p50": 0.7470587054899656, "ref_p90": 0.7607401990866964}
+DONE /Users/clarype/Documents/bulcd-early-detection/experiments/output/historical_sensors/availability.json
