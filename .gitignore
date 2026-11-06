@@ -14,3 +14,5 @@ notebooks/output/
 .ipynb_checkpoints/
 regional_runs/r6_ecoregions/tasks.*
 regional_runs/r6_ecoregions/drive.log
+regional_runs/r6_ecoregions/drive.out
+regional_runs/r6_ecoregions/drive.pid
