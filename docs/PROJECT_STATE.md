@@ -183,10 +183,16 @@ don't redeploy the GEE app yet.
   `Export.image.toDrive` task per dataset + a settings CSV. `outputs.js` `exportDatasets()`/`exportParams()`;
   check `gee/tests/export_check.js` (passes; `Export` stubbed); parity's expected button list updated.
   Committed 2026-11-04; not yet deployed or run as a real task in the Code Editor.
+- **GEE app: export to Cloud Storage, `#exports=off`** (2026-11-06, user request; GEE app only). Section 4 is now
+  "Export" with a Google Drive / Cloud Storage bucket choice (bucket + optional path; Drive stays the default).
+  `#exports=off` on the URL (`ui.url`, the fragment; user's choice over a separate published entry script) leaves
+  the section out and renumbers the inspector; it only hides the section. `export_check.js` covers both (stubbed
+  `Export`). Parity's button list was updated but the live parity run was not repeated. Not yet deployed.
 
 **Open / to check:**
-- Export: in the Code Editor after deploy, run one real export of each dataset and open the GeoTIFFs
-  (confirms `formatOptions.noData` is accepted and the files look right).
+- Export: in the Code Editor after deploy, run one real export of each dataset to Drive and to a bucket and open
+  the GeoTIFFs (confirms `formatOptions.noData` is accepted and the files look right; the user still has to name a
+  test bucket). Open the published app's link with `#exports=off` and check that the section is gone.
 - Deployed edeedc3 to the Code Editor 2026-11-02. In the Code Editor: a long multi-Landsat expectation (e.g. L5+L7+L8 2010–2023), to see whether
   First detected season (343 M chars expanded) still renders. If not, apply the 2026-10-13 one-band/`min()` fix.
 - ~~Then plan step 2~~: done on islay (2026-10-22); see the regional section above.

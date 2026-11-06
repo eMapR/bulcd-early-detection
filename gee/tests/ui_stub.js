@@ -82,6 +82,8 @@ function makeUi() {
     setEeObject(x) { this.image = x; }, setVisParams(v) { this.vis = v; }, setName(n) { this.name = n; },
   });
   ui.root = widget('root', []);
+  // The URL fragment: tests set ui.url.values before calling main().
+  ui.url = { values: {}, get(key, fallback) { return key in this.values ? this.values[key] : fallback; } };
   return { ui, created };
 }
 

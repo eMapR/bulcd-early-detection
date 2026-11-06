@@ -97,7 +97,7 @@ inspect its NBR/fit and probability history.
    seasons); detection episodes (how many separate times P(decrease) rose above the
    threshold in that season: 1, 2, 3+; no smoothing);
    **condition** (the primary layer, on at 0.85 opacity); the study-area outline.
-4. **Export to Google Drive.** After a run, one checkbox per dataset (all checked): condition
+4. **Export.** After a run, one checkbox per dataset (all checked): condition
    (`outcome` 0 decrease / 1 unchanged / 2 increase / 3 not analyzed, plus final `p_decrease`,
    `p_unchanged`, `p_increase`); first detected season (`first_decrease_year`, `first_decrease_doy`)
    and last detection/episodes (`last_decrease_year`, `last_decrease_doy`, `decrease_episodes`) when
@@ -105,10 +105,13 @@ inspect its NBR/fit and probability history.
    scale); NBR (one band per year); and the run settings as a CSV (the settings line and the full
    configuration as JSON). Data values, not the colored layers. GeoTIFFs (cloud-optimized) on the
    area's UTM grid at 30 m (Sentinel-2 true color at 10 m), clipped to the area, masked pixels
-   -9999. **Export to Drive** creates one task per checked dataset, named
-   `bulcd_<area>_<year>_<YYYYMMDD_HHMM>_<dataset>`, in the chosen Drive folder (default
-   `bulcd_early_detection`); start them from the Code Editor's Tasks tab. Code Editor only:
-   published Earth Engine Apps can't run exports.
+   -9999. **Export** creates one task per checked dataset, named
+   `bulcd_<area>_<year>_<YYYYMMDD_HHMM>_<dataset>`, in the chosen destination: a Google Drive
+   folder (default `bulcd_early_detection`) or a Cloud Storage bucket with an optional path
+   (your account needs write access to the bucket, and storage is billed to its project). Start
+   the tasks from the Code Editor's Tasks tab. Code Editor only: published Earth Engine Apps can't
+   run exports. Add `#exports=off` to the URL to leave this section out, e.g. in the link to a
+   published app. This only hides the section; a link without it shows the section again.
 5. **Pixel inspector.** Click the map or type a longitude/latitude and press **Submit
    Pixel**. "Expectation -> Monitoring" (the expectation-period observations the fit
    used, the fitted curve through both periods, and the monitoring observations) with
@@ -261,10 +264,11 @@ different last digit from one evaluation to the next.
 cd gee/tests && node inspector_state_check.js
 ```
 
-`tests/export_check.js` checks the Export to Google Drive section (live Earth Engine, ~2 min, no
-tasks started: `Export` is a recording stand-in). After a default run on the test asset it checks
-the dataset list, that Export to Drive creates one task per checked dataset with valid unique names,
-the UTM grid and the nodata value, and that each image has its listed bands and one band type.
+`tests/export_check.js` checks the Export section (live Earth Engine, ~2 min, no tasks started:
+`Export` is a recording stand-in). After a default run on the test asset it checks the dataset list,
+that Export creates one task per checked dataset with valid unique names, the UTM grid and the nodata
+value, for Google Drive and for a Cloud Storage bucket, that bad bucket names create no tasks, that
+each image has its listed bands and one band type, and that `#exports=off` leaves the section out.
 
 ```sh
 cd gee/tests && node export_check.js

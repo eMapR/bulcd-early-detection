@@ -17,6 +17,7 @@ var AREA_SOURCES = {draw: 'Draw on the map', asset: 'Earth Engine asset'};
 // Starting view (the notebook's default map center).
 var MAP_CENTER = {lon: -123.552, lat: 44.834, zoom: 12};
 var EXPORT_FOLDER = 'bulcd_early_detection';
+var EXPORT_DESTINATIONS = {drive: 'Google Drive', bucket: 'Cloud Storage bucket'};
 
 var H2 = {fontSize: '16px', fontWeight: 'bold', margin: '12px 8px 4px'};
 var SMALL = {fontSize: '12px'};
@@ -125,23 +126,49 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
   var legend = ui.Panel();
   panel.add(legend);
 
-  // 4. Export
-  panel.add(ui.Label('4. Export to Google Drive', H2));
-  panel.add(ui.Label('Exports the run\'s data (not the colored layers) as GeoTIFFs on a 30 m UTM grid ' +
-                     '(Sentinel-2 true color at 10 m), clipped to the area; masked pixels are ' +
-                     outputs.EXPORT_NODATA + '. Each file becomes a task: start it from the Tasks tab ' +
-                     '(top right of the Code Editor).', SMALL));
+  // 4. Export. Adding #exports=off to the URL leaves this section out, for the
+  // published app (exports need the Code Editor). It only hides the section.
+  var exportsOn = ui.url.get('exports', 'on') !== 'off';
   var exportChoices = ui.Panel();
   exportChoices.add(ui.Label('Run the analysis first; its datasets are listed here.', SMALL));
+  var destination = ui.Select({items: [EXPORT_DESTINATIONS.drive, EXPORT_DESTINATIONS.bucket],
+                               value: EXPORT_DESTINATIONS.drive, style: {width: '260px'}});
   var folderBox = ui.Textbox({value: EXPORT_FOLDER, placeholder: 'Google Drive folder', style: {width: '260px'}});
-  var exportButton = ui.Button('Export to Drive');
+  var bucketBox = ui.Textbox({value: '', placeholder: 'Bucket name', style: {width: '260px'}});
+  var pathBox = ui.Textbox({value: '', placeholder: 'Folder in the bucket (optional)', style: {width: '260px'}});
+  function exportRow(label, widget) {
+    return ui.Panel([ui.Label(label, {width: '70px'}), widget], ui.Panel.Layout.flow('horizontal'));
+  }
+  var folderRow = exportRow('Drive folder', folderBox);
+  var bucketRow = exportRow('Bucket', bucketBox);
+  var pathRow = exportRow('Path', pathBox);
+  var bucketNote = ui.Label('Your account needs write access to the bucket, and storage is billed to its project. ' +
+                            'A missing bucket or missing access shows up as a failed task in the Tasks tab.', SMALL);
+  function showDestination(v) {
+    var toBucket = v === EXPORT_DESTINATIONS.bucket;
+    folderRow.style().set('shown', !toBucket);
+    bucketRow.style().set('shown', toBucket);
+    pathRow.style().set('shown', toBucket);
+    bucketNote.style().set('shown', toBucket);
+  }
+  destination.onChange(showDestination);
+  showDestination(destination.getValue());
+  var exportButton = ui.Button('Export');
   var exportStatus = ui.Label('', INFO);
-  panel.add(exportChoices);
-  panel.add(ui.Panel([ui.Label('Drive folder', {width: '70px'}), folderBox], ui.Panel.Layout.flow('horizontal')));
-  panel.add(exportButton).add(exportStatus);
+  if (exportsOn) {
+    panel.add(ui.Label('4. Export', H2));
+    panel.add(ui.Label('Exports the run\'s data (not the colored layers) as GeoTIFFs on a 30 m UTM grid ' +
+                       '(Sentinel-2 true color at 10 m), clipped to the area; masked pixels are ' +
+                       outputs.EXPORT_NODATA + '. Each file becomes a task: start it from the Tasks tab ' +
+                       '(top right of the Code Editor).', SMALL));
+    panel.add(exportChoices);
+    panel.add(exportRow('Save to', destination));
+    panel.add(folderRow).add(bucketRow).add(pathRow).add(bucketNote);
+    panel.add(exportButton).add(exportStatus);
+  }
 
-  // 5. Pixel inspector
-  panel.add(ui.Label('5. Pixel inspector', H2));
+  // Pixel inspector
+  panel.add(ui.Label((exportsOn ? '5' : '4') + '. Pixel inspector', H2));
   panel.add(ui.Label('After a run, click the map, or enter a coordinate (decimal degrees) and press Submit Pixel. ' +
                      'A click fills the boxes, so after changing settings and running again, Submit Pixel ' +
                      'inspects the same 30 m pixel.', SMALL));
@@ -336,9 +363,11 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
     }
     setRun({result: result, config: full, thresholds: thresholds, label: runLabel(c), outcome: outcome,
             timing: timing, episodes: episodes});
-    setExports(c, area, full, outputs.exportDatasets({
-      result: result, outcome: outcome, timing: timing, episodes: episodes, monitoringYear: c.monitoring_year,
-      imgYears: imgYears, window: window, imgSource: imgSource, geom: geom, crs: crs}), crs);
+    if (exportsOn) {
+      setExports(c, area, full, outputs.exportDatasets({
+        result: result, outcome: outcome, timing: timing, episodes: episodes, monitoringYear: c.monitoring_year,
+        imgYears: imgYears, window: window, imgSource: imgSource, geom: geom, crs: crs}), crs);
+    }
   }
 
   // ---------------------------------------------------------------- export
@@ -368,28 +397,37 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
     if (typeof Export === 'undefined') {
       return setMessage(exportStatus, 'Exports need the Code Editor (Export is not available here).', true);
     }
-    var folder = folderBox.getValue().trim() || EXPORT_FOLDER;
+    var toBucket = destination.getValue() === EXPORT_DESTINATIONS.bucket, target, where;
+    if (toBucket) {
+      target = {bucket: bucketBox.getValue().trim(), path: pathBox.getValue().trim().replace(/^\/+|\/+$/g, '')};
+      var problem = outputs.bucketProblem(target.bucket);
+      if (problem) return setMessage(exportStatus, problem, true);
+      where = 'gs://' + target.bucket + '/' + (target.path ? target.path + '/' : '');
+    } else {
+      target = {folder: folderBox.getValue().trim() || EXPORT_FOLDER};
+      where = 'Drive folder "' + target.folder + '"';
+    }
     var chosen = ex.items.filter(function (item) { return item.box.getValue(); });
     if (!chosen.length) return setMessage(exportStatus, 'Check at least one dataset.', true);
+    var method = toBucket ? 'toCloudStorage' : 'toDrive';
     var names = [];
     try {
       chosen.forEach(function (item) {
+        var params;
         if (item.settings) {
-          var name = outputs.exportName([ex.prefix, 'settings']);
-          Export.table.toDrive({collection: item.settings, description: name, folder: folder, fileNamePrefix: name,
-                                fileFormat: 'CSV'});
-          names.push(name);
+          params = outputs.exportSettingsParams(item.settings, target, ex.prefix);
+          Export.table[method](params);
         } else {
-          var params = outputs.exportParams(item.dataset, ex, folder, ex.prefix);
-          Export.image.toDrive(params);
-          names.push(params.description);
+          params = outputs.exportParams(item.dataset, ex, target, ex.prefix);
+          Export.image[method](params);
         }
+        names.push(params.description);
       });
     } catch (e) {
       return setMessage(exportStatus, 'Export failed: ' + (e.message || e), true);
     }
     setMessage(exportStatus, 'Created ' + names.length + ' export task' + (names.length > 1 ? 's' : '') +
-               ' for Drive folder "' + folder + '":\n' + names.join('\n') +
+               ' for ' + where + ':\n' + names.join('\n') +
                '\nOpen the Tasks tab (top right) and press Run on each.');
   });
 
@@ -492,7 +530,9 @@ function main(bulcd, appConfig, outputs, inspector, aoi, controlsUi) {
   ui.root.add(ui.SplitPanel(panel, map));
   return {map: map, state: state, controls: controls, source: source, assetBox: assetBox, useArea: useArea,
           runButton: runButton, lonBox: lonBox, latBox: latBox, submit: submit, AREA_SOURCES: AREA_SOURCES,
-          exportButton: exportButton, folderBox: folderBox, exportChoices: exportChoices, exportStatus: exportStatus};
+          exportButton: exportButton, folderBox: folderBox, exportChoices: exportChoices, exportStatus: exportStatus,
+          destination: destination, bucketBox: bucketBox, pathBox: pathBox, panel: panel,
+          EXPORT_DESTINATIONS: EXPORT_DESTINATIONS};
 }
 
 if (typeof exports !== 'undefined') exports.main = main;
