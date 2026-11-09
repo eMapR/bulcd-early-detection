@@ -196,3 +196,28 @@ season.
 **Open (from step 8b, not decided in this plan):** whether to export in 2 × 2-tile blocks. Step 8b measured
 31% less EECU per tile and about 2x the throughput against single tiles (`docs/findings.md`, 2026-10-26
 "Export optimization"); the cost estimate above assumes single-tile tasks at full-year settings.
+
+## Future development: post-detection disturbance trajectories (idea, 2026-11-09; not started)
+
+Requested by the user for later; nothing is implemented.
+
+**Goal.** After BULC-D first detects a decrease, follow each pixel's spectral trajectory to tell apart
+continued decline, recovery, stabilization and secondary disturbances.
+
+**Why the current products can't do it.** Each season run compares the year against the same 2018-2023
+expectation from the same starting odds, so P(decrease) is a persistent "departed from the pre-2024 condition"
+state, not a new-event signal: a patch detected in 2024 is detected again in 2025 and 2026 (Coast Range: 69% of
+2026 detections were also detected in an earlier season; repeat detections cross early, median DOY 101 vs 141
+for first-time ones). detection_year keeps only the earliest season, so a second disturbance on an already
+detected pixel is invisible.
+
+**Key challenge.** Distinguishing a new disturbance from the continued effects of an earlier one, especially:
+- insect and disease mortality: a slow, multi-year decline that keeps crossing the threshold;
+- partial harvest (thinning) followed by fire, or mortality followed by salvage: a second, real event on a
+  pixel that is already "decrease".
+
+**Directions to evaluate (none chosen).** A rolling expectation (each season against the preceding years, the
+2026-10-28 meeting's config B26) so P(decrease) measures change since the recent past; per-pixel time series
+of the index after detection (slope, magnitude, return toward the expectation); second-crossing or
+deeper-departure rules on the existing per-bin probabilities; comparison with LCMS change classes (slow loss,
+fast loss, gain) as an external reference.
