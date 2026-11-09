@@ -338,8 +338,8 @@ function nbrStretchFromStats(stats) {
 }
 
 // ---------------------------------------------------------------- export
-// Data (not the colored map layers) a run can export to Google Drive as
-// GeoTIFFs. Masked pixels (water, outside the area, no detection) are written
+// Data (not the colored map layers) a run can export to Google Drive or a Cloud
+// Storage bucket as GeoTIFFs. Masked pixels (water, outside the area, no detection) are written
 // as EXPORT_NODATA, since 0 is a real value in several bands (outcome 0 =
 // decrease).
 var EXPORT_NODATA = -9999;
@@ -385,18 +385,53 @@ function exportDatasets(run) {
   return list;
 }
 
-// Export.image.toDrive() parameters for one dataset.
-function exportParams(dataset, run, folder, prefix) {
-  var name = exportName([prefix, dataset.key]);
-  return {image: dataset.image, description: name, folder: folder, fileNamePrefix: name, region: run.geom,
-          scale: dataset.scale, crs: run.crs, maxPixels: 1e13, fileFormat: 'GeoTIFF',
-          formatOptions: {cloudOptimized: true, noData: EXPORT_NODATA}};
+// Why a Cloud Storage bucket name can't be used, or null. Earth Engine only
+// reports a missing bucket or missing write access when the task runs.
+function bucketProblem(bucket) {
+  if (!bucket) return 'Enter a bucket name.';
+  if (!/^[a-z0-9][a-z0-9._-]{1,220}[a-z0-9]$/.test(bucket)) {
+    return '"' + bucket + '" is not a bucket name: enter the name only (no gs:// or /), using lowercase ' +
+           'letters, digits, "-", "_" and ".". A folder inside the bucket goes in Path.';
+  }
+  return null;
+}
+
+// The task name and destination shared by every export. `target`: {folder} for
+// Google Drive, or {bucket, path} for Cloud Storage (path optional, no outer /).
+function exportTarget(target, name) {
+  if (target.bucket) {
+    return {description: name, bucket: target.bucket, fileNamePrefix: (target.path ? target.path + '/' : '') + name};
+  }
+  return {description: name, folder: target.folder, fileNamePrefix: name};
+}
+
+// Export.image.toDrive() / toCloudStorage() parameters for one dataset.
+function exportParams(dataset, run, target, prefix) {
+  var params = exportTarget(target, exportName([prefix, dataset.key]));
+  params.image = dataset.image;
+  params.region = run.geom;
+  params.scale = dataset.scale;
+  params.crs = run.crs;
+  params.maxPixels = 1e13;
+  params.fileFormat = 'GeoTIFF';
+  params.formatOptions = {cloudOptimized: true, noData: EXPORT_NODATA};
+  return params;
+}
+
+// Export.table.toDrive() / toCloudStorage() parameters for the run settings CSV.
+function exportSettingsParams(settings, target, prefix) {
+  var params = exportTarget(target, exportName([prefix, 'settings']));
+  params.collection = settings;
+  params.fileFormat = 'CSV';
+  return params;
 }
 
 exports.EXPORT_NODATA = EXPORT_NODATA;
 exports.exportName = exportName;
 exports.exportDatasets = exportDatasets;
+exports.bucketProblem = bucketProblem;
 exports.exportParams = exportParams;
+exports.exportSettingsParams = exportSettingsParams;
 exports.classThresholds = classThresholds;
 exports.DECREASE = DECREASE;
 exports.UNCHANGED = UNCHANGED;

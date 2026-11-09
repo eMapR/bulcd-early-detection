@@ -480,7 +480,7 @@ def main():
     f = [f"GUI exposes validation/testing text: {m!r}" for m in
          ("legacy", "reference case", "reference pixel", "validation", "testsite", "Pixel 1", "Pixel 2", "Pixel 3",
           "parity", "debug") if m.lower() in visible.lower()]
-    if js["gui_buttons"] != ["Use this area", "Run Early Detection", "Export to Drive", "Submit Pixel"]:
+    if js["gui_buttons"] != ["Use this area", "Run Early Detection", "Export", "Submit Pixel"]:
         f.append(f"GUI buttons {js['gui_buttons']}")
     if js["gui_area_sources"] != ["Draw on the map", "Earth Engine asset"]:
         f.append(f"area sources {js['gui_area_sources']}")
