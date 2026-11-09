@@ -1,0 +1,44 @@
+{
+ "coast-range": {
+  "us_l3code": 1,
+  "tiles": 565,
+  "blocks": 168,
+  "tiles_in_blocks": 672
+ },
+ "blue-mountains": {
+  "us_l3code": 11,
+  "tiles": 733,
+  "blocks": 203,
+  "tiles_in_blocks": 812
+ },
+ "north-cascades": {
+  "us_l3code": 77,
+  "tiles": 384,
+  "blocks": 112,
+  "tiles_in_blocks": 448
+ },
+ "east-cascades": {
+  "us_l3code": 9,
+  "tiles": 485,
+  "blocks": 155,
+  "tiles_in_blocks": 620
+ },
+ "cascades": {
+  "us_l3code": 4,
+  "tiles": 579,
+  "blocks": 169,
+  "tiles_in_blocks": 676
+ },
+ "columbia-mountains": {
+  "us_l3code": 15,
+  "tiles": 264,
+  "blocks": 78,
+  "tiles_in_blocks": 312
+ },
+ "klamath-mountains": {
+  "us_l3code": 78,
+  "tiles": 201,
+  "blocks": 60,
+  "tiles_in_blocks": 240
+ }
+}

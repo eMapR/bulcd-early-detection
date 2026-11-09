@@ -241,6 +241,40 @@ def export_stack_tile(run: RegionalRun, season_runs: list[RegionalRun], tile: Ti
     return task
 
 
+def export_detection_year_tile(run: RegionalRun, season_runs: list[RegionalRun], tile: Tile, collection: str,
+                               asset_root: str = DEFAULT_ASSET_ROOT, start: bool = True):
+    """Exports detection_year alone (one band, detection_year_image(): the same
+    values as the stack's band) into `collection`, on the tile's pixels. The
+    image keeps the latest season tile's properties (run, grid, settings,
+    provenance) plus the stack's detection-year properties. No BULC-D run."""
+    years = season_years(run, season_runs)
+    by_year = {r.controls.monitoring_year: r for r in [*season_runs, run]}
+    assets = {y: f"{collection_id(by_year[y], asset_root)}/{tile.id}" for y in years}
+    for a in assets.values():
+        ee.data.getAsset(a)   # raises if a season tile is missing
+    seasons = {y: ee.Image(a) for y, a in assets.items()}
+    image = ee.Image(detection_year_image(seasons).copyProperties(seasons[years[-1]])).set({
+        "stack_version": spec.STACK_VERSION,
+        "detection_years": ",".join(map(str, years)),
+        "detection_year_floor": years[0],
+        "season_assets_json": json.dumps({str(y): a for y, a in assets.items()}, sort_keys=True),
+    })
+    transform, dimensions = tile_transform(run, tile)
+    task = ee.batch.Export.image.toAsset(
+        image=image,
+        description=f"{collection.split('/')[-1]}_{tile.id}",
+        assetId=f"{collection}/{tile.id}",
+        crs=run.grid.crs,
+        crsTransform=transform,
+        dimensions=dimensions,
+        pyramidingPolicy={".default": "sample"},
+        maxPixels=1e10,
+    )
+    if start:
+        task.start()
+    return task
+
+
 def submit_stack(run: RegionalRun, season_runs: list[RegionalRun], tile_ids: list[str] | None = None,
                  asset_root: str = DEFAULT_ASSET_ROOT) -> list:
     tiles = [t for t in run.units if not tile_ids or t.id in tile_ids]

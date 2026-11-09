@@ -1,18 +1,27 @@
 """R6 seven-ecoregion regional processing (docs/regional_plan.md, "Next run").
 
-    python tools/regional_r6.py plan                  # tiles per ecoregion -> run files (needs the study-area assets)
-    python tools/regional_r6.py submit ECO [ECO ...]  # the three season runs' blocks
-    python tools/regional_r6.py drive                 # loop: submit, stack, retry, report (run under nohup)
-    python tools/regional_r6.py status
+    python tools/regional_r6.py [--variant V] plan                  # tiles per ecoregion -> run files
+    python tools/regional_r6.py [--variant V] submit ECO [ECO ...]  # the three season runs' blocks
+    python tools/regional_r6.py [--variant V] drive                 # loop: submit, stack, retry, report (nohup)
+    python tools/regional_r6.py [--variant V] status
 
-Run files: regional_runs/r6_ecoregions/<eco>_<year>.yaml (the pilot's settings
-with the 2026-11-04 changes: L8 + L9 expectation, full year; plus the LCMS
-forest mask, the ecoregion, its tiles and 2 x 2 blocks). Task records:
-regional_runs/r6_ecoregions/tasks.json (every submitted task, its unit and
-state). Log: regional_runs/r6_ecoregions/drive.log.
+Variants (VARIANTS):
+  nomask (default, from 2026-11-09): no forest mask (every land-cover type analyzed, water masked as before);
+      run IDs r6-nomask-<eco>-<year>; files in regional_runs/r6_ecoregions_nomask/.
+  lcms-mask (2026-11-05 to 11-09, stopped by the user; completed assets kept): LCMS 2023 forest mask;
+      run IDs r6-<eco>-<year>; files in regional_runs/r6_ecoregions/.
 
-Tiles: every 333-px tile on the run grid holding at least one forest pixel
-(FOREST_ASSET = 1) of the ecoregion; blocks: the aligned 2 x 2 blocks
+Run files: <dir>/<eco>_<year>.yaml (the pilot's settings with the 2026-11-04
+changes: L8 + L9 expectation, full year; plus the variant's mask, the
+ecoregion, its tiles and 2 x 2 blocks). Task records: <dir>/tasks.json (every
+submitted task, its unit and state). Log: <dir>/drive.log.
+
+Per block, after its three seasons: the stack (<run 2026>-stack: the 2026 tile +
+detection_year) and, for nomask, detection_year alone in
+r6-nomask-<eco>-detection-year (one band per block, the same values).
+
+Tiles: every 333-px tile on the run grid holding at least one pixel of the
+ecoregion (lcms-mask: one forest pixel); blocks: the aligned 2 x 2 blocks
 containing them (tiling.Grid.blocks).
 """
 
@@ -36,9 +45,21 @@ from bulcd_early_detection.regional.run_config import (AdvancedSettings, Region,
                                                        app_default_controls)
 from bulcd_early_detection.regional.tiling import Grid  # noqa: E402
 
-OUT = ROOT / "regional_runs" / "r6_ecoregions"
+VARIANTS = {
+    "nomask": {"dir": "r6_ecoregions_nomask", "prefix": "r6-nomask", "forest_mask": False, "detection_year": True},
+    "lcms-mask": {"dir": "r6_ecoregions", "prefix": "r6", "forest_mask": True, "detection_year": False},
+}
+V = VARIANTS["nomask"]
+OUT = ROOT / "regional_runs" / V["dir"]
 TASKS = OUT / "tasks.json"
 LOG = OUT / "drive.log"
+
+
+def configure(variant: str) -> None:
+    global V, OUT, TASKS, LOG
+    V = VARIANTS[variant]
+    OUT = ROOT / "regional_runs" / V["dir"]
+    TASKS, LOG = OUT / "tasks.json", OUT / "drive.log"
 YEARS = (2024, 2025, 2026)
 ORDER = [1, 11, 77, 9, 4, 15, 78]   # Coast Range first, then the user's order
 BLOCK = 2
@@ -59,19 +80,22 @@ def run_path(code: int, year: int) -> Path:
 def make_run(code: int, year: int, tiles: list[str], bounds) -> RegionalRun:
     """The pilot's settings (regional_runs/pilot_coast_range_2026.yaml) with the
     plan's changes: expectation L8 + L9, full year (DOY 1-362 in 2025/2026, 1-363
-    in leap 2024: one MM-DD for every season, as the stack requires), LCMS forest
-    mask, the ecoregion, 2 x 2 blocks."""
+    in leap 2024: one MM-DD for every season, as the stack requires), the
+    variant's forest mask (or none), water masked, the ecoregion, 2 x 2 blocks."""
     controls = app_default_controls(monitoring_year=year, season_start="01-01", season_end="12-28",
                                     baseline_first_year=2018, baseline_last_year=2023, decision_threshold=0.65,
                                     increase_threshold=0.75, sensitivity=1.0, fit_order=1,
                                     expectation_sensors=("L8", "L9"))
     advanced = AdvancedSettings(monitoring_sensors=("L8", "L9"), dampening=0.7, posterior_leveler=0.9,
-                                mask_forest=True, mask_water=True, forest_mask_asset=sa.FOREST_ASSET,
+                                mask_forest=V["forest_mask"], mask_water=True,
+                                forest_mask_asset=sa.FOREST_ASSET if V["forest_mask"] else None,
                                 timing_rule="confirmed")
     return RegionalRun(
-        run_id=f"r6-{name(code)}-{year}",
+        run_id=f"{V['prefix']}-{name(code)}-{year}",
         description=(f"R6 seven-ecoregion run: {sa.ECOREGIONS[code][1]} (us_l3code {code}) in OR/WA, season {year}. "
-                     "Pilot settings + L8/L9 expectation + full year + LCMS 2023 forest mask (docs/regional_plan.md)."),
+                     "Pilot settings + L8/L9 expectation + full year + "
+                     + ("LCMS 2023 forest mask" if V["forest_mask"] else "no forest mask (water masked)")
+                     + " (docs/regional_plan.md)."),
         region=Region(name=f"{sa.ECOREGIONS[code][1]}, Oregon + Washington", bounds=bounds, ecoregion=code,
                       tiles=tiles),
         controls=controls, advanced=advanced, grid=Grid(), block_tiles=BLOCK)
@@ -90,7 +114,8 @@ def plan_tiles(code: int, grid: Grid) -> list[str]:
         sa.states_geometry(), ee.ErrorMargin(30))
     (x0, y0), _, (x1, y1), _ = region.bounds(30, grid.crs).coordinates().getInfo()[0][:4]
     candidates = grid.tiles(grid.snap((x0, y0, x1, y1)))
-    forest = ee.Image(sa.FOREST_ASSET).eq(1).updateMask(sa.region_mask(code)).unmask(0).rename("forest")
+    inside = ee.Image(sa.FOREST_ASSET).eq(1) if V["forest_mask"] else ee.Image(1)
+    forest = inside.updateMask(sa.region_mask(code)).unmask(0).rename("forest")
     found = []
     for i in range(0, len(candidates), 200):
         chunk = candidates[i:i + 200]
@@ -113,7 +138,8 @@ def plan(codes) -> None:
         for year in YEARS:
             run = make_run(code, year, tiles, bounds)
             header = (f"# {run.description}\n# Generated by tools/regional_r6.py plan ({datetime.date.today()}); "
-                      f"{len(tiles)} tiles with LCMS forest, {len(run.units)} 2 x 2 blocks.\n")
+                      f"{len(tiles)} tiles{' with LCMS forest' if V['forest_mask'] else ''}, "
+                      f"{len(run.units)} 2 x 2 blocks.\n")
             run_path(code, year).write_text(header + run.to_yaml())
             RegionalRun.load(run_path(code, year))   # round-trip check
         summary[name(code)] = {"us_l3code": code, "tiles": len(tiles), "blocks": len(blocks),
@@ -198,6 +224,40 @@ def submit_stacks(code: int, tasks: dict, budget: int) -> int:
     return n
 
 
+def detection_year_collection(code: int) -> str:
+    return f"{gee.DEFAULT_ASSET_ROOT}/{V['prefix']}-{name(code)}-detection-year"
+
+
+def submit_detection_years(code: int, tasks: dict, budget: int) -> int:
+    """Submits detection_year alone for every block whose three season tasks completed."""
+    if not V["detection_year"]:
+        return 0
+    n = 0
+    runs = [RegionalRun.load(run_path(code, y)) for y in YEARS]
+    final, earlier = runs[-1], runs[:-1]
+    path = detection_year_collection(code)
+    created = False
+    for unit in final.units:
+        if not all(tasks.get(key(r.run_id, unit.id, "season"), {}).get("state") == "COMPLETED" for r in runs):
+            continue
+        k = key(path.split("/")[-1], unit.id, "dyear")
+        rec = tasks.get(k)
+        if rec and (rec["state"] != "FAILED" or rec["attempts"] >= MAX_ATTEMPTS):
+            continue
+        if n >= budget:
+            break
+        if not created:
+            if not _asset_exists(path):
+                ee.data.createAsset({"type": "IMAGE_COLLECTION"}, path)
+            created = True
+        task = gee.export_detection_year_tile(final, earlier, unit, path)
+        tasks[k] = {"task_id": task.id, "state": "SUBMITTED", "attempts": (rec or {}).get("attempts", 0) + 1,
+                    "submitted": _now(), "ecoregion": code}
+        n += 1
+    save_tasks(tasks)
+    return n
+
+
 def refresh(tasks: dict) -> dict:
     """Updates task states from Earth Engine; returns the EE task list by id."""
     by_id = {t["id"]: t for t in ee.data.getTaskList()}
@@ -269,14 +329,16 @@ def drive(interval: int) -> None:
             budget -= n
             m = submit_stacks(code, tasks, budget)
             budget -= m
-            if n or m:
-                log(f"submitted {name(code)}: {n} season, {m} stack tasks")
+            y = submit_detection_years(code, tasks, budget)
+            budget -= y
+            if n or m or y:
+                log(f"submitted {name(code)}: {n} season, {m} stack, {y} detection-year tasks")
         s = summary(tasks)
         log(f"status active={active} quota={q['bytes'] / 1e9:.2f}/{q['bytes_limit'] / 1e9:.0f} GB "
             f"{q['assets']}/{q['assets_limit']} assets; {json.dumps(s)}")
         for e in errors(tasks):
             log(f"ERROR {e}")
-        expected = sum(len(RegionalRun.load(run_path(c, YEARS[0])).units) * (len(YEARS) + 1)
+        expected = sum(len(RegionalRun.load(run_path(c, YEARS[0])).units) * (len(YEARS) + 1 + V["detection_year"])
                        for c in ORDER if run_path(c, YEARS[0]).exists())
         done = sum(r["state"] == "COMPLETED" or (r["state"] == "FAILED" and r["attempts"] >= MAX_ATTEMPTS)
                    for r in tasks.values())
@@ -303,7 +365,9 @@ def main() -> int:
     p.add_argument("mode", choices=("plan", "submit", "drive", "status"))
     p.add_argument("codes", nargs="*", help="ecoregion names or us_l3codes (default: all, in order)")
     p.add_argument("--interval", type=int, default=600)
+    p.add_argument("--variant", choices=sorted(VARIANTS), default="nomask")
     a = p.parse_args()
+    configure(a.variant)
     ee.Initialize(project=sa.PROJECT)
     by_name = {v[0]: k for k, v in sa.ECOREGIONS.items()}
     codes = [int(c) if c.isdigit() else by_name[c] for c in a.codes] or ORDER
